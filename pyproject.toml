@@ -28,3 +28,7 @@ files = ["src"]
 testpaths = ["tests"]
 addopts = "-q --cov=ragproject --cov-report=term-missing"
 markers = ["integration: tests that need real services (deselect with -m 'not integration')"]
+filterwarnings = [
+    # Third-party deprecation from Starlette's TestClient; not our code.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
