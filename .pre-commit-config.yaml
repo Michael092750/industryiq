@@ -9,4 +9,5 @@ repos:
     rev: v1.14.1
     hooks:
       - id: mypy
+        files: ^src/
         additional_dependencies: []
