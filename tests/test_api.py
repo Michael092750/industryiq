@@ -65,6 +65,23 @@ def test_ingest_pdf_file_then_query(client: TestClient) -> None:
     assert result.json()["sources"][0]["text"] == expected
 
 
+def test_ingest_docx_file(client: TestClient) -> None:
+    docx = FIXTURES / "sample.docx"
+    with docx.open("rb") as handle:
+        response = client.post(
+            "/ingest/file",
+            files={
+                "file": (
+                    "sample.docx",
+                    handle,
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            },
+        )
+    assert response.status_code == 200
+    assert response.json()["chunk_ids"]
+
+
 def test_ingest_file_unsupported_type_is_415(client: TestClient) -> None:
     response = client.post(
         "/ingest/file",
