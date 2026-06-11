@@ -90,20 +90,33 @@ def test_ingest_file_unsupported_type_is_415(client: TestClient) -> None:
     assert response.status_code == 415
 
 
-def test_list_chunks_shows_ingested_documents(client: TestClient) -> None:
+def test_debug_chunks_shows_ingested_documents(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DEBUG_API_KEY", "s3cret")
     client.post("/ingest", json={"text": "first doc", "source": "a.txt"})
     client.post("/ingest", json={"text": "second doc", "source": "b.txt"})
-    response = client.get("/chunks")
+    response = client.get("/debug/chunks", headers={"X-Debug-Key": "s3cret"})
     assert response.status_code == 200
     body = response.json()
     assert body["count"] == 2
-    sources = {chunk["source"] for chunk in body["chunks"]}
-    assert sources == {"a.txt", "b.txt"}
+    assert {chunk["source"] for chunk in body["chunks"]} == {"a.txt", "b.txt"}
 
 
-def test_list_chunks_empty_store(client: TestClient) -> None:
-    response = client.get("/chunks")
-    assert response.json() == {"count": 0, "chunks": []}
+def test_debug_chunks_rejects_missing_or_wrong_key(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DEBUG_API_KEY", "s3cret")
+    assert client.get("/debug/chunks").status_code == 401
+    assert client.get("/debug/chunks", headers={"X-Debug-Key": "wrong"}).status_code == 401
+
+
+def test_debug_chunks_disabled_when_no_key_configured(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DEBUG_API_KEY", raising=False)
+    # Even with a header, the endpoint is invisible (404) when unconfigured.
+    assert client.get("/debug/chunks", headers={"X-Debug-Key": "anything"}).status_code == 404
 
 
 def test_query_missing_question_is_422(client: TestClient) -> None:

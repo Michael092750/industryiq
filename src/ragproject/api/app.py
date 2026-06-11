@@ -9,10 +9,11 @@ import tempfile
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from ragproject.api.deps import get_pipeline
+from ragproject.api.security import require_debug_key
 from ragproject.core.loaders import SUPPORTED_EXTENSIONS, load
 from ragproject.core.pipeline import RagPipeline
 
@@ -88,7 +89,17 @@ def ingest_file(file: UploadFile, pipeline: Pipeline) -> IngestResponse:
     return IngestResponse(chunk_ids=chunk_ids)
 
 
-@app.get("/chunks")
+# Engineer-only endpoints: hidden from the public schema (`include_in_schema=False`)
+# and gated behind a debug key (`require_debug_key`). Disabled unless DEBUG_API_KEY is set.
+debug_router = APIRouter(
+    prefix="/debug",
+    tags=["debug"],
+    include_in_schema=False,
+    dependencies=[Depends(require_debug_key)],
+)
+
+
+@debug_router.get("/chunks")
 def list_chunks(pipeline: Pipeline, limit: int = 100) -> ChunksResponse:
     items = pipeline.list_chunks(limit=limit)
     chunks = [
@@ -103,3 +114,6 @@ def query(request: QueryRequest, pipeline: Pipeline) -> QueryResponse:
     result = pipeline.query(request.question, k=request.k)
     sources = [Source(text=hit.metadata.get("text", ""), score=hit.score) for hit in result.hits]
     return QueryResponse(answer=result.answer, sources=sources)
+
+
+app.include_router(debug_router)
