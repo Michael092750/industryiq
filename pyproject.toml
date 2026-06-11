@@ -7,7 +7,12 @@ name = "ragproject"
 version = "0.0.1"
 description = "A modular, testable RAG system"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.115", "pypdf>=5.0", "python-docx>=1.1"]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pypdf>=5.0",
+    "python-docx>=1.1",
+]
 
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pytest", "pytest-cov", "pre-commit", "httpx"]
