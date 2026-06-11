@@ -8,6 +8,7 @@ on the file extension, so callers don't need to care about the format.
 from collections.abc import Callable
 from pathlib import Path
 
+import docx
 import pypdf
 
 
@@ -42,9 +43,26 @@ def load_pdf(path: str | Path) -> str:
     return "\n".join(page.extract_text() for page in reader.pages)
 
 
+def load_docx(path: str | Path) -> str:
+    """Extract text from a ``.docx`` file, joining paragraphs with newlines.
+
+    Raises:
+        FileNotFoundError: If ``path`` does not point to an existing file.
+        ValueError: If the file is not a ``.docx`` file.
+    """
+    p = Path(path)
+    if not p.is_file():
+        raise FileNotFoundError(f"No such file: {p}")
+    if p.suffix.lower() != ".docx":
+        raise ValueError(f"load_docx expects a .docx file, got {p.suffix!r}")
+    document = docx.Document(str(p))
+    return "\n".join(paragraph.text for paragraph in document.paragraphs)
+
+
 _LOADERS: dict[str, Callable[[str | Path], str]] = {
     ".txt": load_text,
     ".pdf": load_pdf,
+    ".docx": load_docx,
 }
 
 SUPPORTED_EXTENSIONS = frozenset(_LOADERS)

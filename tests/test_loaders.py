@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ragproject.core.loaders import load, load_pdf, load_text
+from ragproject.core.loaders import load, load_docx, load_pdf, load_text
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -47,6 +47,25 @@ def test_load_pdf_wrong_extension_raises() -> None:
         load_pdf(FIXTURES / "sample.txt")
 
 
+# --- load_docx -------------------------------------------------------------
+
+
+def test_load_docx_reads_all_paragraphs() -> None:
+    text = load_docx(FIXTURES / "sample.docx")
+    assert "Hello from a Word document." in text
+    assert "second paragraph" in text
+
+
+def test_load_docx_missing_file_raises() -> None:
+    with pytest.raises(FileNotFoundError):
+        load_docx(FIXTURES / "missing.docx")
+
+
+def test_load_docx_wrong_extension_raises() -> None:
+    with pytest.raises(ValueError):
+        load_docx(FIXTURES / "sample.txt")
+
+
 # --- load (dispatcher) -----------------------------------------------------
 
 
@@ -56,6 +75,10 @@ def test_load_dispatches_txt() -> None:
 
 def test_load_dispatches_pdf() -> None:
     assert "Hello from a PDF document." in load(FIXTURES / "sample.pdf")
+
+
+def test_load_dispatches_docx() -> None:
+    assert "Hello from a Word document." in load(FIXTURES / "sample.docx")
 
 
 def test_load_unsupported_extension_raises(tmp_path: Path) -> None:
