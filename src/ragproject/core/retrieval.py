@@ -52,3 +52,7 @@ class Retriever:
         """Return up to ``k`` chunks most relevant to ``query``."""
         query_vector = self._embedder.embed([query])[0]
         return self._store.search(query_vector, k=k)
+
+    def all_chunks(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
+        """Return up to ``limit`` indexed ``(id, metadata)`` pairs, for inspection."""
+        return self._store.all_items(limit=limit)

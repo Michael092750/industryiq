@@ -90,6 +90,22 @@ def test_ingest_file_unsupported_type_is_415(client: TestClient) -> None:
     assert response.status_code == 415
 
 
+def test_list_chunks_shows_ingested_documents(client: TestClient) -> None:
+    client.post("/ingest", json={"text": "first doc", "source": "a.txt"})
+    client.post("/ingest", json={"text": "second doc", "source": "b.txt"})
+    response = client.get("/chunks")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 2
+    sources = {chunk["source"] for chunk in body["chunks"]}
+    assert sources == {"a.txt", "b.txt"}
+
+
+def test_list_chunks_empty_store(client: TestClient) -> None:
+    response = client.get("/chunks")
+    assert response.json() == {"count": 0, "chunks": []}
+
+
 def test_query_missing_question_is_422(client: TestClient) -> None:
     assert client.post("/query", json={}).status_code == 422
 

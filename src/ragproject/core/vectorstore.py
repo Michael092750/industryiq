@@ -37,6 +37,10 @@ class VectorStore(Protocol):
         """Return up to ``k`` hits, highest cosine similarity first."""
         ...
 
+    def all_items(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
+        """Return up to ``limit`` stored ``(id, metadata)`` pairs, for inspection."""
+        ...
+
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
     """Cosine similarity of two equal-length vectors; 0.0 if either is all zeros."""
@@ -76,3 +80,6 @@ class InMemoryVectorStore:
         ]
         hits.sort(key=lambda hit: hit.score, reverse=True)
         return hits[:k]
+
+    def all_items(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
+        return list(self._metadatas.items())[:limit]

@@ -12,6 +12,7 @@ real providers in production -- no code change.
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from ragproject.core.chunking import chunk_text
 from ragproject.core.generation import LLM, generate_answer
@@ -59,3 +60,7 @@ class RagPipeline:
         hits = self._retriever.retrieve(question, k=k)
         answer = generate_answer(question, hits, self._llm)
         return QueryResult(answer=answer, hits=hits)
+
+    def list_chunks(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
+        """Return up to ``limit`` indexed ``(id, metadata)`` pairs, for inspection."""
+        return self._retriever.all_chunks(limit=limit)

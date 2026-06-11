@@ -48,6 +48,15 @@ def test_ingest_file_reads_and_indexes(tmp_path: Path) -> None:
     assert result.hits[0].metadata["source"] == str(file)
 
 
+def test_list_chunks_returns_ingested_content() -> None:
+    pipeline = _pipeline(chunk_size=3, overlap=0)
+    pipeline.ingest_text("alpha beta gamma delta", source="doc.txt")
+    items = pipeline.list_chunks()
+    metadatas = [meta for _id, meta in items]
+    assert all(meta["source"] == "doc.txt" for meta in metadatas)
+    assert {meta["text"] for meta in metadatas} == {"alpha beta gamma", "delta"}
+
+
 def test_query_on_empty_store_still_returns_answer() -> None:
     pipeline = _pipeline(FakeLLM(response="I don't know."))
     result = pipeline.query("anything")

@@ -67,3 +67,13 @@ def test_mismatched_lengths_raise() -> None:
 def test_invalid_k_raises() -> None:
     with pytest.raises(ValueError):
         _seeded_store().search([1.0, 0.0], k=0)
+
+
+def test_all_items_returns_stored_pairs() -> None:
+    items = dict(_seeded_store().all_items())
+    assert set(items) == {"a", "b", "c"}
+    assert items["b"] == {"text": "B"}
+
+
+def test_all_items_respects_limit() -> None:
+    assert len(_seeded_store().all_items(limit=2)) == 2

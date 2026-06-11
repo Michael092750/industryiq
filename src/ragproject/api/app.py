@@ -43,6 +43,17 @@ class QueryResponse(BaseModel):
     sources: list[Source]
 
 
+class Chunk(BaseModel):
+    id: str
+    text: str
+    source: str | None = None
+
+
+class ChunksResponse(BaseModel):
+    count: int
+    chunks: list[Chunk]
+
+
 app = FastAPI(title="ragproject")
 
 
@@ -75,6 +86,16 @@ def ingest_file(file: UploadFile, pipeline: Pipeline) -> IngestResponse:
         os.unlink(tmp_path)
     chunk_ids = pipeline.ingest_text(text, source=file.filename)
     return IngestResponse(chunk_ids=chunk_ids)
+
+
+@app.get("/chunks")
+def list_chunks(pipeline: Pipeline, limit: int = 100) -> ChunksResponse:
+    items = pipeline.list_chunks(limit=limit)
+    chunks = [
+        Chunk(id=chunk_id, text=metadata.get("text", ""), source=metadata.get("source"))
+        for chunk_id, metadata in items
+    ]
+    return ChunksResponse(count=len(chunks), chunks=chunks)
 
 
 @app.post("/query")
