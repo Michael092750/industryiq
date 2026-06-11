@@ -15,7 +15,7 @@ from pathlib import Path
 
 from ragproject.core.chunking import chunk_text
 from ragproject.core.generation import LLM, generate_answer
-from ragproject.core.loaders import load_text
+from ragproject.core.loaders import load
 from ragproject.core.retrieval import Retriever
 from ragproject.core.vectorstore import Hit
 
@@ -52,7 +52,7 @@ class RagPipeline:
 
     def ingest_file(self, path: str | Path) -> list[str]:
         """Load a file, chunk it, and add it to the store. Returns the chunk ids."""
-        return self.ingest_text(load_text(path), source=str(path))
+        return self.ingest_text(load(path), source=str(path))
 
     def query(self, question: str, k: int = 5) -> QueryResult:
         """Retrieve relevant chunks and generate a grounded answer."""
