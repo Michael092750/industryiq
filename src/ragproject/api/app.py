@@ -4,12 +4,16 @@ Routes validate input, call the pipeline, and serialize the result. They contain
 no RAG logic of their own -- that all lives in ``ragproject.core``.
 """
 
+import os
+import tempfile
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from ragproject.api.deps import get_pipeline
+from ragproject.core.loaders import SUPPORTED_EXTENSIONS, load
 from ragproject.core.pipeline import RagPipeline
 
 Pipeline = Annotated[RagPipeline, Depends(get_pipeline)]
@@ -50,6 +54,26 @@ def health() -> dict[str, str]:
 @app.post("/ingest")
 def ingest(request: IngestRequest, pipeline: Pipeline) -> IngestResponse:
     chunk_ids = pipeline.ingest_text(request.text, source=request.source)
+    return IngestResponse(chunk_ids=chunk_ids)
+
+
+@app.post("/ingest/file")
+def ingest_file(file: UploadFile, pipeline: Pipeline) -> IngestResponse:
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type {suffix!r}; supported: {sorted(SUPPORTED_EXTENSIONS)}",
+        )
+    # Write the upload to a temp file so the path-based loaders can read it.
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(file.file.read())
+        tmp_path = tmp.name
+    try:
+        text = load(tmp_path)
+    finally:
+        os.unlink(tmp_path)
+    chunk_ids = pipeline.ingest_text(text, source=file.filename)
     return IngestResponse(chunk_ids=chunk_ids)
 
 
