@@ -7,6 +7,12 @@ are added as later phases need them.
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
+# Load variables from a local .env file into the environment (if present).
+# Real environment variables set by the OS/platform always take precedence.
+load_dotenv()
+
 
 @dataclass(frozen=True)
 class Settings:
