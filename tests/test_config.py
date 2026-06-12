@@ -16,3 +16,16 @@ def test_debug_api_key_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None
 def test_database_url_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/db")
     assert get_settings().database_url == "postgresql://u:p@localhost:5432/db"
+
+
+def test_provider_defaults_to_fake(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("RAG_PROVIDER", raising=False)
+    assert get_settings().provider == "fake"
+
+
+def test_provider_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAG_PROVIDER", "bedrock")
+    settings = get_settings()
+    assert settings.provider == "bedrock"
+    assert settings.bedrock_llm_model_id == "us.anthropic.claude-sonnet-4-6"
+    assert settings.bedrock_embed_model_id == "amazon.titan-embed-text-v2:0"

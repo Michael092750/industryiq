@@ -35,6 +35,7 @@ def test_health() -> None:
 def test_get_pipeline_uses_in_memory_without_database_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("RAG_PROVIDER", "fake")
     monkeypatch.delenv("DATABASE_URL", raising=False)
     get_pipeline.cache_clear()
     assert isinstance(get_pipeline(), RagPipeline)
@@ -51,11 +52,38 @@ def test_get_pipeline_uses_pgvector_when_database_url_set(
             recorded["dsn"] = dsn
             recorded["dim"] = dim
 
+    monkeypatch.setenv("RAG_PROVIDER", "fake")
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@host/db")
     monkeypatch.setattr("ragproject.api.deps.PgVectorStore", FakePg)
     get_pipeline.cache_clear()
     assert isinstance(get_pipeline(), RagPipeline)
     assert recorded["dsn"] == "postgresql://u:p@host/db"
+    get_pipeline.cache_clear()
+
+
+def test_get_pipeline_uses_bedrock_when_provider_is_bedrock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Stub the Bedrock classes so no AWS clients are constructed.
+    class FakeBedrockEmbedder:
+        def __init__(self, model_id: str, region: str) -> None: ...
+
+        @property
+        def dim(self) -> int:
+            return 1024
+
+    class FakeBedrockLLM:
+        def __init__(self, model_id: str, region: str) -> None: ...
+
+        def generate(self, prompt: str) -> str:
+            return "real-ish"
+
+    monkeypatch.setenv("RAG_PROVIDER", "bedrock")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr("ragproject.core.bedrock.BedrockEmbedder", FakeBedrockEmbedder)
+    monkeypatch.setattr("ragproject.core.bedrock.BedrockLLM", FakeBedrockLLM)
+    get_pipeline.cache_clear()
+    assert isinstance(get_pipeline(), RagPipeline)
     get_pipeline.cache_clear()
 
 

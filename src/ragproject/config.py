@@ -26,10 +26,20 @@ class Settings:
     # vector store (data does not survive restarts).
     database_url: str | None = None
 
+    # AI provider: "fake" (offline, default) or "bedrock" (real Amazon Bedrock).
+    provider: str = "fake"
+    aws_region: str = "us-east-1"
+    bedrock_llm_model_id: str = "us.anthropic.claude-sonnet-4-6"
+    bedrock_embed_model_id: str = "amazon.titan-embed-text-v2:0"
+
 
 def get_settings() -> Settings:
     """Build settings from the current environment (read fresh each call)."""
     return Settings(
         debug_api_key=os.getenv("DEBUG_API_KEY"),
         database_url=os.getenv("DATABASE_URL"),
+        provider=os.getenv("RAG_PROVIDER", "fake"),
+        aws_region=os.getenv("AWS_REGION", "us-east-1"),
+        bedrock_llm_model_id=os.getenv("BEDROCK_LLM_MODEL_ID", "us.anthropic.claude-sonnet-4-6"),
+        bedrock_embed_model_id=os.getenv("BEDROCK_EMBED_MODEL_ID", "amazon.titan-embed-text-v2:0"),
     )

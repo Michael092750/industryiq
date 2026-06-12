@@ -16,6 +16,8 @@ dependencies = [
     "python-dotenv>=1.0",
     "psycopg[binary]>=3.1",
     "pgvector>=0.3",
+    "anthropic[bedrock]>=0.40",
+    "boto3>=1.34",
 ]
 
 [project.optional-dependencies]
@@ -35,7 +37,7 @@ files = ["src"]
 
 [[tool.mypy.overrides]]
 # These ship no type stubs; don't fail on their untyped imports.
-module = ["docx.*", "pgvector.*"]
+module = ["docx.*", "pgvector.*", "boto3.*", "botocore.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -49,6 +51,9 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-# pgvectorstore needs a real database; it's covered by integration tests, not
-# the default (DB-free) unit run, so exclude it from unit coverage.
-omit = ["src/ragproject/core/pgvectorstore.py"]
+# These need real external services (DB / AWS Bedrock); they're covered by
+# integration tests, not the default unit run, so exclude them from unit coverage.
+omit = [
+    "src/ragproject/core/pgvectorstore.py",
+    "src/ragproject/core/bedrock.py",
+]
