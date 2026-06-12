@@ -10,4 +10,4 @@ repos:
     hooks:
       - id: mypy
         files: ^src/
-        additional_dependencies: ["fastapi>=0.115", "pypdf>=5.0", "python-docx>=1.1", "python-dotenv>=1.0"]
+        additional_dependencies: ["fastapi>=0.115", "pypdf>=5.0", "python-docx>=1.1", "python-dotenv>=1.0", "psycopg>=3.1"]

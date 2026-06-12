@@ -22,7 +22,14 @@ class Settings:
     # disabled entirely (they respond 404). Set DEBUG_API_KEY to enable them.
     debug_api_key: str | None = None
 
+    # Postgres connection string. When None, the app falls back to the in-memory
+    # vector store (data does not survive restarts).
+    database_url: str | None = None
+
 
 def get_settings() -> Settings:
     """Build settings from the current environment (read fresh each call)."""
-    return Settings(debug_api_key=os.getenv("DEBUG_API_KEY"))
+    return Settings(
+        debug_api_key=os.getenv("DEBUG_API_KEY"),
+        database_url=os.getenv("DATABASE_URL"),
+    )

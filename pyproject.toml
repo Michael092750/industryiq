@@ -14,6 +14,8 @@ dependencies = [
     "pypdf>=5.0",
     "python-docx>=1.1",
     "python-dotenv>=1.0",
+    "psycopg[binary]>=3.1",
+    "pgvector>=0.3",
 ]
 
 [project.optional-dependencies]
@@ -32,15 +34,21 @@ strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-# python-docx ships no type stubs; don't fail on its untyped imports.
-module = ["docx.*"]
+# These ship no type stubs; don't fail on their untyped imports.
+module = ["docx.*", "pgvector.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --cov=ragproject --cov-report=term-missing"
+# Default run = fast unit tests only. Run DB-backed tests with: pytest -m integration
+addopts = "-q --cov=ragproject --cov-report=term-missing -m 'not integration'"
 markers = ["integration: tests that need real services (deselect with -m 'not integration')"]
 filterwarnings = [
     # Third-party deprecation from Starlette's TestClient; not our code.
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
 ]
+
+[tool.coverage.run]
+# pgvectorstore needs a real database; it's covered by integration tests, not
+# the default (DB-free) unit run, so exclude it from unit coverage.
+omit = ["src/ragproject/core/pgvectorstore.py"]
