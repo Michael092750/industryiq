@@ -1,0 +1,14 @@
+# Keep the build context small and never bake secrets/local junk into the image.
+.git/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/
+.env
+*.md
+.github/

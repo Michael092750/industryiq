@@ -22,5 +22,20 @@ services:
       timeout: 5s
       retries: 10
 
+  app:
+    # Build our own image from the Dockerfile in this directory.
+    build: .
+    container_name: ragproject_app
+    environment:
+      # Inside the compose network, the DB host is the service name "db" (not localhost).
+      DATABASE_URL: postgresql://rag:ragpass@db:5432/ragproject
+      DEBUG_API_KEY: ${DEBUG_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      # Wait until the database reports healthy before starting the app.
+      db:
+        condition: service_healthy
+
 volumes:
   pg_data:
