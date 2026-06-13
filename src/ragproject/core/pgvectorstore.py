@@ -25,8 +25,12 @@ class PgVectorStore:
         self._dsn = dsn
         self._dim = dim
         self._table = table
-        with self._connect() as conn:
+        # Create the extension on a plain connection FIRST -- register_vector()
+        # (used by _connect) needs the vector type to already exist.
+        with psycopg.connect(dsn) as conn:
             conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            conn.commit()
+        with self._connect() as conn:
             conn.execute(
                 f"CREATE TABLE IF NOT EXISTS {table} ("
                 f"id TEXT PRIMARY KEY, embedding vector({dim}), metadata JSONB)"
