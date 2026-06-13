@@ -10,11 +10,13 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from ragproject.api.deps import get_pipeline
 from ragproject.api.security import require_debug_key
+from ragproject.config import get_settings
 from ragproject.core.loaders import SUPPORTED_EXTENSIONS, load
 from ragproject.core.pipeline import RagPipeline
 
@@ -57,6 +59,14 @@ class ChunksResponse(BaseModel):
 
 
 app = FastAPI(title="ragproject")
+
+# Allow the browser frontend (a different origin) to call the API.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(get_settings().cors_origins),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

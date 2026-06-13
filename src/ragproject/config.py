@@ -32,9 +32,14 @@ class Settings:
     bedrock_llm_model_id: str = "us.anthropic.claude-sonnet-4-6"
     bedrock_embed_model_id: str = "amazon.titan-embed-text-v2:0"
 
+    # Browser origins allowed to call the API (CORS). The Vite dev server default.
+    cors_origins: tuple[str, ...] = ("http://localhost:5173",)
+
 
 def get_settings() -> Settings:
     """Build settings from the current environment (read fresh each call)."""
+    cors = os.getenv("CORS_ORIGINS")
+    cors_origins = tuple(o.strip() for o in cors.split(",")) if cors else ("http://localhost:5173",)
     return Settings(
         debug_api_key=os.getenv("DEBUG_API_KEY"),
         database_url=os.getenv("DATABASE_URL"),
@@ -42,4 +47,5 @@ def get_settings() -> Settings:
         aws_region=os.getenv("AWS_REGION", "us-east-1"),
         bedrock_llm_model_id=os.getenv("BEDROCK_LLM_MODEL_ID", "us.anthropic.claude-sonnet-4-6"),
         bedrock_embed_model_id=os.getenv("BEDROCK_EMBED_MODEL_ID", "amazon.titan-embed-text-v2:0"),
+        cors_origins=cors_origins,
     )

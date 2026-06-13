@@ -32,6 +32,17 @@ def test_health() -> None:
     assert TestClient(app).get("/health").json() == {"status": "ok"}
 
 
+def test_cors_allows_frontend_origin() -> None:
+    response = TestClient(app).options(
+        "/query",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+
 def test_get_pipeline_uses_in_memory_without_database_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

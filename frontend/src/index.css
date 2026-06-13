@@ -1,0 +1,13 @@
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #1f2430;
+  background: #f5f6f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}

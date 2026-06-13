@@ -29,3 +29,13 @@ def test_provider_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.provider == "bedrock"
     assert settings.bedrock_llm_model_id == "us.anthropic.claude-sonnet-4-6"
     assert settings.bedrock_embed_model_id == "amazon.titan-embed-text-v2:0"
+
+
+def test_cors_origins_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+    assert get_settings().cors_origins == ("http://localhost:5173",)
+
+
+def test_cors_origins_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CORS_ORIGINS", "http://a.com, http://b.com")
+    assert get_settings().cors_origins == ("http://a.com", "http://b.com")
