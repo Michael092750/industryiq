@@ -69,6 +69,24 @@ cdk deploy -c my_ip=$myip --require-approval never
 
 Note the **outputs** it prints: `PublicIp`, `InstanceId`, and `GetSshKeyCommand`.
 
+> **Always pass `-c my_ip=$myip`.** It locks SSH (port 22) to your IP. If you run
+> a bare `cdk deploy`, `my_ip` defaults to `0.0.0.0` and SSH is locked to nobody
+> (`0.0.0.0/32`) — you'll get `Connection timed out` in Step 4/5.
+
+### Fix: SSH locked out (or your IP changed)
+
+If SSH times out, open port 22 to your current IP on the instance's security group:
+
+```powershell
+$myip = (Invoke-WebRequest https://checkip.amazonaws.com -UseBasicParsing).Content.Trim()
+$id  = aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[0].Instances[0].InstanceId" --output text
+$sg  = aws ec2 describe-instances --instance-ids $id --query "Reservations[0].Instances[0].SecurityGroups[0].GroupId" --output text
+aws ec2 authorize-security-group-ingress --group-id $sg --protocol tcp --port 22 --cidr "$myip/32"
+```
+
+This is a manual quick-fix; the proper fix is to redeploy with `-c my_ip=$myip`
+(CDK reverts manual security-group edits on the next deploy).
+
 ---
 
 ## Step 3 — Fetch the SSH key
@@ -130,13 +148,26 @@ To use a **fixed** key (so it's the same every deploy), set it first:
 `export DEBUG_API_KEY=my-fixed-key-123`. Otherwise a random one is generated
 and printed by the `echo` above.
 
-### Finding the debug key for a running deployment
+### Retrieving the debug key from a running deployment
 
-The server's `.env` is the source of truth — retrieve it anytime:
+The server's `.env` is the source of truth. Retrieve it anytime in three steps:
+
+```powershell
+# 1. find the running instance's public IP
+aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" `
+  --query "Reservations[].Instances[].PublicIpAddress" --output text
+```
 
 ```bash
-ssh $SSHO $HOST "grep DEBUG_API_KEY ragproject/.env"
+# 2. ensure you have the SSH key (re-fetch from SSM if you deleted it; see Step 3)
+# 3. SSH in and read the key (substitute the IP):
+ssh -o StrictHostKeyChecking=no -i ~/.ssh/ragproject-cdk-key.pem \
+  ec2-user@<PUBLIC_IP> "grep DEBUG_API_KEY ragproject/.env"
 ```
+
+Prints `DEBUG_API_KEY=...`. If SSH times out, you're locked out — see
+"Fix: SSH locked out" under Step 2. If there is **no** `.env`, the app wasn't
+deployed yet (you ran only `cdk deploy`, not Step 5).
 
 ---
 
