@@ -30,6 +30,9 @@ services:
       # Inside the compose network, the DB host is the service name "db" (not localhost).
       DATABASE_URL: postgresql://rag:ragpass@db:5432/ragproject
       DEBUG_API_KEY: ${DEBUG_API_KEY:-}
+      # Default to free offline fakes; the server sets RAG_PROVIDER=bedrock in its .env.
+      RAG_PROVIDER: ${RAG_PROVIDER:-fake}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
     ports:
       - "8000:8000"
     depends_on:
