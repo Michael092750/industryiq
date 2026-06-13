@@ -61,9 +61,11 @@ class ChunksResponse(BaseModel):
 app = FastAPI(title="ragproject")
 
 # Allow the browser frontend (a different origin) to call the API.
+# Explicit origins from config, plus any localhost port for local dev.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(get_settings().cors_origins),
+    allow_origin_regex=r"http://localhost:\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )

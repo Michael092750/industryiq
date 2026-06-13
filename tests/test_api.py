@@ -43,6 +43,18 @@ def test_cors_allows_frontend_origin() -> None:
     assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
 
 
+def test_cors_allows_any_localhost_port() -> None:
+    # Vite may pick a different port (5174, ...); the regex must allow it.
+    response = TestClient(app).options(
+        "/query",
+        headers={
+            "Origin": "http://localhost:5174",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:5174"
+
+
 def test_get_pipeline_uses_in_memory_without_database_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
