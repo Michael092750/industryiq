@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from ragproject.api.chat_routes import router as chat_router
 from ragproject.api.deps import get_pipeline
 from ragproject.api.security import require_debug_key
 from ragproject.config import get_settings
@@ -188,3 +189,4 @@ def query(request: QueryRequest, pipeline: Pipeline) -> QueryResponse:
 
 
 app.include_router(debug_router)
+app.include_router(chat_router)

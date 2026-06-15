@@ -56,4 +56,5 @@ filterwarnings = [
 omit = [
     "src/ragproject/core/pgvectorstore.py",
     "src/ragproject/core/bedrock.py",
+    "src/ragproject/core/chat/store_pg.py",
 ]

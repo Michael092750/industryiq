@@ -8,6 +8,7 @@ replacements selected by configuration in ``api.deps``.
 """
 
 import json
+from collections.abc import Iterator
 
 import boto3
 from anthropic import AnthropicBedrock
@@ -63,3 +64,11 @@ class BedrockLLM:
             messages=[{"role": "user", "content": prompt}],
         )
         return "".join(block.text for block in message.content if block.type == "text")
+
+    def stream(self, prompt: str) -> Iterator[str]:
+        with self._client.messages.stream(
+            model=self._model_id,
+            max_tokens=self._max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+        ) as stream:
+            yield from stream.text_stream

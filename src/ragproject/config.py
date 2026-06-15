@@ -35,6 +35,18 @@ class Settings:
     # Browser origins allowed to call the API (CORS). The Vite dev server default.
     cors_origins: tuple[str, ...] = ("http://localhost:5173",)
 
+    # Multi-round chat: how many recent turns to feed into the prompt, and how
+    # many chunks to retrieve per turn.
+    chat_history_turns: int = 6
+    chat_retrieval_k: int = 5
+    # Retrieval routing: "always" (always search) or "llm" (let the model decide).
+    chat_router: str = "always"
+    # What the knowledge base holds; injected into the LLM router prompt so it can
+    # judge whether a question is in scope instead of guessing blind.
+    chat_kb_description: str = "industry analysis reports"
+    # Drop retrieved context whose top score is below this (0.0 = keep all).
+    chat_relevance_threshold: float = 0.0
+
 
 def get_settings() -> Settings:
     """Build settings from the current environment (read fresh each call)."""
@@ -48,4 +60,9 @@ def get_settings() -> Settings:
         bedrock_llm_model_id=os.getenv("BEDROCK_LLM_MODEL_ID", "us.anthropic.claude-sonnet-4-6"),
         bedrock_embed_model_id=os.getenv("BEDROCK_EMBED_MODEL_ID", "amazon.titan-embed-text-v2:0"),
         cors_origins=cors_origins,
+        chat_history_turns=int(os.getenv("CHAT_HISTORY_TURNS", "6")),
+        chat_retrieval_k=int(os.getenv("CHAT_RETRIEVAL_K", "5")),
+        chat_router=os.getenv("CHAT_ROUTER", "always"),
+        chat_kb_description=os.getenv("CHAT_KB_DESCRIPTION", "industry analysis reports"),
+        chat_relevance_threshold=float(os.getenv("CHAT_RELEVANCE_THRESHOLD", "0.0")),
     )

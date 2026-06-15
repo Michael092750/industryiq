@@ -9,6 +9,8 @@ Two pieces, deliberately separated for testability:
   later and only needs to satisfy this interface.
 """
 
+import re
+from collections.abc import Iterator
 from typing import Protocol, runtime_checkable
 
 from ragproject.core.vectorstore import Hit
@@ -21,6 +23,25 @@ class LLM(Protocol):
     def generate(self, prompt: str) -> str:
         """Return the model's completion for ``prompt``."""
         ...
+
+
+@runtime_checkable
+class StreamingLLM(Protocol):
+    """Anything that can stream a completion as ordered text chunks."""
+
+    def stream(self, prompt: str) -> Iterator[str]:
+        """Yield the model's completion for ``prompt``, chunk by chunk."""
+        ...
+
+
+@runtime_checkable
+class GenerativeLLM(LLM, StreamingLLM, Protocol):
+    """An LLM that can both return a full completion and stream it.
+
+    The provider concretes implement both; consumers depend on the narrowest
+    port they need -- ``LLM`` for the rewriter/pipeline, ``StreamingLLM`` for the
+    chat answer (Interface Segregation).
+    """
 
 
 class FakeLLM:
@@ -37,6 +58,12 @@ class FakeLLM:
     def generate(self, prompt: str) -> str:
         self.last_prompt = prompt
         return self._response
+
+    def stream(self, prompt: str) -> Iterator[str]:
+        # Emit word-sized chunks so tests exercise multi-chunk streaming; the
+        # pieces concatenate back to exactly ``response``.
+        self.last_prompt = prompt
+        yield from re.findall(r"\S+\s*", self._response) or [self._response]
 
 
 def build_prompt(query: str, hits: list[Hit]) -> str:
