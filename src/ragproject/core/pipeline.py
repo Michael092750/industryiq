@@ -61,6 +61,13 @@ class RagPipeline:
         answer = generate_answer(question, hits, self._llm)
         return QueryResult(answer=answer, hits=hits)
 
+    def retrieve(self, question: str, k: int = 5) -> list[Hit]:
+        """Return the chunks retrieval surfaces for ``question`` -- no generation.
+
+        For inspecting/tuning retrieval (scores, ranking) without an LLM call.
+        """
+        return self._retriever.retrieve(question, k=k)
+
     def list_chunks(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
         """Return up to ``limit`` indexed ``(id, metadata)`` pairs, for inspection."""
         return self._retriever.all_chunks(limit=limit)

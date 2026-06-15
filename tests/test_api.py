@@ -196,7 +196,39 @@ def test_debug_ui_page_is_served(client: TestClient) -> None:
     response = client.get("/debug-ui")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "Indexed chunks" in response.text
+    assert "retrieval debug" in response.text
+    assert "Retrieve" in response.text  # the query box / button
+
+
+def test_debug_retrieve_ranks_chunks_for_query(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DEBUG_API_KEY", "s3cret")
+    client.post("/ingest", json={"text": "the sky is blue", "source": "facts.txt"})
+    response = client.get(
+        "/debug/retrieve", params={"q": "the sky is blue"}, headers={"X-Debug-Key": "s3cret"}
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["query"] == "the sky is blue"
+    assert body["count"] >= 1
+    top = body["chunks"][0]
+    assert top["text"] == "the sky is blue"
+    assert top["source"] == "facts.txt"
+    assert isinstance(top["score"], int | float)
+
+
+def test_debug_retrieve_requires_key(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEBUG_API_KEY", "s3cret")
+    assert client.get("/debug/retrieve", params={"q": "x"}).status_code == 401
+
+
+def test_debug_retrieve_empty_query_is_422(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DEBUG_API_KEY", "s3cret")
+    response = client.get("/debug/retrieve", params={"q": ""}, headers={"X-Debug-Key": "s3cret"})
+    assert response.status_code == 422
 
 
 def test_query_missing_question_is_422(client: TestClient) -> None:

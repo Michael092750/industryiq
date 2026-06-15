@@ -62,3 +62,12 @@ def test_query_on_empty_store_still_returns_answer() -> None:
     result = pipeline.query("anything")
     assert result.answer == "I don't know."
     assert result.hits == []
+
+
+def test_retrieve_returns_hits_without_generating() -> None:
+    llm = FakeLLM()
+    pipeline = _pipeline(llm)
+    pipeline.ingest_text("alpha beta gamma")
+    hits = pipeline.retrieve("alpha beta gamma", k=1)
+    assert "alpha beta gamma" in hits[0].metadata["text"]
+    assert llm.last_prompt is None  # retrieval only -- no generation happened
