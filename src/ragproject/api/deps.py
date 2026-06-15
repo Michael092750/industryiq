@@ -17,14 +17,16 @@ from functools import lru_cache
 from ragproject.config import Settings, get_settings
 from ragproject.core.chat import (
     AlwaysRetrieveRouter,
+    ChatPolicy,
     ChatService,
     ConversationStore,
     InMemoryConversationStore,
     LlmQueryRewriter,
     LlmRouter,
     RetrievalRouter,
+    ThresholdFilter,
 )
-from ragproject.core.chat.store_pg import PgConversationStore
+from ragproject.core.chat.adapters.store_pg import PgConversationStore
 from ragproject.core.embeddings import Embedder, FakeEmbedder
 from ragproject.core.generation import FakeLLM, GenerativeLLM
 from ragproject.core.pgvectorstore import PgVectorStore
@@ -92,7 +94,9 @@ def get_chat_service() -> ChatService:
         rewriter=LlmQueryRewriter(llm),
         llm=llm,
         store=_build_conversation_store(settings),
-        k=settings.chat_retrieval_k,
-        history_limit=settings.chat_history_turns,
-        relevance_threshold=settings.chat_relevance_threshold,
+        relevance_filter=ThresholdFilter(settings.chat_relevance_threshold),
+        policy=ChatPolicy(
+            k=settings.chat_retrieval_k,
+            history_limit=settings.chat_history_turns,
+        ),
     )

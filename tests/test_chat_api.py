@@ -10,6 +10,7 @@ from ragproject.core.chat import (
     ChatService,
     InMemoryConversationStore,
     NoOpQueryRewriter,
+    ThresholdFilter,
 )
 from ragproject.core.embeddings import FakeEmbedder
 from ragproject.core.generation import FakeLLM
@@ -28,6 +29,7 @@ def client() -> Iterator[TestClient]:
         rewriter=NoOpQueryRewriter(),
         llm=FakeLLM(response="Grounded answer [1]."),
         store=InMemoryConversationStore(),
+        relevance_filter=ThresholdFilter(),
     )
     app.dependency_overrides[get_chat_service] = lambda: service
     yield TestClient(app)
@@ -94,7 +96,7 @@ def test_stream_message_returns_sse_events(client: TestClient) -> None:
     assert "text/event-stream" in response.headers["content-type"]
     body = response.text
     assert "event: status" in body
-    assert "Checking local knowledge base" in body  # status label, on the retrieve path
+    assert '"phase": "retrieving"' in body  # semantic phase; UI copy is the frontend's job
     assert "event: sources" in body
     assert "event: token" in body
     assert "event: done" in body

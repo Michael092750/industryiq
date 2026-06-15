@@ -4,13 +4,17 @@ Public surface:
 
 * :class:`ChatService` -- orchestrates a single conversational turn.
 * Ports (:mod:`ragproject.core.chat.ports`) -- the abstractions it depends on.
-* Adapters -- :class:`InMemoryConversationStore`, :class:`LlmQueryRewriter`,
-  :class:`NoOpQueryRewriter`. The Postgres store lives in
-  :mod:`ragproject.core.chat.store_pg` and is imported only where it is wired,
-  to keep this package import light.
+* Adapters (:mod:`ragproject.core.chat.adapters`) -- the concrete
+  implementations of the ports. The Postgres store is imported only where it is
+  wired (:mod:`ragproject.api.deps`), to keep this package import light.
 """
 
+from ragproject.core.chat.adapters.filtering import ThresholdFilter
+from ragproject.core.chat.adapters.rewriting import LlmQueryRewriter, NoOpQueryRewriter
+from ragproject.core.chat.adapters.routing import AlwaysRetrieveRouter, LlmRouter
+from ragproject.core.chat.adapters.store_memory import InMemoryConversationStore
 from ragproject.core.chat.models import (
+    ChatPolicy,
     ChatResult,
     Conversation,
     RouteDecision,
@@ -24,16 +28,15 @@ from ragproject.core.chat.models import (
 from ragproject.core.chat.ports import (
     ConversationStore,
     QueryRewriter,
+    RelevanceFilter,
     RetrievalPort,
     RetrievalRouter,
 )
-from ragproject.core.chat.rewriting import LlmQueryRewriter, NoOpQueryRewriter
-from ragproject.core.chat.routing import AlwaysRetrieveRouter, LlmRouter
 from ragproject.core.chat.service import ChatService, ConversationNotFound
-from ragproject.core.chat.store_memory import InMemoryConversationStore
 
 __all__ = [
     "AlwaysRetrieveRouter",
+    "ChatPolicy",
     "ChatResult",
     "ChatService",
     "Conversation",
@@ -44,9 +47,11 @@ __all__ = [
     "LlmRouter",
     "NoOpQueryRewriter",
     "QueryRewriter",
+    "RelevanceFilter",
     "RetrievalPort",
     "RetrievalRouter",
     "RouteDecision",
+    "ThresholdFilter",
     "StreamEnd",
     "StreamEvent",
     "StreamStart",

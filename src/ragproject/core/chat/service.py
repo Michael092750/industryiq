@@ -17,6 +17,7 @@ import time
 from collections.abc import Callable, Iterator
 
 from ragproject.core.chat.models import (
+    ChatPolicy,
     ChatResult,
     Conversation,
     StreamEnd,
@@ -29,6 +30,7 @@ from ragproject.core.chat.models import (
 from ragproject.core.chat.ports import (
     ConversationStore,
     QueryRewriter,
+    RelevanceFilter,
     RetrievalPort,
     RetrievalRouter,
 )
@@ -42,6 +44,10 @@ class ConversationNotFound(Exception):
     """Raised when an operation targets a conversation that does not exist."""
 
 
+# ChatPolicy is immutable, so one shared default instance is safe to reuse.
+_DEFAULT_POLICY = ChatPolicy()
+
+
 class ChatService:
     """Coordinate routing, rewriting, retrieval, generation, and persistence."""
 
@@ -52,10 +58,9 @@ class ChatService:
         rewriter: QueryRewriter,
         llm: StreamingLLM,
         store: ConversationStore,
+        relevance_filter: RelevanceFilter,
         *,
-        k: int = 5,
-        history_limit: int = 6,
-        relevance_threshold: float = 0.0,
+        policy: ChatPolicy = _DEFAULT_POLICY,
         clock: Callable[[], float] = time.perf_counter,
     ) -> None:
         self._retriever = retriever
@@ -63,9 +68,8 @@ class ChatService:
         self._rewriter = rewriter
         self._llm = llm
         self._store = store
-        self._k = k
-        self._history_limit = history_limit
-        self._relevance_threshold = relevance_threshold
+        self._relevance_filter = relevance_filter
+        self._policy = policy
         self._clock = clock
 
     def start(self, title: str) -> Conversation:
@@ -112,7 +116,7 @@ class ChatService:
             with timer.measure("load"):
                 if self._store.get(conversation_id) is None:
                     raise ConversationNotFound(conversation_id)
-                history = self._store.history(conversation_id, limit=self._history_limit)
+                history = self._store.history(conversation_id, limit=self._policy.history_limit)
 
             with timer.measure("route"):
                 decision = self._router.route(history, question)
@@ -120,15 +124,13 @@ class ChatService:
             standalone = question
             hits: list[Hit] = []
             if decision.should_retrieve:
-                yield StreamStatus(phase="retrieving", label="Checking local knowledge base...")
+                yield StreamStatus(phase="retrieving")
                 with timer.measure("rewrite"):
                     standalone = self._rewriter.condense(history, question)
                 with timer.measure("retrieve"):
-                    retrieved = self._retriever.retrieve(standalone, k=self._k)
-                # Relevance backstop: keep context only if the top hit clears the bar;
-                # otherwise we searched but found nothing useful -> answer without it.
-                if retrieved and retrieved[0].score >= self._relevance_threshold:
-                    hits = retrieved
+                    retrieved = self._retriever.retrieve(standalone, k=self._policy.k)
+                # Coverage backstop: drop hits not relevant enough to ground on.
+                hits = self._relevance_filter.keep(retrieved)
 
             yield StreamStart(standalone_question=standalone, hits=hits)
             yield StreamStatus(phase="generating")

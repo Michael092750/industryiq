@@ -7,7 +7,11 @@ coupled to concrete providers, this file could not exist.
 
 import pytest
 
+from ragproject.core.chat.adapters.filtering import ThresholdFilter
+from ragproject.core.chat.adapters.routing import AlwaysRetrieveRouter
+from ragproject.core.chat.adapters.store_memory import InMemoryConversationStore
 from ragproject.core.chat.models import (
+    ChatPolicy,
     RouteDecision,
     StreamEnd,
     StreamStart,
@@ -18,12 +22,11 @@ from ragproject.core.chat.models import (
 from ragproject.core.chat.ports import (
     ConversationStore,
     QueryRewriter,
+    RelevanceFilter,
     RetrievalPort,
     RetrievalRouter,
 )
-from ragproject.core.chat.routing import AlwaysRetrieveRouter
 from ragproject.core.chat.service import ChatService, ConversationNotFound
-from ragproject.core.chat.store_memory import InMemoryConversationStore
 from ragproject.core.embeddings import FakeEmbedder
 from ragproject.core.generation import FakeLLM, StreamingLLM
 from ragproject.core.retrieval import Retriever
@@ -72,6 +75,7 @@ def _service(
     rewriter: QueryRewriter | None = None,
     llm: StreamingLLM | None = None,
     store: ConversationStore | None = None,
+    relevance_filter: RelevanceFilter | None = None,
 ) -> ChatService:
     return ChatService(
         retriever=retriever or RecordingRetriever(),
@@ -79,6 +83,7 @@ def _service(
         rewriter=rewriter or RecordingRewriter(),
         llm=llm or FakeLLM(response="ANSWER"),
         store=store or InMemoryConversationStore(),
+        relevance_filter=relevance_filter or ThresholdFilter(),
     )
 
 
@@ -122,6 +127,7 @@ def test_reply_grounds_the_prompt_in_retrieved_context() -> None:
         rewriter=RecordingRewriter(rewritten="the sky is blue"),
         llm=llm,
         store=InMemoryConversationStore(),
+        relevance_filter=ThresholdFilter(),
     )
     convo = service.start("c")
     service.reply(convo.id, "the sky is blue")
@@ -143,6 +149,7 @@ def test_reply_reports_per_step_timings(fake_clock) -> None:
         rewriter=RecordingRewriter(),
         llm=FakeLLM(),
         store=store,
+        relevance_filter=ThresholdFilter(),
         clock=fake_clock(step=0.001),
     )
     convo = service.start("c")
@@ -171,33 +178,19 @@ def test_router_decline_skips_retrieval_and_rewrite() -> None:
     assert "retrieving" not in phases
 
 
-def test_relevance_backstop_drops_hits_below_threshold() -> None:
+def test_relevance_filter_drops_hits_below_threshold() -> None:
     retriever = RecordingRetriever(hits=[Hit("c1", 0.2, {"text": "x"})])
-    service = ChatService(
-        retriever=retriever,
-        router=AlwaysRetrieveRouter(),
-        rewriter=RecordingRewriter(),
-        llm=FakeLLM(),
-        store=InMemoryConversationStore(),
-        relevance_threshold=0.5,
-    )
+    service = _service(retriever=retriever, relevance_filter=ThresholdFilter(threshold=0.5))
     convo = service.start("c")
     events = list(service.reply_stream(convo.id, "q"))
     assert retriever.queries == ["STANDALONE"]  # it DID search
     start = next(event for event in events if isinstance(event, StreamStart))
-    assert start.hits == []  # but the low-score hit was dropped
+    assert start.hits == []  # but the low-score hit was filtered out
 
 
-def test_relevance_backstop_keeps_hits_at_or_above_threshold() -> None:
+def test_relevance_filter_keeps_hits_at_or_above_threshold() -> None:
     retriever = RecordingRetriever(hits=[Hit("c1", 0.9, {"text": "x"})])
-    service = ChatService(
-        retriever=retriever,
-        router=AlwaysRetrieveRouter(),
-        rewriter=RecordingRewriter(),
-        llm=FakeLLM(),
-        store=InMemoryConversationStore(),
-        relevance_threshold=0.5,
-    )
+    service = _service(retriever=retriever, relevance_filter=ThresholdFilter(threshold=0.5))
     convo = service.start("c")
     events = list(service.reply_stream(convo.id, "q"))
     start = next(event for event in events if isinstance(event, StreamStart))
@@ -210,12 +203,6 @@ def test_reply_stream_emits_status_phases() -> None:
     events = list(service.reply_stream(convo.id, "q"))
     phases = [event.phase for event in events if isinstance(event, StreamStatus)]
     assert phases == ["thinking", "retrieving", "generating"]
-    label = next(
-        event.label
-        for event in events
-        if isinstance(event, StreamStatus) and event.phase == "retrieving"
-    )
-    assert "knowledge base" in label
 
 
 def test_reply_stream_emits_start_then_tokens_then_end(fake_clock) -> None:
@@ -226,6 +213,7 @@ def test_reply_stream_emits_start_then_tokens_then_end(fake_clock) -> None:
         rewriter=RecordingRewriter(),
         llm=FakeLLM(response="hello world"),
         store=store,
+        relevance_filter=ThresholdFilter(),
         clock=fake_clock(step=0.001),
     )
     convo = service.start("c")
@@ -263,7 +251,8 @@ def test_history_limit_caps_turns_sent_to_the_rewriter() -> None:
         rewriter=rewriter,
         llm=FakeLLM(),
         store=store,
-        history_limit=2,
+        relevance_filter=ThresholdFilter(),
+        policy=ChatPolicy(history_limit=2),
     )
     convo = service.start("c")
     for i in range(4):

@@ -41,6 +41,18 @@ class RouteDecision:
 
 
 @dataclass(frozen=True)
+class ChatPolicy:
+    """Tuning knobs for a chat turn, grouped so they don't crowd the constructor.
+
+    * ``k`` -- how many chunks to retrieve.
+    * ``history_limit`` -- how many recent turns to feed into the prompt.
+    """
+
+    k: int = 5
+    history_limit: int = 6
+
+
+@dataclass(frozen=True)
 class ChatResult:
     """The outcome of one :meth:`ChatService.reply` call.
 
@@ -57,14 +69,14 @@ class ChatResult:
 
 @dataclass(frozen=True)
 class StreamStatus:
-    """A phase indicator for the UI: 'thinking' | 'retrieving' | 'generating'.
+    """A phase marker for the UI: 'thinking' | 'retrieving' | 'generating'.
 
-    ``label`` is human-facing chrome (e.g. "Checking local knowledge base...");
-    it is canned UI text, never model output.
+    Carries only the semantic phase. The user-facing wording (and its
+    translation) is the frontend's concern, not the domain's -- so no display
+    text lives here.
     """
 
     phase: str
-    label: str = ""
 
 
 @dataclass(frozen=True)

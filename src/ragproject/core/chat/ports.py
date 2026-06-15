@@ -41,6 +41,18 @@ class RetrievalRouter(Protocol):
 
 
 @runtime_checkable
+class RelevanceFilter(Protocol):
+    """Decide which retrieved hits are relevant enough to ground the answer.
+
+    The post-retrieval coverage gate ("did we actually find anything useful?"),
+    symmetric with the pre-retrieval :class:`RetrievalRouter`. Implementations
+    decide how -- a score threshold, a reranker, a quorum rule.
+    """
+
+    def keep(self, hits: list[Hit]) -> list[Hit]: ...
+
+
+@runtime_checkable
 class QueryRewriter(Protocol):
     """Rewrite a follow-up question into a standalone one.
 

@@ -15,9 +15,9 @@ import psycopg
 import pytest
 
 from ragproject.config import get_settings
+from ragproject.core.chat.adapters.store_pg import PgConversationStore
 from ragproject.core.chat.models import Turn
 from ragproject.core.chat.ports import ConversationStore
-from ragproject.core.chat.store_pg import PgConversationStore
 
 pytestmark = pytest.mark.integration
 

@@ -1,5 +1,5 @@
+from ragproject.core.chat.adapters.routing import AlwaysRetrieveRouter, LlmRouter
 from ragproject.core.chat.models import Turn
-from ragproject.core.chat.routing import AlwaysRetrieveRouter, LlmRouter
 from ragproject.core.generation import FakeLLM
 
 KB = "industry analysis reports"

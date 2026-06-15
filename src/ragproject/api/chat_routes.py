@@ -112,7 +112,7 @@ def stream_message(
     def event_stream() -> Iterator[str]:
         for event in service.reply_stream(conversation_id, request.question):
             if isinstance(event, StreamStatus):
-                yield _sse("status", {"phase": event.phase, "label": event.label})
+                yield _sse("status", {"phase": event.phase})
             elif isinstance(event, StreamStart):
                 sources = [
                     Source(

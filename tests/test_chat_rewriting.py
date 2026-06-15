@@ -1,5 +1,5 @@
+from ragproject.core.chat.adapters.rewriting import LlmQueryRewriter, NoOpQueryRewriter
 from ragproject.core.chat.models import Turn
-from ragproject.core.chat.rewriting import LlmQueryRewriter, NoOpQueryRewriter
 from ragproject.core.generation import FakeLLM
 
 
