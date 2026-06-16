@@ -34,5 +34,19 @@ Endpoints:
 - `POST /query` — body `{"question": "...", "k": 5}` → `{"answer", "sources"}`
 
 > Note: the default wiring uses offline fakes (`FakeEmbedder`, `FakeLLM`), so
-> answers are placeholders until the real Bedrock/pgvector providers are wired
-> in. Retrieval and source attribution are fully functional.
+> answers are placeholders. Retrieval and source attribution are fully functional.
+
+## Real answers locally (no AWS)
+
+Set the provider to `anthropic` for real Claude answers plus a local CPU embedder:
+
+```powershell
+pip install -e ".[dev,local]"
+# in .env:
+#   RAG_PROVIDER=anthropic
+#   ANTHROPIC_API_KEY=sk-ant-...
+```
+
+This uses Claude via the Anthropic API and a local `fastembed` embedder — no AWS.
+On deploy, `RAG_PROVIDER=bedrock` (set by `compose.prod.yml`) switches to Amazon
+Bedrock automatically, authenticated by the instance IAM role.

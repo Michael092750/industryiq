@@ -31,11 +31,16 @@ class Settings:
     # vector store (data does not survive restarts).
     database_url: str | None = None
 
-    # AI provider: "fake" (offline, default) or "bedrock" (real Amazon Bedrock).
+    # AI provider: "fake" (offline default), "anthropic" (local: Anthropic API
+    # key + a local CPU embedder), or "bedrock" (real Amazon Bedrock on AWS).
     provider: str = "fake"
     aws_region: str = "us-east-1"
     bedrock_llm_model_id: str = "us.anthropic.claude-sonnet-4-6"
     bedrock_embed_model_id: str = "amazon.titan-embed-text-v2:0"
+    # Anthropic direct-API settings (used when provider == "anthropic"). The key
+    # is read from ANTHROPIC_API_KEY; when None the SDK cannot authenticate.
+    anthropic_api_key: str | None = None
+    anthropic_llm_model_id: str = "claude-sonnet-4-6"
 
     # Browser origins allowed to call the API (CORS). The Vite dev server default.
     cors_origins: tuple[str, ...] = ("http://localhost:5173",)
@@ -65,6 +70,8 @@ def get_settings() -> Settings:
         aws_region=os.getenv("AWS_REGION", "us-east-1"),
         bedrock_llm_model_id=os.getenv("BEDROCK_LLM_MODEL_ID", "us.anthropic.claude-sonnet-4-6"),
         bedrock_embed_model_id=os.getenv("BEDROCK_EMBED_MODEL_ID", "amazon.titan-embed-text-v2:0"),
+        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
+        anthropic_llm_model_id=os.getenv("ANTHROPIC_LLM_MODEL_ID", "claude-sonnet-4-6"),
         cors_origins=cors_origins,
         chat_history_turns=int(os.getenv("CHAT_HISTORY_TURNS", "6")),
         chat_retrieval_k=int(os.getenv("CHAT_RETRIEVAL_K", "5")),

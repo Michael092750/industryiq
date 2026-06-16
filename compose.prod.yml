@@ -1,0 +1,12 @@
+# Production overlay for AWS: real Bedrock via the instance's IAM role.
+# Layered on top of docker-compose.yml, so it only states what differs.
+#
+#   docker compose -f docker-compose.yml -f compose.prod.yml up -d --build
+#
+# This is the entire "switch to Bedrock on deploy": RAG_PROVIDER is committed
+# here rather than typed at deploy time. Credentials come from the EC2 role, so
+# no key is set on the box.
+services:
+  app:
+    environment:
+      RAG_PROVIDER: bedrock

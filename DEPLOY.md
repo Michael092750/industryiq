@@ -232,9 +232,14 @@ echo "DEBUG_API_KEY = $DKEY"          # <-- copy this; guards /debug/*
 git archive --format=tar.gz -o /tmp/app.tar.gz HEAD
 scp $SSHO /tmp/app.tar.gz $HOST:/home/ec2-user/
 ssh $SSHO $HOST "rm -rf ragproject && mkdir ragproject && tar xzf app.tar.gz -C ragproject && \
-  printf 'RAG_PROVIDER=bedrock\nAWS_REGION=us-east-1\nDEBUG_API_KEY=%s\n' '$DKEY' > ragproject/.env && \
-  cd ragproject && docker compose up -d --build"
+  printf 'AWS_REGION=us-east-1\nDEBUG_API_KEY=%s\n' '$DKEY' > ragproject/.env && \
+  cd ragproject && docker compose -f docker-compose.yml -f compose.prod.yml up -d --build"
 ```
+
+> The `-f docker-compose.yml -f compose.prod.yml` overlay sets `RAG_PROVIDER=bedrock`
+> (committed in `compose.prod.yml`), so you no longer write it into `.env` on each
+> deploy. Bedrock authenticates via the instance IAM role — no key on the box.
+> Locally you instead set `RAG_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` in `.env`.
 
 > Pin a fixed key with `export DEBUG_API_KEY=my-key` before running, so it's the
 > same every deploy.

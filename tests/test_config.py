@@ -39,3 +39,18 @@ def test_cors_origins_default(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_cors_origins_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CORS_ORIGINS", "http://a.com, http://b.com")
     assert get_settings().cors_origins == ("http://a.com", "http://b.com")
+
+
+def test_anthropic_api_key_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    assert get_settings().anthropic_api_key == "sk-ant-test"
+
+
+def test_anthropic_api_key_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert get_settings().anthropic_api_key is None
+
+
+def test_anthropic_llm_model_id_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_LLM_MODEL_ID", raising=False)
+    assert get_settings().anthropic_llm_model_id == "claude-sonnet-4-6"

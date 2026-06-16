@@ -37,10 +37,17 @@ from ragproject.core.vectorstore import InMemoryVectorStore, VectorStore
 
 
 def _build_ai_providers(settings: Settings) -> tuple[Embedder, GenerativeLLM]:
-    """Choose the embedder + LLM: real Bedrock, or offline fakes (default).
+    """Choose the embedder + LLM from ``RAG_PROVIDER``:
+
+    * ``bedrock``   -- real Bedrock (Titan embeddings + Claude), IAM-authed (AWS).
+    * ``anthropic`` -- local CPU embeddings (fastembed) + Claude via the Anthropic
+      API key. Real generation and retrieval locally, no AWS.
+    * anything else -- offline fakes (the default).
 
     The LLM is returned as a :class:`GenerativeLLM` (generate *and* stream); the
     pipeline and rewriter use the generate half, chat uses the streaming half.
+    Provider imports are deferred so each provider's heavy/optional dependencies
+    load only when that provider is selected.
     """
     if settings.provider == "bedrock":
         from ragproject.core.bedrock import BedrockEmbedder, BedrockLLM
@@ -52,6 +59,14 @@ def _build_ai_providers(settings: Settings) -> tuple[Embedder, GenerativeLLM]:
             model_id=settings.bedrock_llm_model_id, region=settings.aws_region
         )
         return embedder, llm
+    if settings.provider == "anthropic":
+        from ragproject.core.anthropic_llm import AnthropicLLM
+        from ragproject.core.local_embeddings import LocalEmbedder
+
+        return LocalEmbedder(), AnthropicLLM(
+            model_id=settings.anthropic_llm_model_id,
+            api_key=settings.anthropic_api_key,
+        )
     return FakeEmbedder(), FakeLLM()
 
 

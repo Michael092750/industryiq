@@ -113,6 +113,30 @@ def test_get_pipeline_uses_bedrock_when_provider_is_bedrock(
     get_pipeline.cache_clear()
 
 
+def test_get_pipeline_uses_anthropic_when_provider_is_anthropic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Stub the local provider classes so no model download / API client happens.
+    class FakeLocalEmbedder:
+        @property
+        def dim(self) -> int:
+            return 384
+
+    class FakeAnthropicLLM:
+        def __init__(self, model_id: str, api_key: str | None) -> None: ...
+
+        def generate(self, prompt: str) -> str:
+            return "local-ish"
+
+    monkeypatch.setenv("RAG_PROVIDER", "anthropic")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr("ragproject.core.anthropic_llm.AnthropicLLM", FakeAnthropicLLM)
+    monkeypatch.setattr("ragproject.core.local_embeddings.LocalEmbedder", FakeLocalEmbedder)
+    get_pipeline.cache_clear()
+    assert isinstance(get_pipeline(), RagPipeline)
+    get_pipeline.cache_clear()
+
+
 def test_admin_ingest_pdf(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
     pdf = FIXTURES / "sample.pdf"
