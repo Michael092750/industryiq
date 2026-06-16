@@ -22,6 +22,11 @@ class Settings:
     # disabled entirely (they respond 404). Set DEBUG_API_KEY to enable them.
     debug_api_key: str | None = None
 
+    # Secret required to access admin (ingestion) endpoints. When None, they are
+    # disabled (404). Set ADMIN_API_KEY to enable. Admins populate the shared
+    # knowledge base; end users never call these.
+    admin_api_key: str | None = None
+
     # Postgres connection string. When None, the app falls back to the in-memory
     # vector store (data does not survive restarts).
     database_url: str | None = None
@@ -54,6 +59,7 @@ def get_settings() -> Settings:
     cors_origins = tuple(o.strip() for o in cors.split(",")) if cors else ("http://localhost:5173",)
     return Settings(
         debug_api_key=os.getenv("DEBUG_API_KEY"),
+        admin_api_key=os.getenv("ADMIN_API_KEY"),
         database_url=os.getenv("DATABASE_URL"),
         provider=os.getenv("RAG_PROVIDER", "fake"),
         aws_region=os.getenv("AWS_REGION", "us-east-1"),

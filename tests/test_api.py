@@ -8,7 +8,6 @@ from ragproject.api.app import app
 from ragproject.api.deps import get_pipeline
 from ragproject.core.embeddings import FakeEmbedder
 from ragproject.core.generation import FakeLLM
-from ragproject.core.loaders import load_pdf
 from ragproject.core.pipeline import RagPipeline
 from ragproject.core.retrieval import Retriever
 from ragproject.core.vectorstore import InMemoryVectorStore
@@ -17,12 +16,16 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
-def client() -> Iterator[TestClient]:
-    # Inject a fresh, isolated pipeline for each test via dependency override.
-    pipeline = RagPipeline(
+def pipeline() -> RagPipeline:
+    return RagPipeline(
         Retriever(FakeEmbedder(dim=16), InMemoryVectorStore()),
         FakeLLM(response="Grounded answer [1]."),
     )
+
+
+@pytest.fixture
+def client(pipeline: RagPipeline) -> Iterator[TestClient]:
+    # Inject the test pipeline so routes and the test share one store.
     app.dependency_overrides[get_pipeline] = lambda: pipeline
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -34,7 +37,7 @@ def test_health() -> None:
 
 def test_cors_allows_frontend_origin() -> None:
     response = TestClient(app).options(
-        "/query",
+        "/conversations",
         headers={
             "Origin": "http://localhost:5173",
             "Access-Control-Request-Method": "POST",
@@ -46,7 +49,7 @@ def test_cors_allows_frontend_origin() -> None:
 def test_cors_allows_any_localhost_port() -> None:
     # Vite may pick a different port (5174, ...); the regex must allow it.
     response = TestClient(app).options(
-        "/query",
+        "/conversations",
         headers={
             "Origin": "http://localhost:5174",
             "Access-Control-Request-Method": "POST",
@@ -110,39 +113,25 @@ def test_get_pipeline_uses_bedrock_when_provider_is_bedrock(
     get_pipeline.cache_clear()
 
 
-def test_ingest_then_query(client: TestClient) -> None:
-    ingest = client.post("/ingest", json={"text": "cats are great and dogs are loyal"})
-    assert ingest.status_code == 200
-    assert len(ingest.json()["chunk_ids"]) == 1
-
-    response = client.post("/query", json={"question": "cats are great and dogs are loyal"})
-    assert response.status_code == 200
-    body = response.json()
-    assert body["answer"] == "Grounded answer [1]."
-    assert body["sources"][0]["text"] == "cats are great and dogs are loyal"
-
-
-def test_ingest_pdf_file_then_query(client: TestClient) -> None:
+def test_admin_ingest_pdf(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
     pdf = FIXTURES / "sample.pdf"
     with pdf.open("rb") as handle:
         response = client.post(
-            "/ingest/file",
+            "/admin/ingest",
             files={"file": ("sample.pdf", handle, "application/pdf")},
+            headers={"X-Admin-Key": "adm1n"},
         )
     assert response.status_code == 200
     assert response.json()["chunk_ids"]
 
-    # The stored chunk is the whitespace-normalized PDF text; query it verbatim.
-    expected = " ".join(load_pdf(pdf).split())
-    result = client.post("/query", json={"question": expected})
-    assert result.json()["sources"][0]["text"] == expected
 
-
-def test_ingest_docx_file(client: TestClient) -> None:
+def test_admin_ingest_docx(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
     docx = FIXTURES / "sample.docx"
     with docx.open("rb") as handle:
         response = client.post(
-            "/ingest/file",
+            "/admin/ingest",
             files={
                 "file": (
                     "sample.docx",
@@ -150,25 +139,63 @@ def test_ingest_docx_file(client: TestClient) -> None:
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 )
             },
+            headers={"X-Admin-Key": "adm1n"},
         )
     assert response.status_code == 200
     assert response.json()["chunk_ids"]
 
 
-def test_ingest_file_unsupported_type_is_415(client: TestClient) -> None:
+def test_admin_ingest_unsupported_type_is_415(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
     response = client.post(
-        "/ingest/file",
+        "/admin/ingest",
         files={"file": ("data.csv", b"a,b,c", "text/csv")},
+        headers={"X-Admin-Key": "adm1n"},
     )
     assert response.status_code == 415
 
 
-def test_debug_chunks_shows_ingested_documents(
+def test_admin_ingest_rejects_missing_or_wrong_key(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    files = {"file": ("a.txt", b"hi", "text/plain")}
+    assert client.post("/admin/ingest", files=files).status_code == 401
+    assert (
+        client.post("/admin/ingest", files=files, headers={"X-Admin-Key": "wrong"}).status_code
+        == 401
+    )
+
+
+def test_admin_ingest_disabled_when_no_key_configured(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("ADMIN_API_KEY", raising=False)
+    # Even with a header, the endpoint is invisible (404) when unconfigured.
+    response = client.post(
+        "/admin/ingest",
+        files={"file": ("a.txt", b"hi", "text/plain")},
+        headers={"X-Admin-Key": "anything"},
+    )
+    assert response.status_code == 404
+
+
+def test_admin_ui_page_is_served(client: TestClient) -> None:
+    response = client.get("/admin/ui")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "shared knowledge base" in response.text
+    assert "admin key" in response.text  # the key field is on the page
+
+
+def test_debug_chunks_shows_ingested_documents(
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("DEBUG_API_KEY", "s3cret")
-    client.post("/ingest", json={"text": "first doc", "source": "a.txt"})
-    client.post("/ingest", json={"text": "second doc", "source": "b.txt"})
+    pipeline.ingest_text("first doc", source="a.txt")
+    pipeline.ingest_text("second doc", source="b.txt")
     response = client.get("/debug/chunks", headers={"X-Debug-Key": "s3cret"})
     assert response.status_code == 200
     body = response.json()
@@ -201,10 +228,10 @@ def test_debug_ui_page_is_served(client: TestClient) -> None:
 
 
 def test_debug_retrieve_ranks_chunks_for_query(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("DEBUG_API_KEY", "s3cret")
-    client.post("/ingest", json={"text": "the sky is blue", "source": "facts.txt"})
+    pipeline.ingest_text("the sky is blue", source="facts.txt")
     response = client.get(
         "/debug/retrieve", params={"q": "the sky is blue"}, headers={"X-Debug-Key": "s3cret"}
     )
@@ -229,17 +256,3 @@ def test_debug_retrieve_empty_query_is_422(
     monkeypatch.setenv("DEBUG_API_KEY", "s3cret")
     response = client.get("/debug/retrieve", params={"q": ""}, headers={"X-Debug-Key": "s3cret"})
     assert response.status_code == 422
-
-
-def test_query_missing_question_is_422(client: TestClient) -> None:
-    assert client.post("/query", json={}).status_code == 422
-
-
-def test_query_empty_question_is_422(client: TestClient) -> None:
-    assert client.post("/query", json={"question": ""}).status_code == 422
-
-
-def test_query_on_empty_store_returns_answer_with_no_sources(client: TestClient) -> None:
-    response = client.post("/query", json={"question": "anything"})
-    assert response.status_code == 200
-    assert response.json()["sources"] == []
