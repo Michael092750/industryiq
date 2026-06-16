@@ -44,7 +44,7 @@ class GenerativeLLM(LLM, StreamingLLM, Protocol):
     """
 
 
-class FakeLLM:
+class FakeLLM(GenerativeLLM):
     """Offline LLM for tests.
 
     Returns a fixed response and records the last prompt it received, so tests

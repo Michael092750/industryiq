@@ -9,9 +9,10 @@ import uuid
 from datetime import UTC, datetime
 
 from ragproject.core.chat.models import Conversation, Turn
+from ragproject.core.chat.ports import ConversationStore
 
 
-class InMemoryConversationStore:
+class InMemoryConversationStore(ConversationStore):
     """A dict-backed conversation store for tests and local development."""
 
     def __init__(self) -> None:

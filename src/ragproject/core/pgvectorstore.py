@@ -15,10 +15,10 @@ from pgvector import Vector
 from pgvector.psycopg import register_vector
 from psycopg.types.json import Jsonb
 
-from ragproject.core.vectorstore import Hit
+from ragproject.core.vectorstore import Hit, VectorStore
 
 
-class PgVectorStore:
+class PgVectorStore(VectorStore):
     """Vector store backed by a Postgres table with a pgvector column."""
 
     def __init__(self, dsn: str, dim: int, table: str = "chunks") -> None:

@@ -24,7 +24,7 @@ class Embedder(Protocol):
         ...
 
 
-class FakeEmbedder:
+class FakeEmbedder(Embedder):
     """Deterministic, offline embedder for tests.
 
     Vectors are derived from a hash of the text, so the same text always maps

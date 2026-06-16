@@ -7,18 +7,19 @@
 """
 
 from ragproject.core.chat.models import RouteDecision, Turn
+from ragproject.core.chat.ports import RetrievalRouter
 from ragproject.core.chat.prompting import build_route_prompt
 from ragproject.core.generation import LLM
 
 
-class AlwaysRetrieveRouter:
+class AlwaysRetrieveRouter(RetrievalRouter):
     """Always consult the knowledge base."""
 
     def route(self, history: list[Turn], question: str) -> RouteDecision:
         return RouteDecision(should_retrieve=True)
 
 
-class LlmRouter:
+class LlmRouter(RetrievalRouter):
     """Classify, with an LLM, whether a question needs a knowledge-base lookup.
 
     ``kb_description`` is a short, human description of what the knowledge base

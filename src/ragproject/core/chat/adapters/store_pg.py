@@ -17,9 +17,10 @@ from typing import Any
 import psycopg
 
 from ragproject.core.chat.models import Conversation, Turn
+from ragproject.core.chat.ports import ConversationStore
 
 
-class PgConversationStore:
+class PgConversationStore(ConversationStore):
     """Conversation store backed by two Postgres tables."""
 
     def __init__(

@@ -5,6 +5,14 @@ against these ``Protocol`` s, never against concrete adapters. Anything that
 satisfies a port -- an in-memory fake in a test, Postgres in production -- is
 substitutable without touching the service.
 
+Adapters declare their port as an explicit base class (e.g.
+``class LlmRouter(RetrievalRouter)``) so the abstraction-to-implementation link
+is visible at the class and mypy verifies it at the definition site. The ports
+stay ``Protocol`` s rather than ABCs, so explicit subclassing is opt-in:
+:class:`RetrievalPort` is the deliberate exception -- left purely structural so
+the pre-existing :class:`ragproject.core.retrieval.Retriever`, which lives in
+``core`` and must not import ``chat``, can satisfy it without inheritance.
+
 Generation reuses the existing :class:`ragproject.core.generation.LLM` port, so
 it is not redefined here.
 """

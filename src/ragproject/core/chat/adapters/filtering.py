@@ -5,10 +5,11 @@ pre-retrieval :class:`RetrievalRouter`. Swap in a reranker or a quorum rule
 without touching :class:`ChatService`.
 """
 
+from ragproject.core.chat.ports import RelevanceFilter
 from ragproject.core.vectorstore import Hit
 
 
-class ThresholdFilter:
+class ThresholdFilter(RelevanceFilter):
     """Keep hits whose similarity score clears a threshold; drop the rest."""
 
     def __init__(self, threshold: float = 0.0) -> None:

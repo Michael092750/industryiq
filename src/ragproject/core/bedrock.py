@@ -13,8 +13,11 @@ from collections.abc import Iterator
 import boto3
 from anthropic import AnthropicBedrock
 
+from ragproject.core.embeddings import Embedder
+from ragproject.core.generation import GenerativeLLM
 
-class BedrockEmbedder:
+
+class BedrockEmbedder(Embedder):
     """Text embeddings from Amazon Titan Text Embeddings v2."""
 
     def __init__(
@@ -44,7 +47,7 @@ class BedrockEmbedder:
         return vectors
 
 
-class BedrockLLM:
+class BedrockLLM(GenerativeLLM):
     """Text generation from Anthropic Claude on Amazon Bedrock."""
 
     def __init__(

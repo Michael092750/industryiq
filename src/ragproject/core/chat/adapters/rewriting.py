@@ -6,11 +6,12 @@
 """
 
 from ragproject.core.chat.models import Turn
+from ragproject.core.chat.ports import QueryRewriter
 from ragproject.core.chat.prompting import build_condense_prompt
 from ragproject.core.generation import LLM
 
 
-class LlmQueryRewriter:
+class LlmQueryRewriter(QueryRewriter):
     """Condense follow-up questions into standalone ones with an LLM."""
 
     def __init__(self, llm: LLM) -> None:
@@ -24,7 +25,7 @@ class LlmQueryRewriter:
         return rewritten or question
 
 
-class NoOpQueryRewriter:
+class NoOpQueryRewriter(QueryRewriter):
     """Pass questions through unchanged (no history awareness)."""
 
     def condense(self, history: list[Turn], question: str) -> str:

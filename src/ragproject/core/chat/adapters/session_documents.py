@@ -7,13 +7,14 @@ guarantee. The embedder is shared with the global store, so similarity scores ar
 comparable when the two result sets are merged in :class:`ChatService`.
 """
 
+from ragproject.core.chat.ports import SessionDocumentStore
 from ragproject.core.chunking import chunk_text
 from ragproject.core.embeddings import Embedder
 from ragproject.core.retrieval import Retriever
 from ragproject.core.vectorstore import Hit, InMemoryVectorStore
 
 
-class SessionDocuments:
+class SessionDocuments(SessionDocumentStore):
     """In-memory, per-conversation document index."""
 
     def __init__(self, embedder: Embedder, *, chunk_size: int = 200, overlap: int = 20) -> None:
