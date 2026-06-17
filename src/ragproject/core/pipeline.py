@@ -45,15 +45,29 @@ class RagPipeline:
         self._chunk_size = chunk_size
         self._overlap = overlap
 
-    def ingest_text(self, text: str, source: str | None = None) -> list[str]:
-        """Chunk ``text`` and add it to the store. Returns the chunk ids."""
+    def ingest_text(
+        self,
+        text: str,
+        source: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> list[str]:
+        """Chunk ``text`` and add it to the store. Returns the chunk ids.
+
+        ``source`` and any extra ``metadata`` (e.g. a document ``category``) are
+        attached to every chunk, so retrieved hits carry them for attribution.
+        """
         chunks = chunk_text(text, chunk_size=self._chunk_size, overlap=self._overlap)
-        metadatas = [{"source": source} for _ in chunks] if source is not None else None
+        base: dict[str, Any] = {}
+        if source is not None:
+            base["source"] = source
+        if metadata:
+            base.update(metadata)
+        metadatas = [dict(base) for _ in chunks] if base else None
         return self._retriever.index(chunks, metadatas=metadatas)
 
-    def ingest_file(self, path: str | Path) -> list[str]:
+    def ingest_file(self, path: str | Path, metadata: dict[str, Any] | None = None) -> list[str]:
         """Load a file, chunk it, and add it to the store. Returns the chunk ids."""
-        return self.ingest_text(load(path), source=str(path))
+        return self.ingest_text(load(path), source=str(path), metadata=metadata)
 
     def query(self, question: str, k: int = 5) -> QueryResult:
         """Retrieve relevant chunks and generate a grounded answer."""

@@ -38,6 +38,14 @@ def test_ingest_text_with_source_records_metadata() -> None:
     assert hit.metadata["text"] == "alpha beta gamma"
 
 
+def test_ingest_text_with_metadata_records_extra_fields() -> None:
+    pipeline = _pipeline(chunk_size=3, overlap=0)
+    pipeline.ingest_text("alpha beta gamma", source="r.pdf", metadata={"category": "AI"})
+    hit = pipeline.query("alpha beta gamma", k=1).hits[0]
+    assert hit.metadata["category"] == "AI"
+    assert hit.metadata["source"] == "r.pdf"
+
+
 def test_ingest_file_reads_and_indexes(tmp_path: Path) -> None:
     file = tmp_path / "doc.txt"
     file.write_text("the quick brown fox jumps")
@@ -46,6 +54,16 @@ def test_ingest_file_reads_and_indexes(tmp_path: Path) -> None:
     assert len(ids) == 1
     result = pipeline.query("the quick brown fox jumps", k=1)
     assert result.hits[0].metadata["source"] == str(file)
+
+
+def test_ingest_file_with_metadata_records_category(tmp_path: Path) -> None:
+    file = tmp_path / "doc.txt"
+    file.write_text("the quick brown fox jumps")
+    pipeline = _pipeline()
+    pipeline.ingest_file(file, metadata={"category": "finance"})
+    hit = pipeline.query("the quick brown fox jumps", k=1).hits[0]
+    assert hit.metadata["category"] == "finance"
+    assert hit.metadata["source"] == str(file)
 
 
 def test_list_chunks_returns_ingested_content() -> None:

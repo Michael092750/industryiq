@@ -68,8 +68,22 @@ _LOADERS: dict[str, Callable[[str | Path], str]] = {
 SUPPORTED_EXTENSIONS = frozenset(_LOADERS)
 
 
+def _to_utf8_safe(text: str) -> str:
+    """Drop characters that cannot be encoded as UTF-8.
+
+    PDF extraction can emit lone surrogate code points (from broken font maps)
+    that are valid in a Python ``str`` but not encodable to UTF-8. Left in, they
+    crash every UTF-8 consumer downstream -- the embedding tokenizer, JSON
+    payloads to Bedrock, and Postgres text columns. Stripping them here keeps
+    each loader's output safe to embed and store.
+    """
+    return text.encode("utf-8", "ignore").decode("utf-8")
+
+
 def load(path: str | Path) -> str:
     """Load any supported file by dispatching on its extension.
+
+    The returned text is guaranteed UTF-8 encodable (see :func:`_to_utf8_safe`).
 
     Raises:
         FileNotFoundError: If ``path`` does not point to an existing file.
@@ -81,4 +95,4 @@ def load(path: str | Path) -> str:
         raise ValueError(
             f"Unsupported file type {p.suffix!r}; supported: {sorted(SUPPORTED_EXTENSIONS)}"
         )
-    return loader(path)
+    return _to_utf8_safe(loader(path))

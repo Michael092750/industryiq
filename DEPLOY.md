@@ -248,23 +248,32 @@ ssh $SSHO $HOST "rm -rf ragproject && mkdir ragproject && tar xzf app.tar.gz -C 
 
 ```bash
 IP=<PUBLIC_IP>
-curl http://$IP:8000/health
-curl -X POST http://$IP:8000/ingest -H "Content-Type: application/json" \
-  -d '{"text":"Paris is the capital of France.","source":"f.txt"}'
-curl -X POST http://$IP:8000/query  -H "Content-Type: application/json" \
-  -d '{"question":"What is the capital of France?"}'
+curl http://$IP:8000/health                      # -> {"status":"ok"}
+
+# create a conversation (returns its id), then post a message to that id:
+curl -X POST http://$IP:8000/conversations \
+  -H "Content-Type: application/json" -d '{"title":"smoke"}'
+curl -X POST http://$IP:8000/conversations/<ID-FROM-ABOVE>/messages \
+  -H "Content-Type: application/json" -d '{"question":"hello, what can you do?"}'
 ```
-Or open `http://<PUBLIC_IP>:8000/docs` in a browser.
+Or just open `http://<PUBLIC_IP>:8000/docs` and drive the chat from the UI.
+
+> The shared knowledge base starts empty. Populate it with `POST /admin/ingest`
+> (multipart file + `X-Admin-Key`, which needs `ADMIN_API_KEY` set in the server
+> `.env`), or run `scripts/ingest_bulk.py` on the box against the compose Postgres.
 
 ---
 
 ## Reference
 
-**Endpoints:** `/health`, `/ingest`, `/query`, `/ingest/file`, `/docs`,
-`/debug/chunks` + `/debug-ui` (need `X-Debug-Key`).
+**Endpoints:** `/health`, `/docs`; chat under `/conversations` (create, list,
+`/messages`, `/messages/stream`, `/documents`); `/admin/ingest` + `/admin/ui`
+(need `X-Admin-Key`); `/debug/retrieve`, `/debug/chunks`, `/debug-ui` (need
+`X-Debug-Key`).
 
 **Cost:** the `t3.small` bills ~$0.50/day while running. `cdk destroy` stops it.
 
-**Security:** `/query` and `/ingest` are public over plain HTTP (fine for a demo).
-`/debug/*` requires the key. For production: add HTTPS + auth on public routes and
+**Security:** chat (`/conversations/*`) is public over plain HTTP (fine for a
+demo). `/admin/*` and `/debug/*` require their keys and are disabled (404) unless
+the key is configured. For production: add HTTPS + auth on the public routes and
 scope IAM down.

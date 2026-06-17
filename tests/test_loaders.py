@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from ragproject.core import loaders
 from ragproject.core.loaders import load, load_docx, load_pdf, load_text
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -86,3 +87,13 @@ def test_load_unsupported_extension_raises(tmp_path: Path) -> None:
     bad.write_text("a,b,c")
     with pytest.raises(ValueError):
         load(bad)
+
+
+def test_load_strips_non_utf8_surrogates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A loader (e.g. a broken PDF font map) can emit lone surrogates; load() must
+    # drop them so the result is always UTF-8 encodable for embedding/storage.
+    bad_text = "good" + chr(0xD835) + chr(0xDF0F) + "text"  # lone surrogates
+    monkeypatch.setitem(loaders._LOADERS, ".surro", lambda _p: bad_text)
+    result = load(tmp_path / "weird.surro")
+    assert result == "goodtext"
+    result.encode("utf-8")  # must not raise
