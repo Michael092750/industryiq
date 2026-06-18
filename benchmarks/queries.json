@@ -1,0 +1,113 @@
+{
+  "description": "Gold benchmark for the ragproject retriever, scored against the real chunks in the live Postgres store. Each query lists the industry it targets and the substring(s) that mark a relevant chunk (gold_needles); the runner resolves those to the gold chunk ids and scores whether retrieval surfaced them.",
+  "queries": [
+    {
+      "id": "ai-private-investment-2025",
+      "query": "How much did U.S. private AI investment reach in 2025?",
+      "category": "AI",
+      "gold_needles": ["U.S. private AI investment reached $285.9 billion in 2025"]
+    },
+    {
+      "id": "ai-incidents-2025",
+      "query": "How many documented AI incidents were there, and how many were there in 2024?",
+      "category": "AI",
+      "gold_needles": ["Documented AI incidents rose to 362, up from 233 in 2024"]
+    },
+    {
+      "id": "ai-olmo-parameters",
+      "query": "How many times fewer parameters does OLMo 3.1 Think 32B have compared to Grok 4?",
+      "category": "AI",
+      "gold_needles": ["OLMo 3.1 Think 32B, with nearly 90 times fewer parameters than Grok 4"]
+    },
+    {
+      "id": "ai-compute-capacity",
+      "query": "What was global AI compute capacity in H100-equivalents?",
+      "category": "AI",
+      "gold_needles": ["reaching 17 .1 million H100-equivalents"]
+    },
+    {
+      "id": "ai-grok4-emissions",
+      "query": "How many tons of CO2 equivalent did training Grok 4 in 2025 produce?",
+      "category": "AI",
+      "gold_needles": ["training Grok 4 in 2025 produced about 72,816 tons"]
+    },
+    {
+      "id": "ai-github-projects",
+      "query": "How many AI-related GitHub projects were there in 2025?",
+      "category": "AI",
+      "gold_needles": ["increased from 1,549 in 2011 to approximately 5.6 million in 2025"]
+    },
+    {
+      "id": "finance-life-insurance-surrender-risk",
+      "query": "How much in US life insurance policies could be surrendered with low penalty, according to Moody's?",
+      "category": "Finance",
+      "gold_needles": ["estimated that $500 billion (almost one-third of US life insurance policies) could be surrendered with low penalty"]
+    },
+    {
+      "id": "finance-qbp-yoy-increase",
+      "query": "By how much, in dollars and percent, did the reported metric increase from a year ago?",
+      "category": "Finance",
+      "gold_needles": ["$1.2 billion (7.8 percent) higher than a year ago"]
+    },
+    {
+      "id": "finance-community-bank-efficiency-ratio",
+      "query": "What did the community bank efficiency ratio rise to, and by how many basis points?",
+      "category": "Finance",
+      "gold_needles": ["rose 95 basis points from one quarter ago to 63.8 percent"]
+    },
+    {
+      "id": "finance-residential-re-loans",
+      "query": "How much did 1-4 family residential real estate loans increase from the prior quarter?",
+      "category": "Finance",
+      "gold_needles": ["family residential real estate loans ($11.1 billion, or 2.3 percent)"]
+    },
+    {
+      "id": "finance-noninterest-expense",
+      "query": "How much did noninterest expense increase from the prior quarter?",
+      "category": "Finance",
+      "gold_needles": ["Noninterest expense increased $647.9 million (3.9 percent) from a quarter ago"]
+    },
+    {
+      "id": "finance-unrealized-securities-losses",
+      "query": "What were total unrealized losses on securities?",
+      "category": "Finance",
+      "gold_needles": ["Unrealized losses on securities totaled $56.0 billion in first"]
+    },
+    {
+      "id": "semi-us-sales-2020",
+      "query": "What did US semiconductor company sales total in 2020?",
+      "category": "Semiconductor",
+      "gold_needles": ["US semiconductor company sales totaled $208 billion in 2020"]
+    },
+    {
+      "id": "semi-usica-funding",
+      "query": "How much funding did USICA include to bolster domestic chip manufacturing?",
+      "category": "Semiconductor",
+      "gold_needles": ["$52 billion to bolster domestic chip manufacturing"]
+    },
+    {
+      "id": "semi-global-sales-2020",
+      "query": "What were global semiconductor sales in 2020?",
+      "category": "Semiconductor",
+      "gold_needles": ["global sales in 2020 increased by 6.8 percent to $440.4 billion"]
+    },
+    {
+      "id": "semi-us-market-share",
+      "query": "What percent of the global semiconductor market did the US industry hold, described as nearly half?",
+      "category": "Semiconductor",
+      "gold_needles": ["nearly half the global market share"]
+    },
+    {
+      "id": "semi-asia-manufacturing-share",
+      "query": "What percent of global semiconductor manufacturing capacity is in Asia?",
+      "category": "Semiconductor",
+      "gold_needles": ["Asia is home to about 75 percent of the world"]
+    },
+    {
+      "id": "semi-iot-devices-2019",
+      "query": "How many connected IoT devices were there in 2019?",
+      "category": "Semiconductor",
+      "gold_needles": ["numbered 22.6 billion in 2019 and are projected to grow to 75 billion by 2025"]
+    }
+  ]
+}
