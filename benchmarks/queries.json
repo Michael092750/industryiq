@@ -1,5 +1,5 @@
 {
-  "description": "Gold benchmark for the ragproject retriever, scored against the real chunks in the live Postgres store. Each query lists the industry it targets and the substring(s) that mark a relevant chunk (gold_needles); the runner resolves those to the gold chunk ids and scores whether retrieval surfaced them.",
+  "description": "Gold benchmark for the ragproject retriever, scored against the real chunks in the live Postgres store. Each query lists the industry it targets and the substring(s) that mark a relevant chunk (gold_needles); the runner resolves those to the gold chunk ids and scores whether retrieval surfaced them. Queries per category track each category's share of chunks in the store, with a floor of 5 for the smaller categories so they stay meaningfully covered: AI 20, Finance 15, Healthcare 5, Agriculture 5, Semiconductor 5 (22,156 chunks total, 50 queries).",
   "queries": [
     {
       "id": "ai-private-investment-2025",
@@ -38,6 +38,90 @@
       "gold_needles": ["increased from 1,549 in 2011 to approximately 5.6 million in 2025"]
     },
     {
+      "id": "ai-stargate-investment",
+      "query": "How much does the Stargate venture plan to invest to build advanced AI data centers in the US?",
+      "category": "AI",
+      "gold_needles": ["$100 billion and $500 billion to build advanced AI data centers"]
+    },
+    {
+      "id": "ai-us-defence-budget",
+      "query": "What did the US announce as its defence budget for the first time?",
+      "category": "AI",
+      "gold_needles": ["announced a defence budget that surpasses $1 trillion"]
+    },
+    {
+      "id": "ai-genai-economic-value-2038",
+      "query": "How much additional economic value could generative AI unlock by 2038?",
+      "category": "AI",
+      "gold_needles": ["more than $10.3 trillion in additional economic value can be unlocked by 2038"]
+    },
+    {
+      "id": "ai-us-grant-spending",
+      "query": "How much did the US government allocate for AI-related grants from 2013 to 2023?",
+      "category": "AI",
+      "gold_needles": ["$19.7 billion was allocated by the U.S. government for AI-related grants"]
+    },
+    {
+      "id": "ai-field-acquisitions",
+      "query": "How many acquisitions did the leading AI companies make, and what share of the field was that?",
+      "category": "AI",
+      "gold_needles": ["79 acquisitions (18 percent of the total number of acquisitions in the AI field)"]
+    },
+    {
+      "id": "ai-us-vs-china-europe-genai",
+      "query": "By approximately how much did US generative AI investment outpace China and Europe combined?",
+      "category": "AI",
+      "gold_needles": ["China and Europe in generative AI by approximately $21.8 billion"]
+    },
+    {
+      "id": "ai-patent-top-offices-share",
+      "query": "What share of all AI patent filings do the top 10 main offices account for?",
+      "category": "AI",
+      "gold_needles": ["97 percent of all AI patent filings"]
+    },
+    {
+      "id": "ai-phd-gender-2021",
+      "query": "What percentage of new AI PhDs were male in 2021?",
+      "category": "AI",
+      "gold_needles": ["78.7% of new AI PhDs were male"]
+    },
+    {
+      "id": "ai-genai-software-investment-rate",
+      "query": "At what annual rate did US investment in generative AI software increase in the first half of 2025?",
+      "category": "AI",
+      "gold_needles": ["an annual rate of 28 percent during the first half of 2025"]
+    },
+    {
+      "id": "ai-public-tenders-2023",
+      "query": "How much did the US government award in AI-related public tenders in 2023?",
+      "category": "AI",
+      "gold_needles": ["approximately $830 million in AI-related public tenders"]
+    },
+    {
+      "id": "ai-thinking-machines-seed",
+      "query": "What seed round and valuation did the AI company founded by Mira Murati raise?",
+      "category": "AI",
+      "gold_needles": ["raises a $2 billion seed round at a $12 billion valuation"]
+    },
+    {
+      "id": "ai-microsoft-three-mile-island",
+      "query": "What deal did Microsoft announce to revive the Three Mile Island nuclear plant?",
+      "category": "AI",
+      "gold_needles": ["$1.6 billion deal to revive the Three Mile Island"]
+    },
+    {
+      "id": "ai-nvidia-market-cap",
+      "query": "How did Nvidia's market capitalization change over three years?",
+      "category": "AI",
+      "gold_needles": ["market capitalization from approximately $300 billion to over $3 trillion in just three years"]
+    },
+    {
+      "id": "ai-pct-patent-growth",
+      "query": "By what average annual rate have AI patent families with a PCT application grown since 2009?",
+      "category": "AI",
+      "gold_needles": ["grown by an average 13 percent since 2009"]
+    },
+    {
       "id": "finance-life-insurance-surrender-risk",
       "query": "How much in US life insurance policies could be surrendered with low penalty, according to Moody's?",
       "category": "Finance",
@@ -74,6 +158,132 @@
       "gold_needles": ["Unrealized losses on securities totaled $56.0 billion in first"]
     },
     {
+      "id": "finance-nonfinancial-corporate-credit",
+      "query": "How large is nonfinancial corporate credit outstanding, and what are its largest components?",
+      "category": "Finance",
+      "gold_needles": ["$9.7 trillion nonfinancial corporate credit outstanding"]
+    },
+    {
+      "id": "finance-noninterest-income",
+      "query": "How much did noninterest income increase from the prior quarter?",
+      "category": "Finance",
+      "gold_needles": ["Noninterest income increased $428.4 million"]
+    },
+    {
+      "id": "finance-net-operating-revenue",
+      "query": "By how much did net operating revenue change quarter over quarter?",
+      "category": "Finance",
+      "gold_needles": ["decreased 1.0 percent quarter over quarter to $242.9 billion"]
+    },
+    {
+      "id": "finance-discount-window-credit",
+      "query": "How much did primary credit through the discount window increase during the first week?",
+      "category": "Finance",
+      "gold_needles": ["increased from less than $5 billion to more than $150 billion"]
+    },
+    {
+      "id": "finance-cet1-adverse-scenario",
+      "query": "What minimum CET1 ratio would banks still meet under the adverse stress scenario?",
+      "category": "Finance",
+      "gold_needles": ["minimum 4.5 percent CET1 ratio under the adverse scenario"]
+    },
+    {
+      "id": "finance-bitcoin-decline",
+      "query": "By how much have Bitcoin prices fallen from their peak?",
+      "category": "Finance",
+      "gold_needles": ["Bitcoin prices have fallen by over 25 percent from their peak"]
+    },
+    {
+      "id": "finance-em-gdp-spillover-sample",
+      "query": "The emerging-market spillover sample covers how many countries and what share of EM GDP?",
+      "category": "Finance",
+      "gold_needles": ["15 countries accounting for about 76 percent of total EM GDP"]
+    },
+    {
+      "id": "finance-variable-rate-debt-share",
+      "query": "What is the average share of variable-rate debt for European high-yield corporate bond issuers?",
+      "category": "Finance",
+      "gold_needles": ["average share of variable rate debt is 29.4 percent"]
+    },
+    {
+      "id": "finance-failed-bank-fund-cost",
+      "query": "What was the estimated cost to the Deposit Insurance Fund of the bank that failed in the second quarter?",
+      "category": "Finance",
+      "gold_needles": ["estimated cost to the Fund of $15.6 billion"]
+    },
+    {
+      "id": "healthcare-biopharma-output-2022",
+      "query": "How much did the US biopharmaceutical industry's direct output exceed in 2022?",
+      "category": "Healthcare",
+      "gold_needles": ["exceeded $800 billion in direct output in 2022"]
+    },
+    {
+      "id": "healthcare-claims-denials-spend",
+      "query": "How much did hospitals spend in 2025 on overturning claims denials?",
+      "category": "Healthcare",
+      "gold_needles": ["hospitals spent nearly $18 billion on overturning claims denials"]
+    },
+    {
+      "id": "healthcare-biopharma-rd-share",
+      "query": "What share of domestic US business R&D did the biopharmaceutical industry account for in 2021?",
+      "category": "Healthcare",
+      "gold_needles": ["17.6 percent of all domestic U.S. business R&D performance in 2021"]
+    },
+    {
+      "id": "healthcare-bsv-mankind-sale",
+      "query": "What PE-validated exit did Advent International make in India's biopharma sector?",
+      "category": "Healthcare",
+      "gold_needles": ["$1.6 billion sale of BSV Group to Mankind Pharma"]
+    },
+    {
+      "id": "healthcare-nhs-emissions",
+      "query": "By how much has the UK's NHS reduced its direct emissions since 2010?",
+      "category": "Healthcare",
+      "gold_needles": ["reduced emissions by 30 percent since 2010"]
+    },
+    {
+      "id": "agriculture-china-export-2023",
+      "query": "What were US food and agriculture export sales to China in 2023?",
+      "category": "Agriculture",
+      "gold_needles": ["China is still the largest market, with $28.84 billion of U.S. export sales there in 2023"]
+    },
+    {
+      "id": "agriculture-ssa-finance-gap",
+      "query": "How large is the agricultural finance demand in Sub-Saharan Africa, and how much is met?",
+      "category": "Agriculture",
+      "gold_needles": ["$240 billion demand for agricultural finance in Sub-Saharan Africa"]
+    },
+    {
+      "id": "agriculture-investment-return",
+      "query": "What return did the $1 million to $3 million investment generate for the program?",
+      "category": "Agriculture",
+      "gold_needles": ["investment returned between 20 and 33%"]
+    },
+    {
+      "id": "agriculture-bionutrients-adoption",
+      "query": "What share of farmers report high use of bionutrients?",
+      "category": "Agriculture",
+      "gold_needles": ["high use of bionutrients (64 percent)"]
+    },
+    {
+      "id": "agriculture-ecoceres-round",
+      "query": "What funding round did EcoCeres raise, and from whom?",
+      "category": "Agriculture",
+      "gold_needles": ["$400 million round from Bain Capital"]
+    },
+    {
+      "id": "semi-global-sales-2020",
+      "query": "What were global semiconductor sales in 2020?",
+      "category": "Semiconductor",
+      "gold_needles": ["global sales in 2020 increased by 6.8 percent to $440.4 billion"]
+    },
+    {
+      "id": "semi-asia-manufacturing-share",
+      "query": "What percent of global semiconductor manufacturing capacity is in Asia?",
+      "category": "Semiconductor",
+      "gold_needles": ["Asia is home to about 75 percent of the world"]
+    },
+    {
       "id": "semi-us-sales-2020",
       "query": "What did US semiconductor company sales total in 2020?",
       "category": "Semiconductor",
@@ -84,24 +294,6 @@
       "query": "How much funding did USICA include to bolster domestic chip manufacturing?",
       "category": "Semiconductor",
       "gold_needles": ["$52 billion to bolster domestic chip manufacturing"]
-    },
-    {
-      "id": "semi-global-sales-2020",
-      "query": "What were global semiconductor sales in 2020?",
-      "category": "Semiconductor",
-      "gold_needles": ["global sales in 2020 increased by 6.8 percent to $440.4 billion"]
-    },
-    {
-      "id": "semi-us-market-share",
-      "query": "What percent of the global semiconductor market did the US industry hold, described as nearly half?",
-      "category": "Semiconductor",
-      "gold_needles": ["nearly half the global market share"]
-    },
-    {
-      "id": "semi-asia-manufacturing-share",
-      "query": "What percent of global semiconductor manufacturing capacity is in Asia?",
-      "category": "Semiconductor",
-      "gold_needles": ["Asia is home to about 75 percent of the world"]
     },
     {
       "id": "semi-iot-devices-2019",
