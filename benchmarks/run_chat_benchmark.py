@@ -63,6 +63,7 @@ import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -177,6 +178,21 @@ def chat_model_id(settings: Settings) -> str:
         if settings.provider == "bedrock"
         else settings.anthropic_llm_model_id
     )
+
+
+def count_chunks(dsn: str, table: str = "chunks") -> int | None:
+    """Corpus size in the live store, recorded as experiment setup. Best-effort:
+    returns None if the count fails (the run is unaffected)."""
+    import psycopg
+
+    try:
+        with psycopg.connect(dsn) as conn, conn.cursor() as cur:
+            # table is a fixed constant, not user input -- mirrors PgVectorStore.
+            cur.execute(f"SELECT count(*) FROM {table}")
+            row = cur.fetchone()
+            return int(row[0]) if row else None
+    except Exception:
+        return None
 
 
 # --------------------------------------------------------------------------- #
@@ -395,28 +411,33 @@ def main(argv: list[str]) -> int:
     service = build_chat_service(settings, embedder, llm, k, rewriter)
     judge = judge_lib.JudgeLLM(model_id=args.judge_model, api_key=settings.anthropic_api_key)
 
-    print(
-        f"provider={settings.provider}  rewriter={args.rewriter}  k={k}  "
-        f"queries={len(queries)}  chat_model={chat_model_id(settings)}  "
-        f"judge_model={judge.model_id}"
-    )
+    # Full experiment setup, recorded with the results so each run is self-documenting
+    # and reproducible (and diffable across runs).
+    config: dict[str, Any] = {
+        "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
+        "label": args.label,
+        "provider": settings.provider,
+        "chat_model": chat_model_id(settings),
+        "judge_model": judge.model_id,
+        "judge_max_tokens": judge.max_tokens,
+        "embedder": type(embedder).__name__,
+        "embed_dim": embedder.dim,
+        "rewriter": args.rewriter,
+        "router": settings.chat_router,
+        "relevance_threshold": settings.chat_relevance_threshold,
+        "history_turns": settings.chat_history_turns,
+        "k": k,
+        "queries_file": args.queries.name,
+        "n_queries": len(queries),
+        "n_chunks": count_chunks(settings.database_url),
+    }
+    print("SETUP: " + json.dumps(config, ensure_ascii=False))
 
     records, rows = evaluate(service, judge, queries)
     summary = chat_summary(records)
     print_section("CHAT (LLM-as-judge)", summary, rows)
 
-    results: dict[str, Any] = {
-        "config": {
-            "provider": settings.provider,
-            "rewriter": args.rewriter,
-            "label": args.label,
-            "k": k,
-            "chat_model": chat_model_id(settings),
-            "judge_model": judge.model_id,
-        },
-        "summary": summary,
-        "rows": rows,
-    }
+    results: dict[str, Any] = {"config": config, "summary": summary, "rows": rows}
     if args.out:
         args.out.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"\nwrote {args.out}")

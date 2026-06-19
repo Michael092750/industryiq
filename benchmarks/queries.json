@@ -41,7 +41,7 @@
       "id": "ai-stargate-investment",
       "query": "How much does the Stargate venture plan to invest to build advanced AI data centers in the US?",
       "category": "AI",
-      "gold_needles": ["$100 billion and $500 billion to build advanced AI data centers"]
+      "gold_needles": ["$100 billion and $500 billion to build advanced AI data centers", "Stargate Project announced by OpenAI"]
     },
     {
       "id": "ai-us-defence-budget",
@@ -53,7 +53,7 @@
       "id": "ai-genai-economic-value-2038",
       "query": "How much additional economic value could generative AI unlock by 2038?",
       "category": "AI",
-      "gold_needles": ["more than $10.3 trillion in additional economic value can be unlocked by 2038"]
+      "gold_needles": ["more than $10.3 trillion in additional economic value can be unlocked by 2038", "unlock an additional $10.3 trillion in economic value"]
     },
     {
       "id": "ai-us-grant-spending",
@@ -215,7 +215,7 @@
       "id": "healthcare-biopharma-output-2022",
       "query": "How much did the US biopharmaceutical industry's direct output exceed in 2022?",
       "category": "Healthcare",
-      "gold_needles": ["exceeded $800 billion in direct output in 2022"]
+      "gold_needles": ["exceeded $800 billion in direct output in 2022", "$802 billion"]
     },
     {
       "id": "healthcare-claims-denials-spend",

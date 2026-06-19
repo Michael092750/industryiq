@@ -90,10 +90,11 @@ python benchmarks/run_benchmark.py --label pg-seqscan --out pg-seqscan.json
 python benchmarks/run_benchmark.py --label pg-hnsw --out pg-hnsw.json
 ```
 
-Each file's `config` records the `label`, `provider`, `k`, and `n_chunks`; the
-`summary` holds the recall/latency numbers. The query set and gold set are
-unchanged between runs, so any difference in recall or `search_ms` is purely the
-index method. An exact scan returns true nearest neighbors; an approximate index
+Each run prints a `SETUP:` line and records the same block under `config` so a saved
+run is self-documenting: `timestamp`, `label`, `provider`, `embedder` + `embed_dim`,
+`k`, `queries_file`, `n_queries`, and `n_chunks` (corpus size). The `summary` holds
+the recall/latency numbers. The query set and gold set are unchanged between runs, so
+any difference in recall or `search_ms` is purely the index method. An exact scan returns true nearest neighbors; an approximate index
 (HNSW/IVFFlat) trades a little recall for much lower `search_ms` — exactly the
 tradeoff this benchmark surfaces.
 
@@ -222,6 +223,16 @@ Read the diff on two axes:
   the answer *was* retrieved) and `groundedness` are intrinsic to the chat model and
   should stay roughly **flat**. If they move, the judge or chat model changed, not the
   retrieval.
+
+## Output
+
+`--out` writes `{config, summary, rows}`, and a `SETUP:` line with the same `config`
+prints at the start of every run. `config` captures the full experiment setup so a
+saved run is self-documenting and diffs are unambiguous: `timestamp`, `label`,
+`provider`, `chat_model`, `judge_model`, `judge_max_tokens`, `embedder` + `embed_dim`,
+`rewriter`, `router`, `relevance_threshold`, `history_turns`, `k`, `queries_file`,
+`n_queries`, and `n_chunks` (corpus size in the live store). `summary` holds the
+metrics below; `rows` is the per-query detail (scores + the judge's rationale).
 
 ## Chat metrics
 

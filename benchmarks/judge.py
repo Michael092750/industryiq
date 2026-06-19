@@ -143,6 +143,10 @@ class JudgeLLM:
     def model_id(self) -> str:
         return self._model_id
 
+    @property
+    def max_tokens(self) -> int:
+        return self._max_tokens
+
     def score(self, question: str, reference: str, hits: list[Hit], answer: str) -> JudgeVerdict:
         """Return the judge's structured verdict for one (question, reference, context, answer)."""
         message = self._client.messages.create(

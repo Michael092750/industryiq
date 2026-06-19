@@ -43,6 +43,7 @@ import json
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -308,6 +309,21 @@ def main(argv: list[str]) -> int:
     corpus = build_corpus(embedder, settings)
     print(f"loaded {corpus.n_chunks} chunks from the live pg store")
 
+    # Full experiment setup, recorded with the results so each run is self-documenting
+    # and reproducible (and diffs across index methods are unambiguous).
+    config: dict[str, Any] = {
+        "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
+        "label": args.label,
+        "provider": settings.provider,
+        "embedder": type(embedder).__name__,
+        "embed_dim": embedder.dim,
+        "k": k,
+        "queries_file": args.queries.name,
+        "n_queries": len(queries),
+        "n_chunks": corpus.n_chunks,
+    }
+    print("SETUP: " + json.dumps(config, ensure_ascii=False))
+
     # Resolve + validate gold for every query up front.
     gold_by_id: dict[str, set[str]] = {}
     missing: list[str] = []
@@ -327,16 +343,7 @@ def main(argv: list[str]) -> int:
     summary = retriever_summary(out, k)
     print_section("RETRIEVER", summary, out.rows)
 
-    results: dict[str, Any] = {
-        "config": {
-            "provider": settings.provider,
-            "label": args.label,
-            "k": k,
-            "n_chunks": corpus.n_chunks,
-        },
-        "summary": summary,
-        "rows": out.rows,
-    }
+    results: dict[str, Any] = {"config": config, "summary": summary, "rows": out.rows}
     if args.out:
         args.out.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"\nwrote {args.out}")
