@@ -1,10 +1,10 @@
-from ragproject.core.chat.models import Turn
-from ragproject.core.chat.prompting import (
+from industryiq.core.chat.models import Turn
+from industryiq.core.chat.prompting import (
     build_chat_prompt,
     build_condense_prompt,
     format_history,
 )
-from ragproject.core.vectorstore import Hit
+from industryiq.core.vectorstore import Hit
 
 
 def _hit(text: str, score: float = 1.0, id_: str = "x") -> Hit:

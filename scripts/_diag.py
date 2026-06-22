@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 
-from ragproject.core.chunking import chunk_text
-from ragproject.core.loaders import SUPPORTED_EXTENSIONS, load
+from industryiq.core.chunking import chunk_text
+from industryiq.core.loaders import SUPPORTED_EXTENSIONS, load
 
 root = Path(sys.argv[1])
 for path in sorted(root.rglob("*")):

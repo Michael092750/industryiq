@@ -1,6 +1,6 @@
-from ragproject.core.chat.adapters.routing import AlwaysRetrieveRouter, LlmRouter
-from ragproject.core.chat.models import Turn
-from ragproject.core.generation import FakeLLM
+from industryiq.core.chat.adapters.routing import AlwaysRetrieveRouter, LlmRouter
+from industryiq.core.chat.models import Turn
+from industryiq.core.generation import FakeLLM
 
 KB = "industry analysis reports"
 

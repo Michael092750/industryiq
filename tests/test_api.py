@@ -4,13 +4,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from ragproject.api.app import app
-from ragproject.api.deps import get_pipeline
-from ragproject.core.embeddings import FakeEmbedder
-from ragproject.core.generation import FakeLLM
-from ragproject.core.pipeline import RagPipeline
-from ragproject.core.retrieval import Retriever
-from ragproject.core.vectorstore import InMemoryVectorStore
+from industryiq.api.app import app
+from industryiq.api.deps import get_pipeline
+from industryiq.core.embeddings import FakeEmbedder
+from industryiq.core.generation import FakeLLM
+from industryiq.core.pipeline import RagPipeline
+from industryiq.core.retrieval import Retriever
+from industryiq.core.vectorstore import InMemoryVectorStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -80,7 +80,7 @@ def test_get_pipeline_uses_pgvector_when_database_url_set(
 
     monkeypatch.setenv("RAG_PROVIDER", "fake")
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@host/db")
-    monkeypatch.setattr("ragproject.api.deps.PgVectorStore", FakePg)
+    monkeypatch.setattr("industryiq.api.deps.PgVectorStore", FakePg)
     get_pipeline.cache_clear()
     assert isinstance(get_pipeline(), RagPipeline)
     assert recorded["dsn"] == "postgresql://u:p@host/db"
@@ -106,8 +106,8 @@ def test_get_pipeline_uses_bedrock_when_provider_is_bedrock(
 
     monkeypatch.setenv("RAG_PROVIDER", "bedrock")
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    monkeypatch.setattr("ragproject.core.bedrock.BedrockEmbedder", FakeBedrockEmbedder)
-    monkeypatch.setattr("ragproject.core.bedrock.BedrockLLM", FakeBedrockLLM)
+    monkeypatch.setattr("industryiq.core.bedrock.BedrockEmbedder", FakeBedrockEmbedder)
+    monkeypatch.setattr("industryiq.core.bedrock.BedrockLLM", FakeBedrockLLM)
     get_pipeline.cache_clear()
     assert isinstance(get_pipeline(), RagPipeline)
     get_pipeline.cache_clear()
@@ -130,8 +130,8 @@ def test_get_pipeline_uses_anthropic_when_provider_is_anthropic(
 
     monkeypatch.setenv("RAG_PROVIDER", "anthropic")
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    monkeypatch.setattr("ragproject.core.anthropic_llm.AnthropicLLM", FakeAnthropicLLM)
-    monkeypatch.setattr("ragproject.core.local_embeddings.LocalEmbedder", FakeLocalEmbedder)
+    monkeypatch.setattr("industryiq.core.anthropic_llm.AnthropicLLM", FakeAnthropicLLM)
+    monkeypatch.setattr("industryiq.core.local_embeddings.LocalEmbedder", FakeLocalEmbedder)
     get_pipeline.cache_clear()
     assert isinstance(get_pipeline(), RagPipeline)
     get_pipeline.cache_clear()

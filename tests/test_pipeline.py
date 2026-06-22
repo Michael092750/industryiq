@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from ragproject.core.embeddings import FakeEmbedder
-from ragproject.core.generation import FakeLLM
-from ragproject.core.pipeline import RagPipeline
-from ragproject.core.retrieval import Retriever
-from ragproject.core.vectorstore import InMemoryVectorStore
+from industryiq.core.embeddings import FakeEmbedder
+from industryiq.core.generation import FakeLLM
+from industryiq.core.pipeline import RagPipeline
+from industryiq.core.retrieval import Retriever
+from industryiq.core.vectorstore import InMemoryVectorStore
 
 
 def _pipeline(llm: FakeLLM | None = None, **kwargs: int) -> RagPipeline:

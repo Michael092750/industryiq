@@ -1,5 +1,5 @@
 {
-  "description": "Gold benchmark for the ragproject retriever, scored against the real chunks in the live Postgres store. Each query lists the industry it targets and the substring(s) that mark a relevant chunk (gold_needles); the runner resolves those to the gold chunk ids and scores whether retrieval surfaced them. Queries per category track each category's share of chunks in the store, with a floor of 5 for the smaller categories so they stay meaningfully covered: AI 20, Finance 15, Healthcare 5, Agriculture 5, Semiconductor 5 (22,156 chunks total, 50 queries).",
+  "description": "Gold benchmark for the IndustryIQ retriever, scored against the real chunks in the live Postgres store. Each query lists the industry it targets and the substring(s) that mark a relevant chunk (gold_needles); the runner resolves those to the gold chunk ids and scores whether retrieval surfaced them. Queries per category track each category's share of chunks in the store, with a floor of 5 for the smaller categories so they stay meaningfully covered: AI 20, Finance 15, Healthcare 5, Agriculture 5, Semiconductor 5 (22,156 chunks total, 50 queries).",
   "queries": [
     {
       "id": "ai-private-investment-2025",

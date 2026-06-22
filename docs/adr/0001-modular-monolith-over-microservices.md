@@ -12,7 +12,7 @@ option was "modular, testable, decoupled" code — not any measured scaling need
 
 ## Decision
 
-Build chat as a **module inside the existing application** (`ragproject.core.chat`)
+Build chat as a **module inside the existing application** (`industryiq.core.chat`)
 using a **ports-and-adapters** (hexagonal) design, rather than as a separate
 deployable service.
 

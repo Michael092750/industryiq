@@ -1,5 +1,5 @@
-from ragproject.core.chat.adapters.store_memory import InMemoryConversationStore
-from ragproject.core.chat.models import Turn
+from industryiq.core.chat.adapters.store_memory import InMemoryConversationStore
+from industryiq.core.chat.models import Turn
 
 
 def test_create_assigns_id_and_persists() -> None:

@@ -1,6 +1,6 @@
 import pytest
 
-from ragproject.core.vectorstore import InMemoryVectorStore, VectorStore, cosine_similarity
+from industryiq.core.vectorstore import InMemoryVectorStore, VectorStore, cosine_similarity
 
 
 def test_cosine_of_zero_vector_is_zero() -> None:

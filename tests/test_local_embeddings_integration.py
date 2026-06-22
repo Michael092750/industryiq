@@ -10,7 +10,7 @@ asserts LocalEmbedder honors the same Embedder contract as FakeEmbedder.
 
 import pytest
 
-from ragproject.core.embeddings import Embedder
+from industryiq.core.embeddings import Embedder
 
 pytestmark = pytest.mark.integration
 
@@ -18,7 +18,7 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def embedder() -> Embedder:
     pytest.importorskip("fastembed")
-    from ragproject.core.local_embeddings import LocalEmbedder
+    from industryiq.core.local_embeddings import LocalEmbedder
 
     return LocalEmbedder()
 

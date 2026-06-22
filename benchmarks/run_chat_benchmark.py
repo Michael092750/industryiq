@@ -70,8 +70,8 @@ from typing import Any
 import judge as judge_lib
 import metrics
 
-from ragproject.config import Settings, get_settings
-from ragproject.core.chat import (
+from industryiq.config import Settings, get_settings
+from industryiq.core.chat import (
     AlwaysRetrieveRouter,
     ChatPolicy,
     ChatService,
@@ -83,11 +83,11 @@ from ragproject.core.chat import (
     RetrievalRouter,
     ThresholdFilter,
 )
-from ragproject.core.embeddings import Embedder
-from ragproject.core.generation import GenerativeLLM
-from ragproject.core.pgvectorstore import PgVectorStore
-from ragproject.core.retrieval import Retriever
-from ragproject.core.vectorstore import Hit
+from industryiq.core.embeddings import Embedder
+from industryiq.core.generation import GenerativeLLM
+from industryiq.core.pgvectorstore import PgVectorStore
+from industryiq.core.retrieval import Retriever
+from industryiq.core.vectorstore import Hit
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_QUERIES = HERE / "queries.json"
@@ -127,15 +127,15 @@ def build_providers(settings: Settings) -> tuple[Embedder, GenerativeLLM]:
     chat model, so the embedder must match the table and the LLM must really answer.
     """
     if settings.provider == "bedrock":
-        from ragproject.core.bedrock import BedrockEmbedder, BedrockLLM
+        from industryiq.core.bedrock import BedrockEmbedder, BedrockLLM
 
         return (
             BedrockEmbedder(model_id=settings.bedrock_embed_model_id, region=settings.aws_region),
             BedrockLLM(model_id=settings.bedrock_llm_model_id, region=settings.aws_region),
         )
     if settings.provider == "anthropic":
-        from ragproject.core.anthropic_llm import AnthropicLLM
-        from ragproject.core.local_embeddings import LocalEmbedder
+        from industryiq.core.anthropic_llm import AnthropicLLM
+        from industryiq.core.local_embeddings import LocalEmbedder
 
         return LocalEmbedder(), AnthropicLLM(
             model_id=settings.anthropic_llm_model_id, api_key=settings.anthropic_api_key

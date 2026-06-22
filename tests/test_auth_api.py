@@ -3,9 +3,9 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from ragproject.api.app import app
-from ragproject.api.deps import get_auth_service
-from ragproject.core.auth import AuthService, InMemoryUserStore
+from industryiq.api.app import app
+from industryiq.api.deps import get_auth_service
+from industryiq.core.auth import AuthService, InMemoryUserStore
 
 
 @pytest.fixture

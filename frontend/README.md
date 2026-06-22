@@ -1,6 +1,6 @@
 # IndustryIQ — frontend
 
-The web client for the ragproject API: a dark, GPT-style chat app for
+The web client for the IndustryIQ API: a dark, GPT-style chat app for
 questioning your industry reports. React + Vite + TypeScript, styled with
 Tailwind CSS v4. Self-contained package, separate from the Python backend.
 
@@ -23,7 +23,7 @@ The backend must be running first (see the repo root `README.md`):
 
 ```powershell
 # in another terminal, from the repo root:
-python -m uvicorn ragproject.api.app:app --reload
+python -m uvicorn industryiq.api.app:app --reload
 ```
 
 Then, in this folder:

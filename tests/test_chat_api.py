@@ -4,10 +4,10 @@ from datetime import UTC, datetime
 import pytest
 from fastapi.testclient import TestClient
 
-from ragproject.api.app import app
-from ragproject.api.deps import get_chat_service, get_current_user, get_session_documents
-from ragproject.core.auth import User
-from ragproject.core.chat import (
+from industryiq.api.app import app
+from industryiq.api.deps import get_chat_service, get_current_user, get_session_documents
+from industryiq.core.auth import User
+from industryiq.core.chat import (
     AlwaysRetrieveRouter,
     ChatService,
     InMemoryConversationStore,
@@ -15,10 +15,10 @@ from ragproject.core.chat import (
     SessionDocuments,
     ThresholdFilter,
 )
-from ragproject.core.embeddings import FakeEmbedder
-from ragproject.core.generation import FakeLLM
-from ragproject.core.retrieval import Retriever
-from ragproject.core.vectorstore import InMemoryVectorStore
+from industryiq.core.embeddings import FakeEmbedder
+from industryiq.core.generation import FakeLLM
+from industryiq.core.retrieval import Retriever
+from industryiq.core.vectorstore import InMemoryVectorStore
 
 # A stand-in authenticated user; tests that need a second user override the
 # get_current_user dependency mid-test (see test_conversation_is_scoped_to_owner).

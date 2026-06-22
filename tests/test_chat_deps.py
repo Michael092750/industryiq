@@ -1,7 +1,7 @@
 import pytest
 
-from ragproject.api.deps import get_chat_service, get_session_documents
-from ragproject.core.chat import ChatService
+from industryiq.api.deps import get_chat_service, get_session_documents
+from industryiq.core.chat import ChatService
 
 
 def _clear_caches() -> None:
@@ -34,8 +34,8 @@ def test_get_chat_service_uses_postgres_when_database_url_set(
 
     monkeypatch.setenv("RAG_PROVIDER", "fake")
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@host/db")
-    monkeypatch.setattr("ragproject.api.deps.PgVectorStore", FakePgVector)
-    monkeypatch.setattr("ragproject.api.deps.PgConversationStore", FakePgConversation)
+    monkeypatch.setattr("industryiq.api.deps.PgVectorStore", FakePgVector)
+    monkeypatch.setattr("industryiq.api.deps.PgConversationStore", FakePgConversation)
     _clear_caches()
     assert isinstance(get_chat_service(), ChatService)
     assert recorded["vector_dsn"] == "postgresql://u:p@host/db"

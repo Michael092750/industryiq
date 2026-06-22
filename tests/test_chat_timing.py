@@ -1,6 +1,6 @@
 import pytest
 
-from ragproject.core.chat.timing import StepTimer
+from industryiq.core.chat.timing import StepTimer
 
 
 def test_measure_records_named_duration_in_ms(fake_clock) -> None:

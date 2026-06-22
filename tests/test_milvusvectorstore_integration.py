@@ -15,8 +15,8 @@ from collections.abc import Iterator
 
 import pytest
 
-from ragproject.config import get_settings
-from ragproject.core.vectorstore import VectorStore
+from industryiq.config import get_settings
+from industryiq.core.vectorstore import VectorStore
 
 pytestmark = pytest.mark.integration
 
@@ -27,7 +27,7 @@ MILVUS_URI = get_settings().milvus_uri
 def store() -> Iterator["object"]:
     from pymilvus import MilvusClient
 
-    from ragproject.core.milvusvectorstore import MilvusVectorStore
+    from industryiq.core.milvusvectorstore import MilvusVectorStore
 
     collection = "test_chunks_" + uuid.uuid4().hex[:8]
     try:

@@ -1,6 +1,6 @@
-from ragproject.core.embeddings import FakeEmbedder
-from ragproject.core.retrieval import Retriever
-from ragproject.core.vectorstore import InMemoryVectorStore
+from industryiq.core.embeddings import FakeEmbedder
+from industryiq.core.retrieval import Retriever
+from industryiq.core.vectorstore import InMemoryVectorStore
 
 
 def _retriever() -> Retriever:

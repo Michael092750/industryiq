@@ -1,6 +1,6 @@
 import pytest
 
-from ragproject.config import get_settings
+from industryiq.config import get_settings
 
 
 def test_debug_api_key_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:

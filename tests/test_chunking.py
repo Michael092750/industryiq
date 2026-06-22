@@ -1,6 +1,6 @@
 import pytest
 
-from ragproject.core.chunking import chunk_text
+from industryiq.core.chunking import chunk_text
 
 
 def test_short_text_returns_single_chunk() -> None:

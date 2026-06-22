@@ -14,9 +14,9 @@ from collections.abc import Iterator
 import psycopg
 import pytest
 
-from ragproject.config import get_settings
-from ragproject.core.pgvectorstore import PgVectorStore
-from ragproject.core.vectorstore import VectorStore
+from industryiq.config import get_settings
+from industryiq.core.pgvectorstore import PgVectorStore
+from industryiq.core.vectorstore import VectorStore
 
 pytestmark = pytest.mark.integration
 

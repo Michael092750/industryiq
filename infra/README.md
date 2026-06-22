@@ -1,6 +1,6 @@
-# infra — ragproject infrastructure (AWS CDK)
+# infra — IndustryIQ infrastructure (AWS CDK)
 
-Infrastructure as code for the ragproject deployment. Self-contained: its own
+Infrastructure as code for the IndustryIQ deployment. Self-contained: its own
 virtualenv and dependencies, separate from the application package.
 
 ## Setup (once)

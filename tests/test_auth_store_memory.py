@@ -1,4 +1,4 @@
-from ragproject.core.auth.adapters.store_memory import InMemoryUserStore
+from industryiq.core.auth.adapters.store_memory import InMemoryUserStore
 
 
 def test_create_assigns_id_and_persists() -> None:

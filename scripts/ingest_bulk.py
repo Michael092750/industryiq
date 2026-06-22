@@ -22,8 +22,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from ragproject.api.deps import get_pipeline
-from ragproject.core.loaders import SUPPORTED_EXTENSIONS, load
+from industryiq.api.deps import get_pipeline
+from industryiq.core.loaders import SUPPORTED_EXTENSIONS, load
 
 
 def main(root: Path) -> None:

@@ -1,4 +1,4 @@
-from ragproject import version
+from industryiq import version
 
 
 def test_version_returns_string() -> None:

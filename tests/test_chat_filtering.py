@@ -1,5 +1,5 @@
-from ragproject.core.chat.adapters.filtering import ThresholdFilter
-from ragproject.core.vectorstore import Hit
+from industryiq.core.chat.adapters.filtering import ThresholdFilter
+from industryiq.core.vectorstore import Hit
 
 
 def _hit(score: float) -> Hit:

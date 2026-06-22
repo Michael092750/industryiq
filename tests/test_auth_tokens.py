@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from ragproject.core.auth.tokens import decode_token, encode_token
+from industryiq.core.auth.tokens import decode_token, encode_token
 
 # >= 32 bytes so pyjwt does not warn about a weak HMAC key.
 SECRET = "unit-test-secret-key-of-sufficient-length"

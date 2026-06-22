@@ -1,5 +1,5 @@
-from ragproject.core.generation import LLM, FakeLLM, build_prompt, generate_answer
-from ragproject.core.vectorstore import Hit
+from industryiq.core.generation import LLM, FakeLLM, build_prompt, generate_answer
+from industryiq.core.vectorstore import Hit
 
 
 def _hits() -> list[Hit]:

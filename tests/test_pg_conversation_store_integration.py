@@ -14,10 +14,10 @@ from collections.abc import Iterator
 import psycopg
 import pytest
 
-from ragproject.config import get_settings
-from ragproject.core.chat.adapters.store_pg import PgConversationStore
-from ragproject.core.chat.models import Turn
-from ragproject.core.chat.ports import ConversationStore
+from industryiq.config import get_settings
+from industryiq.core.chat.adapters.store_pg import PgConversationStore
+from industryiq.core.chat.models import Turn
+from industryiq.core.chat.ports import ConversationStore
 
 pytestmark = pytest.mark.integration
 

@@ -7,10 +7,10 @@ coupled to concrete providers, this file could not exist.
 
 import pytest
 
-from ragproject.core.chat.adapters.filtering import ThresholdFilter
-from ragproject.core.chat.adapters.routing import AlwaysRetrieveRouter
-from ragproject.core.chat.adapters.store_memory import InMemoryConversationStore
-from ragproject.core.chat.models import (
+from industryiq.core.chat.adapters.filtering import ThresholdFilter
+from industryiq.core.chat.adapters.routing import AlwaysRetrieveRouter
+from industryiq.core.chat.adapters.store_memory import InMemoryConversationStore
+from industryiq.core.chat.models import (
     ChatPolicy,
     RouteDecision,
     StreamEnd,
@@ -19,7 +19,7 @@ from ragproject.core.chat.models import (
     StreamToken,
     Turn,
 )
-from ragproject.core.chat.ports import (
+from industryiq.core.chat.ports import (
     ConversationStore,
     QueryRewriter,
     RelevanceFilter,
@@ -27,11 +27,11 @@ from ragproject.core.chat.ports import (
     RetrievalRouter,
     SessionDocumentStore,
 )
-from ragproject.core.chat.service import ChatService, ConversationNotFound, merge_hits
-from ragproject.core.embeddings import FakeEmbedder
-from ragproject.core.generation import FakeLLM, StreamingLLM
-from ragproject.core.retrieval import Retriever
-from ragproject.core.vectorstore import Hit, InMemoryVectorStore
+from industryiq.core.chat.service import ChatService, ConversationNotFound, merge_hits
+from industryiq.core.embeddings import FakeEmbedder
+from industryiq.core.generation import FakeLLM, StreamingLLM
+from industryiq.core.retrieval import Retriever
+from industryiq.core.vectorstore import Hit, InMemoryVectorStore
 
 
 class RecordingRewriter:

@@ -1,6 +1,8 @@
-# ragproject
+# IndustryIQ
 
-A modular, testable Retrieval-Augmented Generation (RAG) system.
+**An AI research agent for industry analysis** — answers questions from a curated
+library of consultancy and association reports, with cited sources. Built as a
+modular, testable Retrieval-Augmented Generation (RAG) system.
 
 ## Development
 
@@ -22,7 +24,7 @@ pytest
 ## Run the API locally
 
 ```powershell
-python -m uvicorn ragproject.api.app:app --reload
+python -m uvicorn industryiq.api.app:app --reload
 ```
 
 Then open <http://127.0.0.1:8000/docs> for the interactive Swagger UI.
@@ -147,7 +149,7 @@ pipeline build separate stores in the same process).
 2. Start the API (same `.env`, so it uses the same provider + database):
 
    ```powershell
-   python -m uvicorn ragproject.api.app:app --reload
+   python -m uvicorn industryiq.api.app:app --reload
    ```
 
 3. Drive a conversation from `/docs` (click **Authorize** and paste a token), or
@@ -194,7 +196,7 @@ For a true full-stack run-through, start all three services, then exercise the a
 docker compose up -d db
 
 # 2) backend  (reads .env: provider, DATABASE_URL, JWT_SECRET, ANTHROPIC_API_KEY)
-python -m uvicorn ragproject.api.app:app --reload      # :8000
+python -m uvicorn industryiq.api.app:app --reload      # :8000
 
 # 3) frontend
 cd frontend ; npm install ; npm run dev                # :5173

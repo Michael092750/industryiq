@@ -1,6 +1,6 @@
 import pytest
 
-from ragproject.core.embeddings import Embedder, FakeEmbedder
+from industryiq.core.embeddings import Embedder, FakeEmbedder
 
 
 def test_fake_embedder_satisfies_interface() -> None:

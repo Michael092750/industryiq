@@ -1,6 +1,6 @@
 import pytest
 
-from ragproject.core.auth import AuthService, EmailAlreadyRegistered, InMemoryUserStore
+from industryiq.core.auth import AuthService, EmailAlreadyRegistered, InMemoryUserStore
 
 
 def _service() -> AuthService:

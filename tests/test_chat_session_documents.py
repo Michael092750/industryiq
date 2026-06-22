@@ -1,5 +1,5 @@
-from ragproject.core.chat.adapters.session_documents import SessionDocuments
-from ragproject.core.embeddings import FakeEmbedder
+from industryiq.core.chat.adapters.session_documents import SessionDocuments
+from industryiq.core.embeddings import FakeEmbedder
 
 
 def _docs() -> SessionDocuments:

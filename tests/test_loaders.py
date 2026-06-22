@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from ragproject.core import loaders
-from ragproject.core.loaders import load, load_docx, load_pdf, load_text
+from industryiq.core import loaders
+from industryiq.core.loaders import load, load_docx, load_pdf, load_text
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

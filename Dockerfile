@@ -1,4 +1,4 @@
-# Recipe to build an image of the ragproject API.
+# Recipe to build an image of the IndustryIQ API.
 FROM python:3.11-slim
 
 # Don't write .pyc files; stream logs straight to the console.
@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir .
 EXPOSE 8000
 
 # How the container runs the app. 0.0.0.0 so it's reachable from outside the container.
-CMD ["uvicorn", "ragproject.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "industryiq.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,4 +1,4 @@
-from ragproject.core.auth.passwords import hash_password, verify_password
+from industryiq.core.auth.passwords import hash_password, verify_password
 
 
 def test_hash_is_not_plaintext() -> None:

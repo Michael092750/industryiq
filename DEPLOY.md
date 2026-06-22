@@ -1,4 +1,4 @@
-# Deploying ragproject to AWS
+# Deploying IndustryIQ to AWS
 
 The deployment has **two independent parts**:
 
@@ -94,7 +94,7 @@ the image and restarts the containers in place.
 
 ## 4. Update the infrastructure
 
-You edited `infra/ragproject_infra/ragproject_stack.py` (e.g. instance size).
+You edited `infra/industryiq_infra/industryiq_stack.py` (e.g. instance size).
 Re-run **[Procedure A](#procedure-a--deploy-the-infrastructure)** — CDK computes the
 diff and applies only what changed. Run `cdk diff -c my_ip=$myip` first to preview.
 

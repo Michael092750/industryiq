@@ -1,6 +1,6 @@
-from ragproject.core.chat.adapters.rewriting import LlmQueryRewriter, NoOpQueryRewriter
-from ragproject.core.chat.models import Turn
-from ragproject.core.generation import FakeLLM
+from industryiq.core.chat.adapters.rewriting import LlmQueryRewriter, NoOpQueryRewriter
+from industryiq.core.chat.models import Turn
+from industryiq.core.generation import FakeLLM
 
 
 def test_llm_rewriter_returns_question_unchanged_on_first_turn() -> None:

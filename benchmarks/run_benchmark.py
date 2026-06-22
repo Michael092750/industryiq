@@ -1,4 +1,4 @@
-"""Benchmark the ragproject retriever against a labeled gold set.
+"""Benchmark the industryiq retriever against a labeled gold set.
 
 This is a pure *retrieval* benchmark: a set of queries, each with a known set of
 relevant ("gold") chunks, run against a live vector store -- ``--backend pgvector``
@@ -53,10 +53,10 @@ from typing import Any
 
 import metrics
 
-from ragproject.config import Settings, get_settings
-from ragproject.core.embeddings import Embedder
-from ragproject.core.pgvectorstore import PgVectorStore
-from ragproject.core.vectorstore import VectorStore
+from industryiq.config import Settings, get_settings
+from industryiq.core.embeddings import Embedder
+from industryiq.core.pgvectorstore import PgVectorStore
+from industryiq.core.vectorstore import VectorStore
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_QUERIES = HERE / "queries.json"
@@ -73,11 +73,11 @@ def build_embedder(settings: Settings) -> Embedder:
     producing meaningless (and pgvector-incompatible) vectors.
     """
     if settings.provider == "bedrock":
-        from ragproject.core.bedrock import BedrockEmbedder
+        from industryiq.core.bedrock import BedrockEmbedder
 
         return BedrockEmbedder(model_id=settings.bedrock_embed_model_id, region=settings.aws_region)
     if settings.provider == "anthropic":
-        from ragproject.core.local_embeddings import LocalEmbedder
+        from industryiq.core.local_embeddings import LocalEmbedder
 
         return LocalEmbedder()
     raise SystemExit(
@@ -114,7 +114,7 @@ def build_store(settings: Settings, backend: str, dim: int) -> VectorStore:
     pgvector-only runs don't need pymilvus.
     """
     if backend == "milvus":
-        from ragproject.core.milvusvectorstore import MilvusVectorStore
+        from industryiq.core.milvusvectorstore import MilvusVectorStore
 
         return MilvusVectorStore(
             settings.milvus_uri,

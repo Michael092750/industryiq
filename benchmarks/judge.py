@@ -28,7 +28,7 @@ from dataclasses import dataclass
 
 from anthropic import Anthropic
 
-from ragproject.core.vectorstore import Hit
+from industryiq.core.vectorstore import Hit
 
 # A different (and stronger) model than the chatbot's, so the evaluation is
 # independent rather than a model grading itself.
