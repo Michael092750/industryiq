@@ -94,6 +94,10 @@ services:
       # Inside the compose network, Milvus is reachable at the service name "milvus".
       MILVUS_URI: ${MILVUS_URI:-http://milvus:19530}
       DEBUG_API_KEY: ${DEBUG_API_KEY:-}
+      # Admin ingestion key (POST /admin/ingest); unset -> endpoint disabled (404).
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      # Signs JWT access tokens; unset -> insecure built-in default (dev only).
+      JWT_SECRET: ${JWT_SECRET:-}
       # Default to free offline fakes; compose.prod.yml overrides this to "bedrock" on AWS.
       RAG_PROVIDER: ${RAG_PROVIDER:-fake}
       AWS_REGION: ${AWS_REGION:-us-east-1}
