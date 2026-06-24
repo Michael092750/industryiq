@@ -68,3 +68,7 @@ class Retriever:
     def all_chunks(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
         """Return up to ``limit`` indexed ``(id, metadata)`` pairs, for inspection."""
         return self._store.all_items(limit=limit)
+
+    def delete_source(self, source: str) -> int:
+        """Delete every indexed chunk that came from ``source``. Returns the count."""
+        return self._store.delete_by_source(source)

@@ -1,0 +1,57 @@
+
+=== 2026_SIA_StandardIndustry_OnePager_02c48.pdf ===
+  pypdf   {'secs': 0.02, 'pages': 1, 'chars': 2303, 'empty_pages': 0}
+Loading weights:   0%|          | 0/770 [00:00<?, ?it/s]Loading weights: 100%|##########| 770/770 [00:00<00:00, 8867.57it/s]
+  docling {'secs': 2.32, 'chars': 1950, 'section_headers': 3, 'tables': 0, 'pictures': 11, 'chunks': 2, 'chunks_with_section': 2}
+
+=== 136_docs-en-pdf-generative-ai-factsheet.pdf ===
+  pypdf   {'secs': 0.17, 'pages': 10, 'chars': 17084, 'empty_pages': 0}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  docling {'secs': 8.35, 'chars': 17907, 'section_headers': 20, 'tables': 1, 'pictures': 10, 'chunks': 22, 'chunks_with_section': 22}
+
+=== 023_Accenture-A-New-Era-of-Generative-AI-for-Everyone.pdf ===
+  pypdf   {'secs': 0.08, 'pages': 10, 'chars': 15902, 'empty_pages': 0}
+  docling {'secs': 7.48, 'chars': 14081, 'section_headers': 16, 'tables': 1, 'pictures': 7, 'chunks': 19, 'chunks_with_section': 19}
+
+=== 030_The-Travel-Industrys-New-Trip-Final.pdf ===
+  pypdf   {'secs': 0.12, 'pages': 10, 'chars': 11240, 'empty_pages': 1}
+  docling {'secs': 7.54, 'chars': 9884, 'section_headers': 8, 'tables': 1, 'pictures': 9, 'chunks': 11, 'chunks_with_section': 11}
+
+=== 044_NIST.AI.600-1.pdf ===
+  pypdf   {'secs': 0.28, 'pages': 10, 'chars': 23676, 'empty_pages': 0}
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (1106 > 512). Running this sequence through the model will result in indexing errors
+  docling {'secs': 8.65, 'chars': 25335, 'section_headers': 14, 'tables': 1, 'pictures': 3, 'chunks': 35, 'chunks_with_section': 35}
+
+=== 051_WEF_Artificial_Intelligence_in_Financial_Services_2025.pdf ===
+  pypdf   {'secs': 0.18, 'pages': 10, 'chars': 23426, 'empty_pages': 0}
+  docling {'secs': 10.16, 'chars': 18741, 'section_headers': 17, 'tables': 2, 'pictures': 15, 'chunks': 21, 'chunks_with_section': 20}
+
+=== 006_hai_ai-index-report-2025_chapter1_final.pdf ===
+  pypdf   {'secs': 0.19, 'pages': 10, 'chars': 14043, 'empty_pages': 0}
+  docling {'secs': 8.74, 'chars': 12146, 'section_headers': 21, 'tables': 2, 'pictures': 15, 'chunks': 23, 'chunks_with_section': 23}
+
+=== 110_RAND_RRA3888-1.pdf ===
+  pypdf   {'secs': 0.11, 'pages': 10, 'chars': 21484, 'empty_pages': 1}
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (7924 > 512). Running this sequence through the model will result in indexing errors
+  docling {'secs': 8.58, 'chars': 22141, 'section_headers': 18, 'tables': 2, 'pictures': 2, 'chunks': 71, 'chunks_with_section': 71}
+
+=== 104_2019.11.20_brookingsmetro_what-jobs-are-affected-by-ai_report_muro-whiton-maxim.pdf ===
+found startxref pointing to a previous revision after a corrupt one
+  pypdf   {'secs': 0.25, 'pages': 10, 'chars': 15880, 'empty_pages': 0}
+  docling {'secs': 9.23, 'chars': 15653, 'section_headers': 9, 'tables': 2, 'pictures': 6, 'chunks': 18, 'chunks_with_section': 18}
+
+=== 135_wipo_pub_1055.pdf ===
+  pypdf   {'secs': 0.57, 'pages': 10, 'chars': 11577, 'empty_pages': 1}
+  docling {'secs': 7.78, 'chars': 11373, 'section_headers': 19, 'tables': 0, 'pictures': 6, 'chunks': 24, 'chunks_with_section': 24}
+
+=== imf_org__text.pdf ===
+  pypdf   {'secs': 3.17, 'pages': 10, 'chars': 14396, 'empty_pages': 1}
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (698 > 512). Running this sequence through the model will result in indexing errors
+  docling {'secs': 21.85, 'chars': 25629, 'section_headers': 14, 'tables': 4, 'pictures': 4, 'chunks': 22, 'chunks_with_section': 22}
+
+=== fdic_gov__quarterly-banking-profile-fourth-quarter-2025.pdf ===
+  pypdf   {'secs': 0.41, 'pages': 10, 'chars': 16077, 'empty_pages': 1}
+  docling {'secs': 9.44, 'chars': 14280, 'section_headers': 22, 'tables': 0, 'pictures': 17, 'chunks': 22, 'chunks_with_section': 21}
+
+12/12 ok | pypdf 5.5s vs docling 110.1s (20x) | section coverage 288/290 chunks
+-> C:\Users\micha\OneDrive\Study YZ\LLM Camp\Projects\industryiq\benchmarks\docling_vs_pypdf\out\results.json

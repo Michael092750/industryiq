@@ -1,6 +1,6 @@
 import pytest
 
-from industryiq.core.chunking import chunk_text
+from industryiq.core.chunking import chunk_text, split_sections
 
 
 def test_short_text_returns_single_chunk() -> None:
@@ -41,3 +41,40 @@ def test_consecutive_chunks_overlap() -> None:
 def test_invalid_params_raise(chunk_size: int, overlap: int) -> None:
     with pytest.raises(ValueError):
         chunk_text("some text here", chunk_size=chunk_size, overlap=overlap)
+
+
+def test_split_sections_no_heading_yields_single_block() -> None:
+    assert split_sections("plain text, no heading") == [(None, "plain text, no heading")]
+
+
+def test_split_sections_empty_text_yields_nothing() -> None:
+    assert split_sections("") == []
+
+
+def test_split_sections_tags_each_heading_block() -> None:
+    text = "# Title\nintro\n## Outlook\nbody\n### Risks\nmore"
+    assert split_sections(text) == [
+        ("Title", "# Title\nintro"),
+        ("Outlook", "## Outlook\nbody"),
+        ("Risks", "### Risks\nmore"),
+    ]
+
+
+def test_split_sections_keeps_heading_line_inside_its_block() -> None:
+    # The heading words stay in the block so they still embed/index as content.
+    assert split_sections("## Scope 3 Emissions\ndetail") == [
+        ("Scope 3 Emissions", "## Scope 3 Emissions\ndetail")
+    ]
+
+
+def test_split_sections_leading_content_uses_initial_section() -> None:
+    # Body before the first heading inherits the carried-in section.
+    assert split_sections("carried body\n## New\nbody", initial_section="Prev") == [
+        ("Prev", "carried body"),
+        ("New", "## New\nbody"),
+    ]
+
+
+def test_split_sections_ignores_non_atx_hashes() -> None:
+    # No space after '#', and a bare '###', are not headings.
+    assert split_sections("#nospace\n###\ntext") == [(None, "#nospace\n###\ntext")]

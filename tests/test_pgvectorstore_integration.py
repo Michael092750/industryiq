@@ -87,3 +87,22 @@ def test_search_empty_store_returns_empty(store: PgVectorStore) -> None:
 def test_invalid_k_raises(store: PgVectorStore) -> None:
     with pytest.raises(ValueError):
         store.search([1.0, 0.0], k=0)
+
+
+def test_delete_by_source_removes_only_matching_chunks(store: PgVectorStore) -> None:
+    store.upsert(
+        ids=["a1", "a2", "b1"],
+        vectors=[[1.0, 0.0], [0.9, 0.1], [0.0, 1.0]],
+        metadatas=[
+            {"text": "A1", "source": "a.pdf"},
+            {"text": "A2", "source": "a.pdf"},
+            {"text": "B1", "source": "b.pdf"},
+        ],
+    )
+    assert store.delete_by_source("a.pdf") == 2
+    assert {id_ for id_, _meta in store.all_items()} == {"b1"}
+
+
+def test_delete_by_source_unknown_source_is_noop(store: PgVectorStore) -> None:
+    _seed(store)
+    assert store.delete_by_source("missing.pdf") == 0

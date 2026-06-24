@@ -77,3 +77,23 @@ def test_all_items_returns_stored_pairs() -> None:
 
 def test_all_items_respects_limit() -> None:
     assert len(_seeded_store().all_items(limit=2)) == 2
+
+
+def test_delete_by_source_removes_only_matching_chunks() -> None:
+    store = InMemoryVectorStore()
+    store.upsert(
+        ids=["a1", "a2", "b1"],
+        vectors=[[1.0, 0.0], [0.9, 0.1], [0.0, 1.0]],
+        metadatas=[
+            {"text": "A1", "source": "a.pdf"},
+            {"text": "A2", "source": "a.pdf"},
+            {"text": "B1", "source": "b.pdf"},
+        ],
+    )
+    deleted = store.delete_by_source("a.pdf")
+    assert deleted == 2
+    assert {id_ for id_, _ in store.all_items()} == {"b1"}
+
+
+def test_delete_by_source_unknown_source_is_noop() -> None:
+    assert _seeded_store().delete_by_source("missing.pdf") == 0

@@ -42,6 +42,13 @@ class Settings:
     # ...). Explicit (not AUTOINDEX) so benchmark runs name the index they used.
     milvus_index_type: str = "HNSW"
 
+    # PDF text extractor used at ingestion: "docling" (default; layout-aware,
+    # emits Markdown with correct reading order/headings -> better retrieval on
+    # report PDFs; needs the optional 'docling' extra and falls back to pypdf on
+    # any failure) or "pypdf" (fast pure-Python text, no fallback). Ingestion is
+    # an offline batch, so the slower default is worth the chunk-quality win.
+    pdf_parser: str = "docling"
+
     # AI provider: "fake" (offline default), "anthropic" (local: Anthropic API
     # key + a local CPU embedder), or "bedrock" (real Amazon Bedrock on AWS).
     provider: str = "fake"
@@ -77,6 +84,21 @@ class Settings:
     # Drop retrieved context whose top score is below this (0.0 = keep all).
     chat_relevance_threshold: float = 0.0
 
+    # Scheduled bulk ingestion: a background loop that periodically scans a folder
+    # (path + interval set by an admin via /admin/ingest-job) and ingests new/
+    # changed files into the shared KB. ``enabled`` is the master kill-switch for
+    # the loop itself; ``poll_seconds`` is how often it checks whether a run is due.
+    ingest_scheduler_enabled: bool = True
+    ingest_scheduler_poll_seconds: int = 60
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    """Parse a boolean env var; treat 0/false/no/off (any case) as False."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in ("0", "false", "no", "off", "")
+
 
 def get_settings() -> Settings:
     """Build settings from the current environment (read fresh each call)."""
@@ -87,6 +109,7 @@ def get_settings() -> Settings:
         admin_api_key=os.getenv("ADMIN_API_KEY"),
         database_url=os.getenv("DATABASE_URL"),
         vector_backend=os.getenv("VECTOR_BACKEND", "pgvector"),
+        pdf_parser=os.getenv("PDF_PARSER", "docling"),
         milvus_uri=os.getenv("MILVUS_URI", "http://localhost:19530"),
         milvus_token=os.getenv("MILVUS_TOKEN"),
         milvus_collection=os.getenv("MILVUS_COLLECTION", "chunks"),
@@ -106,4 +129,6 @@ def get_settings() -> Settings:
         chat_router=os.getenv("CHAT_ROUTER", "always"),
         chat_kb_description=os.getenv("CHAT_KB_DESCRIPTION", "industry analysis reports"),
         chat_relevance_threshold=float(os.getenv("CHAT_RELEVANCE_THRESHOLD", "0.0")),
+        ingest_scheduler_enabled=_env_bool("INGEST_SCHEDULER_ENABLED", True),
+        ingest_scheduler_poll_seconds=int(os.getenv("INGEST_SCHEDULER_POLL_SECONDS", "60")),
     )

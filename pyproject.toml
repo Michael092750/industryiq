@@ -28,6 +28,9 @@ dev = ["ruff", "mypy", "pytest", "pytest-cov", "pre-commit", "httpx"]
 # Local-dev AI provider (RAG_PROVIDER=anthropic): a CPU embedder for retrieval.
 # Not needed in production, which uses Bedrock.
 local = ["fastembed>=0.3"]
+# Layout-aware PDF parsing (PDF_PARSER=docling): pulls in PyTorch + models, so
+# it is opt-in. Only ingestion hosts that set PDF_PARSER=docling need it.
+docling = ["docling>=2.0"]
 
 [tool.ruff]
 line-length = 100
@@ -43,7 +46,7 @@ files = ["src"]
 
 [[tool.mypy.overrides]]
 # These ship no type stubs; don't fail on their untyped imports.
-module = ["docx.*", "pgvector.*", "pymilvus.*", "boto3.*", "botocore.*", "fastembed.*", "bcrypt.*"]
+module = ["docx.*", "pgvector.*", "pymilvus.*", "boto3.*", "botocore.*", "fastembed.*", "bcrypt.*", "docling.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -67,4 +70,5 @@ omit = [
     "src/industryiq/core/local_embeddings.py",
     "src/industryiq/core/chat/adapters/store_pg.py",
     "src/industryiq/core/auth/adapters/store_pg.py",
+    "src/industryiq/core/ingestion/adapters/store_pg.py",
 ]

@@ -101,6 +101,14 @@ services:
       # Default to free offline fakes; compose.prod.yml overrides this to "bedrock" on AWS.
       RAG_PROVIDER: ${RAG_PROVIDER:-fake}
       AWS_REGION: ${AWS_REGION:-us-east-1}
+      # Background bulk-ingest scheduler: scans the folder/interval an admin sets
+      # via /admin/ingest-job and ingests new/changed files. Set to 0/false to
+      # disable the loop entirely. Point the job's path at the mount below.
+      INGEST_SCHEDULER_ENABLED: ${INGEST_SCHEDULER_ENABLED:-true}
+    volumes:
+      # Server-side folder the scheduled ingest reads from. Drop reports under
+      # ./reports (one subfolder per category) and set the job path to /data/reports.
+      - ./reports:/data/reports:ro
     ports:
       - "8000:8000"
     depends_on:

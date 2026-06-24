@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from industryiq.core.chunking import chunk_text
+from industryiq.core.chunking import chunk_text, split_sections
 from industryiq.core.generation import LLM, generate_answer
 from industryiq.core.loaders import load_pages, load_title
 from industryiq.core.retrieval import Retriever
@@ -73,11 +73,17 @@ class RagPipeline:
         metadata: dict[str, Any] | None = None,
         title: str | None = None,
     ) -> list[str]:
-        """Chunk pre-extracted ``pages`` and add them, tagging each chunk's ``page``.
+        """Chunk pre-extracted ``pages`` and add them, tagging ``page`` and ``section``.
 
         ``page`` (1-based) is recorded only when there is more than one page, so
         single-page / non-paginated sources don't carry a misleading number.
         Chunking is per page, so a chunk never straddles a page boundary.
+
+        ``section`` is each chunk's nearest Markdown heading (from Docling's
+        layout-aware output), carried across page boundaries so body that
+        continues past a page break keeps the heading it opened under. Pages with
+        no headings (plain text, pypdf) leave ``section`` unset, so chunking is
+        unchanged for them.
         """
         base: dict[str, Any] = {}
         if source is not None:
@@ -89,13 +95,18 @@ class RagPipeline:
         paginated = len(pages) > 1
         chunks: list[str] = []
         metadatas: list[dict[str, Any]] = []
+        carried_section: str | None = None  # heading in force at the last page's end
         for page_number, page_text in enumerate(pages, start=1):
-            for chunk in chunk_text(page_text, chunk_size=self._chunk_size, overlap=self._overlap):
-                chunks.append(chunk)
-                chunk_meta = dict(base)
-                if paginated:
-                    chunk_meta["page"] = page_number
-                metadatas.append(chunk_meta)
+            for section, block in split_sections(page_text, initial_section=carried_section):
+                carried_section = section
+                for chunk in chunk_text(block, chunk_size=self._chunk_size, overlap=self._overlap):
+                    chunks.append(chunk)
+                    chunk_meta = dict(base)
+                    if paginated:
+                        chunk_meta["page"] = page_number
+                    if section:
+                        chunk_meta["section"] = section
+                    metadatas.append(chunk_meta)
         return self._retriever.index(chunks, metadatas=metadatas)
 
     def ingest_file(
@@ -131,3 +142,11 @@ class RagPipeline:
     def list_chunks(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
         """Return up to ``limit`` indexed ``(id, metadata)`` pairs, for inspection."""
         return self._retriever.all_chunks(limit=limit)
+
+    def delete_source(self, source: str) -> int:
+        """Remove every chunk previously ingested from ``source``. Returns the count.
+
+        Lets a scheduled re-ingest replace a changed file's chunks (delete the old
+        set, then re-ingest) instead of leaving stale duplicates behind.
+        """
+        return self._retriever.delete_source(source)

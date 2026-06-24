@@ -1,0 +1,855 @@
+Artificial Intelligence 
+in Financial Services
+WHITE PAPER
+JANUARY 2025
+In collaboration with Accenture
+Transformation of Industries in the Age of AI
+AI Governance  
+Alliance
+
+Images: Getty Images, Unsplash
+Disclaimer 
+This document is published by the  
+World Economic Forum as a contribution 
+to a project, insight area or interaction. 
+The findings, interpretations and 
+conclusions expressed herein are a result 
+of a collaborative process facilitated and 
+endorsed by the World Economic Forum 
+but whose results do not necessarily 
+represent the views of the World Economic 
+Forum, nor the entirety of its Members, 
+Partners or other stakeholders.
+© 2025 World Economic Forum. All rights 
+reserved. No part of this publication may 
+be reproduced or transmitted in any form 
+or by any means, including photocopying 
+and recording, or by any information 
+storage and retrieval system.
+Contents
+Reading guide 3
+Foreword 4
+Executive summary 5
+Introduction  6
+1 AI landscape in financial services 7
+2 Seeing early value from AI implementation 11
+3 Moving towards an AI-powered future 12
+4 AI in the workforce 14
+5 AI risks and challenges 15
+6 Prioritizing responsible AI 17
+7 AI regulation challenges 18
+Conclusion 20
+Contributors 21
+Endnotes 25
+Artificial Intelligence in Financial Services 2
+
+Reading guide
+The World Economic Forum’s AI Transformation of 
+Industries initiative seeks to catalyse responsible 
+industry transformation by exploring the strategic 
+implications, opportunities and challenges of 
+promoting artificial intelligence (AI)-driven innovation 
+across business and operating models.
+This white paper series explores the transformative 
+role of AI across industries. It provides insights 
+through both broad analyses and in-depth 
+explorations of industry-specific and regional deep 
+dives. The series includes:
+As AI continues to evolve at an unprecedented 
+pace, each paper in this series captures a unique 
+perspective on AI – including a detailed snapshot 
+of the landscape at the time of writing. Recognizing 
+that ongoing shifts and advancements are already 
+in motion, the aim is to continuously deepen and 
+update the understanding of AI’s implications 
+and applications through collaboration with the 
+community of World Economic Forum partners 
+and stakeholders engaged in AI strategy and 
+implementation across organizations.
+Together, these papers offer a comprehensive 
+view of AI’s current development and adoption, 
+as well as a view of its future potential impact. 
+Each paper can be read stand-alone or alongside 
+the others, with common themes emerging 
+across industries.
+Frontier Technologies  
+in Industrial Operations:  
+The Rise of Artificial 
+Intelligence Agents
+WHITE PAPER
+JANUARY 2025
+In collaboration with Boston Consulting Group
+Transformation of Industries in the Age of AI
+Artificial Intelligence 
+in Financial Services
+WHITE PAPER
+JANUARY 2025
+In collaboration with Accenture
+Transformation of Industries in the Age of AI
+AI Governance  
+Alliance
+The Future of AI-Enabled Health: 
+Leading the Way
+WHITE PAPER
+JANUARY 2025
+In collaboration with Boston Consulting Group
+Transformation of Industries in the Age of AI
+Leveraging Generative AI 
+for Job Augmentation and
+Workforce Productivity: 
+Scenarios, Case Studies
+and a Framework for Action
+INSIGHT REPORT
+NOVEMBER 2024
+In collaboration with 
+PwC
+Artificial Intelligence’s 
+Energy Paradox: Balancing 
+Challenges and Opportunities
+WHITE PAPER
+JANUARY 2025
+In collaboration with Accenture
+Transformation of Industries in the Age of AI
+AI Governance  
+Alliance
+In collaboration with the Global Cyber Security 
+Capacity Centre, University of Oxford
+Artificial Intelligence 
+and Cybersecurity: 
+Balancing Risks 
+and Rewards
+WHITE PAPER
+JANUARY 2025
+Transformation of Industries in the Age of AI
+AI Governance  
+Alliance
+AI in Action: Beyond 
+Experimentation to 
+Transform Industry
+FLAGSHIP WHITE PAPER SERIES
+JANUARY 2025
+In collaboration with Accenture
+AI Governance  
+Alliance
+Transformation of Industries in the Age of AI
+Int e lli g e n t  T r a n s p o r t , 
+G r e e n e r  F u t u r e : 
+ 
+AI as a Catalyst to 
+Decarbonize 
+ 
+G lobal Logistics
+WHI T E  P A P E R
+J A N U A R Y  2 0 2 5
+I n  c o l l abor ati o n with 
+M c K i n s e y  & C o mpan y
+ 
+ 
+T r a n s forma t i on of Indust r i es i n t he Age of AI
+Impact on industrial ecosystems
+Cross industry
+Industry or function specific
+Impact on industries, sectors and functions
+Additional reports to be announced.
+Blueprint to Action: 
+China’s Path to AI-Powered 
+Industry Transformation
+WHITE PAPER
+JANUARY 2025
+In collaboration with Accenture
+Transformation of Industries in the Age of AI
+AI Governance  
+Alliance
+Regional specific 
+Impact on regions
+Advanced 
+manufacturing 
+and supply chains
+Financial 
+services
+Media, 
+entertainment 
+and sport Healthcare Transport Telecommunications Consumer goods
+Artificial Intelligence in Media, 
+Entertainment and Sport
+WHITE PAPER
+JANUARY 2025
+In collaboration with Accenture
+Transformation of Industries in the Age of AI
+AI Governance  
+Alliance
+Leveraging 
+Generative AI for Job 
+Augmentation and 
+Workforce Productivity
+Artificial Intelligence’s 
+Energy Paradox: 
+Balancing Challenges 
+and Opportunities
+Artificial Intelligence 
+and Cybersecurity: 
+Balancing Risks 
+and Rewards
+AI in Action: Beyond 
+Experimentation to 
+Transform Industry
+Blueprint to Action:  
+China’s Path to 
+AI-Powered Industry 
+Transformation
+Artificial Intelligence 
+in Financial Services
+Frontier Technologies 
+in Industrial 
+Operations: The 
+Rise of Artificial 
+Intelligence Agents
+Artificial Intelligence in 
+Media, Entertainment 
+and Sport
+The Future of 
+AI-Enabled Health: 
+Leading the Way
+Intelligent Transport, 
+Greener Future: 
+AI as a Catalyst 
+to Decarbonize 
+Global Logistics
+Upcoming 
+industry report: 
+Telecommunications
+Upcoming 
+industry report: 
+Consumer goods
+Artificial Intelligence in Financial Services 33
+
+Drew Propson 
+Head, Technology 
+and Innovation in 
+Financial Services,  
+World Economic Forum
+David Parker 
+Global Financial Services 
+Industry Practices Chair, 
+Accenture
+Foreword
+Artificial intelligence (AI) – and particularly generative 
+AI (genAI) – soared to the top of the agenda for 
+businesses, policy-makers and other stakeholders 
+in 2024. There was no shortage of discussion 
+across various forums about the technology’s 
+profound impact and the potential direction of 
+future policy frameworks; nevertheless, the World 
+Economic Forum, responding to the increasing 
+interest in the evolution of AI, launched its own 
+dialogue series within the financial services sector. 
+The aim was to explore a fundamental question: 
+how might this technology not only influence the 
+strategic direction of individual financial institutions, 
+but also transform the entire financial services 
+landscape in the years to come?
+Over the course of 2024, the Forum brought 
+together over 100 experts representing more 
+than 50 financial services organizations to begin 
+addressing this critical question. In addition to 
+banks, input was sought from across insurance, 
+asset management, the investor ecosystem and 
+key fintech (financial technology) players to allow 
+for an exchange of perspectives and best practices 
+around a technology that was developing so 
+rapidly that many organizations felt overwhelmed. 
+Beyond virtual meetings, stakeholders from the 
+private sector participated in Forum-led roundtables 
+in London, New York and Bangkok where they 
+debated both the transformative opportunities 
+AI offers and how business and society could 
+most responsibly manage the concurrent risks AI 
+is presenting.
+This paper, a collaborative effort between the 
+World Economic Forum and Accenture, represents 
+an initial attempt to synthesize key insights from 
+the dialogue series, alongside supporting desk 
+research. We hope this paper will serve as a 
+valuable resource for a broad range of stakeholders 
+across the financial services ecosystem, and will 
+inspire further examination of AI’s potential within 
+the sector. This work is part of the Forum’s AI 
+Governance Alliance (AIGA) – a 500-member group 
+focused on fostering the inclusive, ethical and 
+sustainable use of AI for the benefit of all. Looking 
+ahead, we are eager to build on the insights from 
+this paper in the coming year, as we lead a deeper 
+exploration of the future of financial services in the 
+era of AI.
+Andre Belelieu 
+Head, Financial 
+Services Industries, 
+World Economic Forum
+Artificial Intelligence in Financial ServicesJanuary 2025
+Artificial Intelligence in Financial Services
+4
+
+Executive summary
+This paper, the first in a series on artificial 
+intelligence (AI) in financial services, draws on 
+insights from roundtable discussions with over 100 
+financial services executives worldwide, as well as 
+from the latest external research on AI. 
+As exploration of AI’s far-reaching impact continues, 
+the aim of this paper is to provide an overview of 
+the state of AI in financial services, along with key 
+open questions and potential risks to be considered 
+by business leaders, policy-makers and customers.
+Key insights:  
+Financial services businesses with their 
+data-rich and language-heavy operations 
+are uniquely positioned to capitalize on the 
+developments of AI and have been doing so 
+for years. More recently, with the developments 
+of generative AI (genAI), research indicates that 
+32-39% of the work performed across capital 
+markets, insurance and banking businesses has 
+high potential to be fully automated and 34-37% 
+holds high augmentation potential. This has driven 
+a significant increase in new AI investment.
+In 2023, financial services firms spent $35 
+billion on AI, with projected investments 
+across banking, insurance, capital markets and 
+payments businesses expected to reach $97 
+billion by 2027. With this sizeable investment, 
+financial services are one of the most heavily 
+invested industries in AI, with prominent use cases 
+across the enterprise where automation and 
+machine learning are streamlining tasks, reducing 
+operational costs and improving accuracy.
+With much of the existing AI adoption in 
+financial services largely focused on driving 
+efficiency, the attention of business leaders 
+is now shifting towards revenue growth 
+opportunities. Backend applications will continue 
+to be important; in addition, approximately 70% of 
+financial services executives believe AI will directly 
+contribute to revenue growth in the coming years. 
+The rapid maturing of AI, coupled with an 
+expanding list of applicable uses, is pushing 
+the industry towards reinvention at an 
+unprecedented – and often uncomfortable – 
+speed and scale. As technological developments 
+accelerate, the integration of various emerging 
+innovations, such as small language models, AI 
+agents and quantum computing will drive both 
+innovation and uncertainty across financial services. 
+This shift will continue to challenge business 
+leaders, policy-makers and regulators.
+Looking ahead, financial services stakeholders 
+must increase collaboration to address key 
+risks such as data transparency, privacy, 
+cybersecurity and the spread of misinformation, 
+while also closing policy gaps that could hinder 
+the use and innovation of AI. Overcoming these 
+challenges is essential to ensuring that AI can be 
+leveraged effectively and responsibly across the 
+industry, now and in the future.
+Artificial intelligence is transforming financial 
+services, offering efficiency and revenue 
+growth opportunities, but also posing 
+significant risks and challenges.
+Artificial Intelligence in Financial Services 5
+
+Introduction 
+The digitalization of financial services – from the 
+advent of ATMs (automated teller machines) and 
+online banking to the widespread use of mobile apps 
+– transformed the industry from all perspectives: 
+providers, customers, employees, regulators and 
+other stakeholders. Artificial intelligence (AI) is poised 
+to have at least as profound an impact, albeit with 
+important differences.
+The digital era started in the mid-1980s and 
+is broadly considered to have run for three to 
+four decades. AI has, in fact, been around a lot 
+longer; however, the introduction and widespread 
+adoption of generative AI (genAI) and its increased 
+accessibility two years ago have had a seismic 
+effect on technology and business. Its potential 
+to automate and augment tasks throughout the 
+operating models of most organizations quickly 
+established it as one of the most transformative 
+technologies the world has ever seen. Banking, 
+insurance, capital markets and payments are 
+among the areas in which its impact is expected 
+to be most pervasive (see Figure 1).
+The rapid speed at which AI is maturing, however, 
+combined with the explosion of potential use 
+cases, presents a particular challenge for financial 
+services executives and board members. Most 
+have limited knowledge and experience of 
+technology, yet they are expected to develop a 
+vision of how AI will change their industry, their 
+business and operating models, their offerings 
+and experiences, and their workforces. As some 
+early adopters of genAI are already trumpeting 
+their achievements, financial services leaders are 
+starting to feel intense pressure to strategize their 
+investments to seize the opportunities that are 
+patently on offer. At the same time, executives 
+will need to act immediately to defend their 
+systems, data and customers against a potent 
+new threat, while preparing to comply with a raft 
+of new regulations. 
+Never before has the industry attempted to reinvent 
+itself, its practices and its offerings so extensively at 
+such a rapid pace. This paper aims to help industry 
+leaders address this challenge by summarizing 
+the areas in which AI is likely to have the greatest 
+impact, the fundamental steps that are needed to 
+achieve this impact, and the risks posed by the 
+technology alongside how they might be mitigated. 
+By examining trends and forecasts in the industry, 
+the paper hopes to encourage engagement from all 
+parties in the future role of AI in financial services. 
+By promoting a better understanding of both the 
+potential and the risks of the technology, it seeks 
+to help build a foundation for the effective and 
+responsible application of AI for the benefit of all. 
+Artificial intelligence continues to present 
+unique opportunities and challenges across 
+financial services, disrupting business 
+models, investments and the workforce.
+Artificial Intelligence in Financial Services 6
+ The rapid 
+speed at which 
+AI is maturing, 
+combined with 
+the explosion 
+of potential use 
+cases, presents  
+a particular 
+challenge for 
+financial services 
+executives and 
+board members.
+6
+Artificial Intelligence in Financial Services
+
+AI landscape in 
+financial services
+1
+Financial services is leading in AI investment, 
+harnessing the technology to enhance efficiency 
+across functions, reduce risk and manage fraud.
+Financial services firms have been using AI in their 
+processes for decades. Shortly after the advent 
+of genAI, it became evident that these firms – 
+because so much of what they do is language-
+based – had a greater potential than most others 
+to capitalize on large language models (LLMs). In 
+fact, the tasks that take up almost half of all the 
+time spent by financial services employees are 
+well suited to either automation or augmentation 
+(see Figure 1).
+The potential impact of LLMs across all major industriesFIGURE 1
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Work time distribution across US industries
+Banking
+Insurance
+Capital markets
+Software and platforms
+Health
+Communications and media
+Retail
+Life sciences
+High tech
+Travel
+Automotive
+Public services
+Energy
+Utilities
+Industrial
+Customer goods and services
+Aerospace and defense
+Chemicals
+Natural resources
+High potential for automation High potential for augmentation Lower potential Non-language tasks
+39%
+33%
+32%
+31%
+42%
+34%
+36%
+34%
+31%
+35%
+34%
+34%
+35%
+34%
+33%
+32%
+30%
+31%
+31%
+34%
+37%
+37%
+37%
+25%
+31%
+28%
+29%
+31%
+27%
+27%
+26%
+23%
+23%
+24%
+24%
+26%
+22%
+19%
+21%
+23%
+26%
+28%
+17%
+25%
+15%
+19%
+26%
+26%
+17%
+28%
+20%
+22%
+20%
+21%
+26%
+24%
+19%
+Source: Accenture. (2023.) A new era of generative AI for everyone. https://www.accenture.com/content/dam/accenture/final/accenture-com/document/
+Accenture-A-New-Era-of-Generative-AI-for-Everyone.pdf#zoom=40.
+Artificial Intelligence in Financial Services
+7
+
+It’s no surprise, therefore, that financial services 
+businesses are exploring, investing in and 
+implementing AI at a faster rate than other 
+industries (see Figure 2). As its early pilots deliver 
+promising outcomes and start to be scaled across 
+the enterprise, the commitment of the industry is 
+only expected to deepen. Financial services firms 
+spent a significant $35 billion on AI in 2023, with 
+projected investments across banking, insurance, 
+capital markets and payments expected to reach 
+$97 billion by 2027.1
+AI platforms spend by industry, 2023-2024e
+Growth in spend, spend/revenues and relative total spend
+Bubble size: total AI platforms spend (2024e)
+AI platforms spend/total revenues (2024e)
+Growth in AI platforms spend (2023-2024e)
+0%
+10%
+20%
+30%
+50%
+80%
+0.00% 0.01% 0.02% 0.03% 0.04% 0.05% 0.06% 0.08%
+40%
+70%
+60%
+0.07%
+Mining
+and metals
+Automotive
+and mobility
+Consumer
+industries
+Chemicals
+Travel and tourism
+Advanced
+manufacturing
+Aviation and aerospace
+Healthcare
+Financial
+services
+Media,
+entertainment
+and sport
+Software and platforms
+High techUtilities
+Information technology
+Energy...
+Estimated global AI spend, by industry (2024)FIGURE 2
+Source: Accenture Research. Data from Accenture’s G2000 list. AI Platforms spend from IDC (2023-2024e). Revenues from Capital IQ S&P (2023-2024e)
+As soon as financial services firms started 
+to examine the potential of genAI, it became 
+apparent that the technology could transform 
+processes and practices all the way from back-
+office operations to front-end customer-facing 
+experiences. Its ability to process and reference 
+large amounts of data efficiently revealed numerous 
+opportunities for automating routine manual tasks 
+in areas such as sales, customer and employee 
+experiences, fraud and risk management, and 
+technology development. In addition, companies 
+are developing or acquiring a variety of AI-powered 
+tools that help employees perform their current 
+roles more efficiently and effectively. It remains to be 
+seen whether there are any financial services tasks 
+that will, in the long run, be unaffected by AI. 
+Artificial Intelligence in Financial Services 8
+8
+Artificial Intelligence in Financial Services
+
+IT planning
+and
+coordination
+Data
+sourcing
+strategy
+Operations
+A revolution fuelled by genAI: banking example
+Consumer and private banking
+Deposits Unsecured
+lending
+Secured
+lending
+Commercial and corporate banking
+LendingTransaction
+banking
+Secondary
+markets
+Wealth 
+management
+Portfolio
+management
+Front-back
+optimization
+Unsecured
+lending
+Overdrafts Home
+Loans
+Pricing
+precision Credit memo Market 
+analysis
+Portfolio
+customization
+Securities 
+based lending
+Account and
+system review
+Portfolio
+optimization
+Trade
+processing
+Trade
+settlement Trading
+Brand, content marketing Sales, intelligent RM and adviser enablement
+Marketing
+automation
+Lead nurturing
+and qualiﬁcation
+New offer
+management
+Brand
+management
+Brand 
+marketing
+and campaigns
+Segmentation
+and targeting
+Client and
+sales insights
+Digital content
+creation and
+management
+Lead generation and optimization
+Client onboarding
+Underwriting Underwriting and credit assessment
+Usage and activation Usage and activation
+Deposit, cash
+and payments
+management
+Cards
+management
+Account and
+portfolio
+management
+Fraud
+management
+Investment
+management
+Fund 
+services and 
+administration
+Custody
+and asset
+safekeeping
+Collections
+and default
+management
+Call
+centre
+Client
+servicing
+Client
+relationship
+management
+Operations
+controls
+Investment
+management
+Advisory
+services
+Intelligent
+RM
+Low impact Medium impact High impactEstimated impact of genAI
+Servicing
+Knowledge
+management
+and document
+management
+system
+Collaboration and
+communications
+software
+Content
+management
+service
+Human
+resources Legal CybersecurityProject
+management
+Enterprise
+resource
+planning
+Business
+process
+management
+Enterprise
+apps/
+functions
+Know-your-
+customer and
+enhanced due
+diligence
+Audit Compliance
+Financial
+crime and
+AML
+Risk
+management Finance Procurement MRM
+(responsible AI)
+Risk, 
+compliance
+and audit
+Business
+intelligence
+reporting and
+self-serve
+Software
+development
+life cycle
+Data
+structuring and
+processing
+Real-time
+decision-
+making
+Technology
+and data Data
+governance
+Document
+and knowledge
+management
+Application
+management
+Enterprise
+testing
+IT
+engineering
+Product
+pricing
+Sales and
+marketing
+Onboarding 
+and
+underwriting
+An analysis of the likely impact of generative AI on banking functionsFIGURE 3
+Source: Accenture. (2024). The age of AI: Banking’s new reality. https://www.accenture.com/content/dam/accenture/final/accenture-com/document-2/Accenture-
+Age-AI-Banking-New-Reality.pdf.
+9
+Given the impact that AI – and genAI in particular 
+– has on most financial services functions, there 
+has been a surge in the development of industry-
+specific solutions, both through in-house initiatives 
+and those of technology providers such as 
+OpenAI, Google, Microsoft, Amazon and many 
+others. An examination of the functions at which 
+most investment is directed sheds light on how AI 
+generates value in key areas (see Table 1). 
+Artificial Intelligence in Financial Services
+9
+
+The most promising AI use case examples (contextualized) across financial services TABLE 1
+Industry Function Description Value delivered
+Banking Sales and service Customer service agents receive 
+quick and comprehensive 
+information on all aspects of 
+products, policies and processes 
+from a variety of sources
+ – Greater agent efficiency
+ – Increased response accuracy
+ – Quicker response time 
+Capital markets Client servicing/ investment 
+management 
+Firms use AI models to create 
+investment portfolios, offer 
+financial assistance and provide 
+clients with real-time insights and 
+trading recommendations
+ – Enhanced client satisfaction 
+and retention
+ – Competitive advantage 
+Payments Fraud management and detection Pre-emptive fraud detection 
+includes technologies that 
+can proactively seek and 
+identify suspicious behaviour 
+or anomalous events before 
+fraudulent transactions 2
+ – Improved fraud protection for 
+customers
+ – Enhanced customer experience 
+by minimizing false positives 
+Insurance Claims The automation of claims and 
+customer document processing 3 
+ – Improved workflows
+ – Greater agent efficiency
+ – Streamlined document collection 
+and validation
+Across financial 
+services
+Risk management and underwriting Prediction of fraudulent 
+transactions, more effective 
+underwriting processing and 
+risk scoring
+ – Reduced internal and 
+external risk 
+ – Better protection of data
+ – Improved underwriting 
+processing times 
+ – Greater accessibility to 
+established credit scoring 
+and evaluation
+Technology development Streamlining the software 
+development life cycle, from 
+writing code to automation 
+testing4 as well as understanding 
+and decommissioning of legacy 
+code environments
+ – Improved workflow and accuracy
+ – Increased efficiency
+ – Shorter development cycles
+ – Reduction in technology debt
+Artificial Intelligence in Financial Services 10

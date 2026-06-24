@@ -1,0 +1,355 @@
+WIPO
+Technology Trends 2019
+Artificial
+Intelligence
+
+
+
+WIPO
+Technology Trends 2019
+Artificial
+Intelligence
+
+The user is allowed to reproduce, distribute, adapt, translate 
+and publicly perform this publication, including for commer-
+cial purposes, without explicit permission, provided that the 
+content is accompanied by an acknowledgement that WIPO 
+is the source and that it is clearly indicated if changes were 
+made to the original content.
+Suggested citation: WIPO (2019). WIPO Technology Trends 
+2019: Artificial Intelligence. Geneva: World Intellectual Property 
+Organization.
+Adaptation/translation/derivatives should not carry any  
+official emblem or logo, unless they have been approved and 
+validated by WIPO. Please contact us via the WIPO website 
+to obtain permission. 
+For any derivative work, please include the following  
+disclaimer: “The Secretariat of WIPO assumes no liability or 
+responsibility with regard to the transformation or translation 
+of the original content.”
+When content published by WIPO, such as images, graphics, 
+trademarks or logos, is attributed to a third-party, the user 
+of such content is solely responsible for clearing the rights 
+with the right holder(s).
+To view a copy of this license, please visit https://creative-
+commons.org/licenses/by/3.0/igo/
+The designations employed and the presentation of material 
+throughout this publication do not imply the expression of any 
+opinion whatsoever on the part of WIPO concerning the legal 
+status of any country, territory or area or of its authorities, 
+or concerning the delimitation of its frontiers or boundaries.
+This publication is not intended to reflect the views of the 
+Member States or the WIPO Secretariat. 
+The mention of specific companies or products of manu -
+facturers does not imply that they are endorsed or recom -
+mended by WIPO in preference to others of a similar nature 
+that are not mentioned.
+Photo credit: cover montage created with images by 
+© Margarita Lyr / iStock / Getty Images Plus and  
+© Daria Dombrovskaya / iStock / Getty Images Plus
+Printed in Switzerland
+© WIPO, 2019
+First published 2019
+World Intellectual Property Organization 
+34, chemin des Colombettes, P.O. Box 18 
+CH-1211 Geneva 20, Switzerland
+ISBN: 978-92-805-3007-0
+Attribution 3.0 IGO 
+(CC BY 3.0 IGO)
+
+Artificial intelligence 
+is a new digital 
+frontier that will 
+have a profound 
+impact on the world, 
+transforming the way 
+we live and work.
+WIPO Director General, Francis Gurry
+
+Preface
+7
+					
+Foreword
+8
+					
+About the 
+contributors
+10
+					
+Acknowl- 
+edgments
+12
+					
+Executive 
+summary
+13
+					
+1 Introduction 
+The past, present and future 
+of AI: what research and 
+innovation trends can reveal; 
+the data used in this report 
+and how it is analyzed; and 
+a scheme for categorizing 
+AI technologies.
+18
+2 Trends 
+in artificial 
+intelligence 
+Overall trends emerging 
+from the data and analysis of 
+changes over time, by region 
+and industry and the most 
+prominent entities.
+30
+3 Evolution 
+of AI patent 
+applications 
+and 
+scientific 
+publications 
+The historical development 
+of AI innovation: analysis 
+of trends in patents and 
+scientific literature since 
+the emergence of AI, and 
+breakdown by techniques, 
+functional applications and 
+application fields.
+38
+4 Key 
+players in 
+AI patenting
+The top applicants for AI 
+patents: how companies and 
+universities/public research 
+organizations compare, which 
+entities are most active in 
+each area and where they 
+are filing.
+58
+
+5 WIPO Technology Trends 2019
+5 Geography 
+of patent 
+filings
+Comprehensive analysis of 
+geographical trends, based on 
+the offices where patents are 
+filed, including both first and 
+subsequent filings.
+82
+6 Market 
+trends 
+related to AI 
+Analysis of the use of AI 
+technologies: data on 
+acquisitions, funding, open 
+source and patent litigation 
+and oppositions.
+104
+7 Key issues 
+arising from 
+AI and policy 
+responses
+Views from AI experts 
+on the key policy and 
+regulatory issues raised by AI 
+applications, plus examples of 
+policies proposed or enacted 
+in various jurisdictions. 
+120
+8 The future 
+of AI and the 
+IP system
+The opportunities presented 
+by AI for business, society 
+and culture, and how AI and IP 
+rights interact with each other 
+in the promotion of innovation.
+138
+Selected AI 
+categories 
+and terms
+146
+					
+Further
+reading
+150
+					
+
+This new report aims 
+to shed light on the 
+trends in innovation in 
+AI since the field first 
+developed in the 1950s.
+WIPO Director General, Francis Gurry
+
+7 WIPO Technology Trends 2019
+Preface
+I am pleased to present the first report in a new 
+flagship series, WIPO Technology Trends. This 
+first edition features artificial intelligence (AI) as 
+the theme. It is a fitting topic for the launch of 
+the series as AI is a cutting-edge technology 
+with impacts on a wide range of businesses 
+and activities.
+AI is fast becoming part of our everyday lives, 
+changing how we work, shop, travel and 
+interact with each other. Yet we are only at 
+the beginning of discovering the many ways 
+in which AI will have an impact on – and 
+indeed challenge – business, society and 
+culture. There are numerous misconceptions 
+and misgivings about the nature of AI, and in 
+particular the challenge it poses to humankind. 
+Given these widely held reservations and 
+concerns, it is essential to have a factual basis 
+for policy discussions about innovation in AI. 
+Through this report, we hope to contribute 
+evidence and bring clarity to this important 
+area of debate.
+Based on a detailed study of patents and other 
+information, this new report aims to shed light 
+on the trends in innovation in AI since the field 
+first developed in the 1950s. Research has 
+involved the analysis of patent data related 
+to AI inventions, as well as data on scientific 
+publications, litigation filings and acquisition 
+activity. These data findings are discussed in 
+detail and accompanied by commentary and 
+industry perspectives from more than 20 of the 
+world’s leading experts in AI; more complete 
+datasets, patent search methodology and 
+expert contributions are openly available on 
+the WIPO website. We hope that this report will 
+prove an invaluable resource for businesses, 
+researchers and policymakers in the field, as 
+well as for those general readers who want to 
+find out how AI research has so far developed – 
+and where it is going.
+The analysis offers unique insights into trends 
+in AI techniques (i.e., the different approaches 
+used in AI, such as machine learning and 
+fuzzy logic), AI functional applications (such 
+as natural language processing, speech 
+processing and computer vision) and AI 
+application fields (i.e., those industries and 
+other sectors in which AI innovation is being 
+put into practice). One of the most striking 
+findings of the report is that 50 percent of all AI 
+patents have been published in just the last five 
+years – a remarkable illustration of how rapidly 
+innovation is advancing in this field.
+This report identifies the key players in 
+AI from both the corporate and public 
+sectors across different research areas and 
+industries. Furthermore, the analysis of the 
+data and the inputs from AI experts address 
+many of the policy issues raised by AI, such 
+as the regulation and control of data, the 
+incentivization of further research, the role of 
+intellectual property (IP) protection and the 
+development of human-centered and ethical AI 
+to benefit all.
+Together, the analysis of technological trends 
+presented in this report and the voices of AI 
+experts collected here are a valuable new 
+addition to a growing knowledge base on AI.
+I hope that this contribution will help to shift 
+debate away from speculative interpretation 
+and toward evidence-based projections, 
+thereby informing global policymaking on 
+the future of AI, its governance and the IP 
+framework that supports it.
+Francis GURRY 
+Director General
+
+
+8 Foreword
+Foreword
+Andrew Ng 
+CEO, Landing AI 
+and deeplearning.ai 
+I remember watching the final chess match 
+between Deep Blue and Gary Kasparov while 
+I was a graduate student at MIT in the 1990s. 
+When Kasparov resigned, I jumped out of 
+my chair in excitement – the AI community 
+had finally triumphed over the human 
+chess champion!
+This moment stands out for me, among 
+many milestones in the development of AI, 
+such as the rise of deep learning, lessons in 
+scalability and the DARPA Grand Challenge. 
+AI is automation on steroids, and we had 
+“automated” the process of playing chess. I 
+was once captain of my high school chess 
+team and used to play competitively, but at 
+that moment I was happy to retire and leave it 
+to the computers. This was not a sad event for 
+me; on the contrary, I was thrilled to give up 
+chess this way.
+As AI continues to develop and transform 
+industry after industry, I hope it will create 
+many more similarly joyful experiences. We 
+have a duty to address serious issues relating 
+to unemployment and inequality, but we should 
+also never lose sight of the value and possibility 
+that AI brings.
+This report illustrates some of those 
+possibilities and where they are arising. One of 
+its findings is that deep learning is the biggest 
+and fastest growing technique in AI. When I 
+was at Stanford in the 2000s, my PhD student, 
+Adam Coates, came into my office with a 
+chart showing that the more data you fed to a 
+neural network, the better the neural network 
+performed. We started looking for the biggest 
+computers we could find. That discovery, and 
+the idea of using distributed computing to 
+scale up neural networks, led to the creation of 
+Google Brain in 2011. Since then, deep learning 
+has made great progress as we’ve collected 
+more data and created the powerful computers 
+to make it work. 
+But we still have a long way to go in the field. 
+For example, a toddler can usually recognize 
+a cat after just one encounter, but a computer 
+still needs more than one example to learn. 
+We need to find ways to train computers on 
+training datasets as small as 100, or even 
+10. Manufacturing lines, for example, use 
+computer vision to check for defects in parts 
+but hopefully they will never have a million 
+examples of defects to train on. Effective 
+“unsupervised learning” – learning without 
+labelled data – remains a holy grail of AI.
+Even without this “holy grail,” AI is already 
+creating massive economic value in the world 
+today. In covering AI, the media tends to focus 
+on images, speech and natural language 
+processing because those types of data 
+are very human. Everyone can understand 
+what it means for a computer to identify a 
+cat or recognize your speech. But a lot of the 
+economic value today is driven through deep 
+learning on “structured data.” Think of this as 
+machine learning applied to massive Excel 
+spreadsheets (only bigger than the biggest 
+Excel spreadsheet in the world). This data – for 
+example, what trucks should be dispatched 
+when, what products to recommend to what 
+user – is more specific to individual companies 
+and industries. Structured data gets less 
+attention because it’s not as visual or intuitive. 
+But it is driving massive value today and will 
+continue as incumbent companies across all 
+industries transform themselves with AI.
+With this potential to transform every industry 
+and create so much economic value, AI 
+presents just as great a technological shift as 
+the Internet did. In the Internet era, companies 
+including Microsoft and Apple saw the Internet 
+trend early, and their leaders made strategic 
+decisions to become true Internet companies. 

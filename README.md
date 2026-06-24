@@ -138,6 +138,49 @@ so retrieved hits are attributable to an industry. Supported types: `.pdf`,
 > **same `RAG_PROVIDER`** you query with — a 384-dim local embedder and 1024-dim
 > Bedrock Titan are not interchangeable against one store.
 
+## Scheduled bulk ingestion (admin-configurable)
+
+The live service can ingest a folder **on a schedule** that an admin sets at
+runtime — no redeploy. A background loop scans a server-side folder every _N_
+minutes and ingests new/changed files into the shared knowledge base, using the
+same code path as the CLI above (so Milvus is the target when
+`VECTOR_BACKEND=milvus`). Because it runs **in-process**, it reuses the app's
+embedder + store — no ingest-vs-query dimension mismatch.
+
+**Where the files live.** The job reads a path the _server_ can see. In Docker
+that's a mounted volume — `docker-compose.yml` mounts `./reports` to
+`/data/reports` (read-only). Drop reports under `./reports` with one subfolder
+per category, then point the job at `/data/reports`.
+
+**Configure it** via the key-gated admin API (`X-Admin-Key`, the same
+`ADMIN_API_KEY` as `/admin/ingest`), or the panel on `GET /admin/ui`:
+
+```powershell
+$admin = @{ "X-Admin-Key" = $env:ADMIN_API_KEY }
+
+# set the folder, interval, and turn it on
+Invoke-RestMethod "$base/admin/ingest-job" -Method Put -Headers $admin `
+  -ContentType application/json `
+  -Body (@{ path = "/data/reports"; interval_minutes = 60; enabled = $true } | ConvertTo-Json)
+
+# inspect config + last run
+Invoke-RestMethod "$base/admin/ingest-job" -Headers $admin
+
+# ingest immediately (don't wait for the next tick)
+Invoke-RestMethod "$base/admin/ingest-job/run-now" -Method Post -Headers $admin
+```
+
+**Idempotent re-runs.** Each file is fingerprinted by a content hash (not mtime,
+which is unreliable across OneDrive/containers). On every scan: new files are
+ingested, **changed** files have their old chunks deleted and are re-ingested, and
+unchanged files are skipped — so re-scanning the same folder never duplicates
+content. The manifest lives in Postgres, so dedup survives restarts (without
+`DATABASE_URL` it's in-memory and each run re-ingests everything).
+
+> **One scheduler per process.** The container runs a single uvicorn worker, so
+> exactly one scheduler runs. Running multiple workers would make each schedule
+> independently. Disable the loop with `INGEST_SCHEDULER_ENABLED=0`.
+
 ## Testing chat + RAG locally
 
 Chat retrieval and ingestion must share a store, so use **Postgres** — with the

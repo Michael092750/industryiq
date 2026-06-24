@@ -10,6 +10,9 @@ group of routes lives in its own router module:
 * :mod:`industryiq.api.debug_routes` -- engineer-only inspection (hidden).
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,9 +20,36 @@ from industryiq.api.admin_routes import router as admin_router
 from industryiq.api.auth_routes import router as auth_router
 from industryiq.api.chat_routes import router as chat_router
 from industryiq.api.debug_routes import router as debug_router
+from industryiq.api.deps import get_ingestion_service
 from industryiq.config import get_settings
+from industryiq.core.ingestion import IngestScheduler
 
-app = FastAPI(title="IndustryIQ")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Start the background ingestion scheduler on startup; stop it on shutdown.
+
+    The scheduler polls the admin-set job config and runs the bulk ingest on its
+    interval. It is built from the cached ingestion service, so it shares the
+    app's embedder + vector store. One uvicorn worker = one scheduler (the
+    Dockerfile runs a single process); more workers would each schedule.
+    """
+    settings = get_settings()
+    scheduler: IngestScheduler | None = None
+    if settings.ingest_scheduler_enabled:
+        scheduler = IngestScheduler(
+            get_ingestion_service(),
+            poll_seconds=settings.ingest_scheduler_poll_seconds,
+        )
+        scheduler.start()
+    try:
+        yield
+    finally:
+        if scheduler is not None:
+            await scheduler.stop()
+
+
+app = FastAPI(title="IndustryIQ", lifespan=lifespan)
 
 # Allow the browser frontend (a different origin) to call the API.
 # Explicit origins from config, plus any localhost port for local dev.

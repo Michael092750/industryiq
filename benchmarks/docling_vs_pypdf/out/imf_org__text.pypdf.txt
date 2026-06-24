@@ -1,0 +1,274 @@
+INTERNATIONAL MONETARY FUND
+GLOBAL FINANCIAL STABILITY REPORT
+GLOBAL
+FINANCIAL
+STABILITY
+REPORT
+Shifting Ground 
+beneath the Calm
+2025
+OCT
+
+
+
+INTERNATIONAL MONETARY FUND
+2025
+OCT
+GLOBAL
+FINANCIAL
+STABILITY
+REPORT
+Shifting Ground 
+beneath the Calm
+
+©2025 International Monetary Fund
+Cover and Design: IMF CSF Creative Solutions Division
+Cataloging-in-Publication Data
+IMF Library
+Names: International Monetary Fund.
+Title: Global financial stability report.
+Other titles: GFSR | World economic and financial surveys, 0258-7440
+Description: Washington, DC : International Monetary Fund, 2002- | Semiannual | Some issues also have thematic 
+titles. | Began with issue for March 2002.
+Subjects: LCSH: Capital market—Statistics—Periodicals. | International finance—Forecasting—Periodicals. |  
+Economic stabilization—Periodicals.
+Classification: LCC HG4523.G557
+ISBNs: 979-8-22902-318-4 (paper)
+  979-8-22902-545-5 (ePub)
+  979-8-22902-543-0 (web PDF)
+Disclaimer: The Global Financial Stability Report is a survey by the IMF staff published twice a year, 
+in the spring and fall. The report draws out the financial ramifications of economic issues highlighted 
+in the IMF’s World Economic Outlook. The report was prepared by IMF staff and has benefited 
+from comments and suggestions from Executive Directors following their discussion of the report 
+on April 11, 2025. The views expressed in this publication are those of the IMF staff and do not 
+necessarily represent the views of the IMF’s Executive Directors or their national authorities.
+Recommended citation: International Monetary Fund. 2025. Global Financial Stability Report: Shifting 
+Ground beneath the Calm. Washington, DC, October.
+Please send orders to:
+International Monetary Fund, Publications Services
+PO Box 92780, Washington, DC 20090, USA
+T el.: (202) 623-7430 Fax: (202) 623-7201
+publications@IMF .org
+bookstore.IMF .org
+eLibrary.IMF .org
+
+Assumptions and Conventions vii
+Further Information viii
+Preface ix
+Foreword x
+Executive Summary xii
+IMF Executive Board Discussion of the Outlook, September 2025 xvii
+Chapter 1. Shifting Ground beneath the Calm: Stability Challenges amid Changes in  
+Financial Markets 1
+Chapter 1 at a Glance  1
+Introduction 1
+Financial Market Developments and Asset Valuations 2
+Financial Conditions Ease, but the Growth-at-Risk Metric Remains Elevated 9
+Emerging and Frontier Markets 10
+Sovereign Bond Markets 14
+Financial Intermediaries 21
+Corporate Credit Risk 29
+Policy Recommendations 34
+Box 1.1. Global Real Estate Update 38
+Box 1.2. Low Interest Rates in China Could Imperil Bank Profits and Lending 41
+Box 1.3. Banks and Insurers Are Deepening Ties with the Private Credit Ecosystem 43
+References 45
+Chapter 2. Risk and Resilience in the Global Foreign Exchange Market 47
+Chapter 2 at a Glance  47
+Introduction 47
+Macrofinancial Shocks and the Global Foreign Exchange Market: A Conceptual Framework 51
+The Evolving Landscape of the Global Foreign Exchange Market 53
+Macrofinancial Uncertainty and FX T rading Dynamics 56
+Uncertainty Shocks and Stress in Foreign Exchange Markets 59
+Spillovers of Foreign Exchange Market Stress to Other Asset Classes 64
+Conclusion and Policy Recommendations 65
+Box 2.1. Foreign Exchange Market Dynamics around the April US Tariff Announcement 68
+Box 2.2. The Relevance of Settlement Risk in Foreign Exchange Markets 70
+Box 2.3. Implications of Operational Disruptions in Foreign Exchange Markets 72
+References 74
+Chapter 3. Global Shocks, Local Markets: The Changing Landscape of  
+Emerging Market Sovereign Debt 77
+Chapter 3 at a Glance 77
+Introduction 77
+CONTENTS
+International Monetary Fund | October 2025 iii
+
+GLOBAL FINANCIAL STABILITY REPORT: ShIFTING GROuNd BENEATh ThE CALM
+iv International Monetary Fund | October 2025
+Framework for Assessing EMDE Sovereign Debt Markets 79
+Recent T rends in EMDE Sovereign Debt Markets 80
+EMDE Bond Market Sensitivity to Global Shocks 85
+Vulnerabilities: Limited Absorption Capacity and the Sovereign-Bank Nexus 87
+Deepening Local Currency Bond Markets to Enhance Financial Stability 92
+Policy Recommendations 97
+Box 3.1. Local Currency Debt and Domestic Investors in the Corporate Sector in 
+Emerging Market and Developing Economies 100
+Box 3.2. Case Studies of Local Currency Bond Market Reforms in Emerging Market and 
+Developing Economies Supported by IMF T echnical Assistance 102
+References 103
+Figures
+Figure ES.1. Economic Uncertainty and Financial Volatility xii
+Figure ES.2. Near-T erm Growth-at-Risk Framework Forecast xii
+Figure ES.3. US Dollar versus Interest Rate Differentials xiii
+Figure ES.4. Forced Sales of Bond Funds under the Waterfall Approach xiii
+Figure ES.5. Share of T otal Assets of Weak Banks, by Region xiii
+Figure ES.6. Effects of Investor Composition on Emerging Market Local Bond  
+Market Sensitivity xiv
+Figure ES.7. Estimated “r–g” (Five-Year Ahead) in Emerging Markets,  
+by Average Credit Rating Band xiv
+Figure ES.8. Stablecoin Market Cap xv
+Figure ES.9. Effect of an Increase in Microfinancial Uncertainty on Foreign  
+Exchange Market Conditions xv
+Figure 1.1. Asset Prices amid Still-Elevated Uncertainty 3
+Figure 1.2. Some Developing Divergences 5
+Figure 1.3. Equity Valuation Pressures 7
+Figure 1.4. Expected Profit Margins Have Been Revised Down in Most Cases 9
+Figure 1.5. Financial Conditions Index 10
+Figure 1.6. Global Growth-at-Risk 11
+Figure 1.7. Pressures on Major Emerging Markets Have Eased, but Uncertainties Linger 12
+Figure 1.8. Eurobond Issuance Has Remained Robust, but High Yields and the  
+Upcoming Maturity Wall Have Prompted Frontier Economies to  
+Explore Alternative Funding Strategies 13
+Figure 1.9. Rising Bond Supply across Major Advanced Economies  
+Has Steepened Yield Curves 14
+Figure 1.10. Widening Emerging Market Swap Spreads Are Increasing the Cost of Financing 15
+Figure 1.11. Convenience Yields amid Rising Safe-Asset Supply 16
+Figure 1.12. Anatomy of T wo Stress Episodes from a T reasury Market Perspective,  
+March 2020 and April 2025 18
+Figure 1.13. Structural Resilience in Repo Markets 19
+Figure 1.14. Bond Mutual Fund Flows, T reasury Holdings, and  
+Forced Liquidations under Stress 20
+Figure 1.15. Global Bank Stress T ests Results 22
+Figure 1.16. Bank Exposure to Nonbank Financial Intermediaries 24
+Figure 1.17. Banks’ Interest Margins Remain Resilient amid Concerns about  
+Potential Valuation Losses 26
+Figure 1.19. Stablecoins Are Growing alongside T okenized Assets, with  
+Notable Cross-Border Flows 27
+
+CONTENTS
+vInternational Monetary Fund | October 2025
+Figure 1.20. The Rise of Stablecoins Comes with Potential Concerns over  
+Financial Stability 28
+Figure 1.21. Corporate Fundamentals and Risks 30
+Figure 1.22. Corporate Debt Sensitivity Analysis 31
+Figure 1.23. Credit Risk and Fundamentals of Direct Lending 32
+Figure 1.24. Cyclicality and Liquidity Risk for Increasing 
+Retail Participation in Private Credit 33
+Figure 1.25. Vulnerabilities Posed by the Rising Ownership of the High-Yield  
+Bond Market, by Investment Funds and Exchange-T raded Funds 35
+Figure 1.1.1. Commercial Real Estate Activity 38
+Figure 1.1.2. Commercial Real Estate Headwinds 39
+Figure 1.1.3. Residential Real Estate Activity 40
+Exchange-T raded Funds
+Figure 2.1. Key Developments in the Global Foreign Exchange Market 48
+Figure 2.2. Macrofinancial Uncertainty and Foreign Exchange Market Conditions 50
+Figure 2.3. Shock T ransmission to Foreign Exchange Market Conditions and  
+Macrofinancial Feedback Effects 51
+Figure 2.4. Structure and T rends in the Global Foreign Exchange Market 54
+Figure 2.5. Bank and Nonbank Financial Institutions’ Presence in the Global  
+Foreign Exchange Market 55
+Figure 2.6. Net Purchase of US Dollars and Macrofinancial Uncertainty 57
+Figure 2.7. Effect of Macrofinancial Uncertainty on Foreign Exchange Spot Activity 58
+Figure 2.8. Effect of Macrofinancial Uncertainty on Foreign Exchange Swap Flows 59
+Figure 2.9. Effect of Global Macrofinancial Uncertainty Shocks on Foreign  
+Exchange Market Conditions 60
+Figure 2.10. Foreign Exchange Market Fragilities as Amplifiers of Shock T ransmission 62
+Figure 2.11. Dealers’ Constraints and Foreign Exchange Market Conditions 63
+Figure 2.12. Policy Mitigating Factors 63
+Figure 2.13. Financial Spillovers of Foreign Exchange Market Stress 64
+Figure 2.1.1. Broad US Dollar Index and VIX, January 2, 2025, to May 15, 2025 68
+Figure 2.1.2. Net Spot US Dollar Flows before and after the US Tariff Announcement on  
+April 2, 2025 69
+Figure 2.2.1. Effect of CLS Entry on Excess Foreign Exchange Returns and Volatility 70
+Figure 2.3.1. Effect of Interdealer Platform Disruption on Market Liquidity 73
+Figure 3.1. Financial Stability Framework for Local Sovereign Debt Markets in 
+Emerging Market and Developing Economies 79
+Figure 3.2. Recent T rends in Emerging and Frontier Debt Markets 80
+Figure 3.3. Composition of Marketable Domestic Public Debt in Selected Emerging Market and  
+Developing Economies 81
+Figure 3.4. Portfolio Flows, Nonresident Holdings, and Investor Returns for  
+Selected Emerging Market and Developing Economies 83
+Figure 3.5. Investor Base in Selected Emerging Market Local Currency  
+Government Bond Markets 84
+Figure 3.6. Local Stress Index and the Investor Base for Local Currency  
+Bond Markets in Emerging Markets 85
+Figure 3.7. Effect of Global Risk Factors on Local Currency Bond Markets in  
+Emerging Markets and the Role of Investor Composition 86
+Figure 3.8. Investor Composition and the Long-T erm Effect of a VIX Increase on  
+Local Currency Bond Markets in Emerging Markets 88
+
+GLOBAL FINANCIAL STABILITY REPORT: ShIFTING GROuNd BENEATh ThE CALm
+vi International monetary Fund | October 2025
+Figure 3.9. Financial Sector Assets and Absorption Challenges in 
+Selected Emerging Markets 89
+Figure 3.10. Recent T rends in Sovereign-Bank Nexus Risks in Selected Emerging Market and  
+Developing Economies 91
+Figure 3.11. Building Blocks of Local Currency Bond Market Resilience in  
+Emerging Market and Developing Economies 93
+Figure 3.12. Local Currency Bond Market Development in Emerging Market and  
+Developing Economies 96
+Figure 3.1.1. Corporate Debt in Emerging Markets 100
+Online-Only Annexes
+Online Annex 1.1. IMF Global Stress T est (GST) Scenarios
+Online Annex 1.2. Definitions of Nonbank Financial Institutions (NBFIs)
+Online Annex 1.3. Stress T est of Banks Exposures to NBFIs
+Online Annex 1.4. Mutual Funds and Their Impact on Core Bond Markets
+Online Annex 1.5. Corporate Debt-at-Risk Sensitivity Analysis
+Online Annex 1.6. Estimating US Dollar Exposures
+Online Annex 1.7. Sovereign Bond Markets
+Online Annex 1.8. Short-T erm Rate Sensitivities to Reserves and Dealer Positions
+Online Annex 2.1. Glossary of Key Foreign Exchange (FX) Market T erms
+Online Annex 2.2. Data Description and Sources
+Online Annex 2.3. How Has the Global FX Market Evolved over Time?
+Online Annex 2.4. How Do Macrofinancial Uncertainty Shocks Affect T rading Activity?
+Online Annex 2.5. How Do Macro-Financial Uncertainty Shocks Affect FX Market Conditions?  
+Do Structural Vulnerabilities in FX Markets Amplify the Effects of These Shocks?
+Online Annex 2.6. Does Stress in FX Markets Spillover to Other Financial Markets?
+Online Annex 2.7. Foreign Exchange Market Dynamics around the US Liberation Day Tariff Announcement
+Online Annex 2.8. The Relevance of Settlement Risk in Foreign Exchange Markets
+Online Annex 2.9. Implications of Operational Disruptions in Foreign Exchange Markets
+Online Annex 3.1. Measurement and Econometric Approach
+Online Annex 3.2. Country Classification of Local Currency Bond Markets
+Editor’s Note (October 24, 2025)
+This web version of the GFSR has been revised to update Figure 3.6 (panel 2) and Figure 3.9 (panel 3) with 
+ISO-3 country codes.
+
+The following conventions are used throughout the Global Financial Stability Report (GFSR):
+. . . to indicate that data are not available or not applicable;
+— to indicate that the figure is zero or less than half the final digit shown or that the item does not exist;
+– between years or months (for example, 2021–22 or January–June) to indicate the years or months covered, 
+including the beginning and ending years or months;
+/ between years or months (for example, 2021/22) to indicate a fiscal or financial year.
+“Billion” means a thousand million.
+“T rillion” means a thousand billion.
+“Basis points” refers to hundredths of 1 percentage point (for example, 25 basis points are equivalent to ¼ of 
+1 percentage point).
+Minor discrepancies between sums of constituent figures and totals shown reflect rounding.
+As used in this report, the terms “country” and “economy” do not in all cases refer to a territorial entity that is a 
+state as understood by international law and practice. As used here, the term also covers some territorial entities 
+that are not states but for which statistical data are maintained on a separate and independent basis.
+The boundaries, colors, denominations, and any other information shown on the maps do not imply, on the part 
+of the International Monetary Fund, any judgment on the legal status of any territory or any endorsement or 
+acceptance of such boundaries.
+ASSUMPTIONS AND CONVENTIONS
+International Monetary Fund | October 2025 vii
+
+Corrections and Revisions
+The data and analysis appearing in the Global Financial Stability Report are compiled by IMF staff at the time 
+of publication. Every effort is made to ensure their timeliness, accuracy, and completeness. When errors are discov-
+ered, corrections and revisions are incorporated into the digital editions available from the IMF website and on the 
+IMF eLibrary. All substantive changes are listed in the Contents page.
+Print and Digital Editions
+Print
+Print copies of this Global Financial Stability Report can be ordered from the IMF Bookstore at imfbk.st/570343.
+Digital
+Multiple digital editions of the Global Financial Stability Report, including ePub, enhanced PDF , and HTML, 
+are available on the IMF eLibrary at eLibrary.IMF .org/OCT25GFSR.
+Download a free PDF of the report and data sets for each of the figures therein from the IMF website at  
+IMF .org/publications/GFSR or scan the QR code below to access the Global Financial Stability Report web  
+page directly:
+Copyright and Reuse
+Information on the terms and conditions for reusing the contents of this publication are at IMF .org/external/
+terms.htm.
+FURTHER INFORMATION
+International Monetary Fund | October 2025viii

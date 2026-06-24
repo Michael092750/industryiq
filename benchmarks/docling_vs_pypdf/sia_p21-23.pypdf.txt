@@ -1,0 +1,118 @@
+AMERICA’S SHARE 
+OF THE GLOBAL 
+SEMICONDUCTOR 
+MARKET
+SECTION 3
+
+----- PAGE BREAK -----
+
+Over the past three decades, the semiconductor industry 
+has experienced rapid growth and delivered an enormous 
+economic impact. 
+GLOBAL 
+SEMICONDUCTOR SALES
+SECTION 3: AMERICA’S SHARE OF THE GLOBAL SEMICONDUCTOR MARKET 
+222025 STATE OF THE U.S. SEMICONDUCTOR INDUSTRY 222025 STATE OF THE U.S. SEMICONDUCTOR INDUSTRY
+Chip performance and cost improvements 
+enabled the evolution from mainframes to PCs 
+in the 1990s, the web and online services in the 
+2000s, and the smartphone revolution in the 
+2010s. Looking ahead, the growth of artificial 
+intelligence, electric and autonomous vehicles, 
+and advanced manufacturing – all of which 
+rely on semiconductors – will, in turn, fuel the 
+expansion of the semiconductor market over 
+the next decade. By 2030, AI alone is projected 
+to contribute more than $15 trillion to the global 
+economy. Semiconductors are essential to our 
+modern world, which is why long-term market 
+demand for semiconductors remains strong. 
+GLOBAL SEMICONDUCTOR SALES, 2001-2025 (E)
+700
+600
+500
+400
+300
+200
+100
+0
+2001 201520092003 201720112005 201920132007 2021 2023 2025E
++19.7% ‘23/’24
+Source: WSTS
+Global semiconductor sales hit $630.5 billion 
+in 2024, beating initial forecasts and topping 
+$600 billion in annual sales for the first time. 
+Regionally, 2024 yearly sales were up in the 
+Americas (45.2%), China (20.0%), and Asia 
+Pacific/All Others (12.2%), but down in Japan 
+(-0.3%), and Europe (-8.1%).
+Several semiconductor product segments 
+related to high-performance compute had 
+stellar performance in 2024. Sales of logic 
+products totaled $215.8 billion in 2024, 
+making it the largest product category by 
+sales. Memory products were second in terms 
+of sales, increasing by 78.9% in 2024 to a 
+USD (billions)
+
+----- PAGE BREAK -----
+
+U.S. MARKET SHARE
+SECTION 3: AMERICA’S SHARE OF THE GLOBAL SEMICONDUCTOR MARKET 
+232025 STATE OF THE U.S. SEMICONDUCTOR INDUSTRY 232025 STATE OF THE U.S. SEMICONDUCTOR INDUSTRY
+The U.S. semiconductor industry commands 
+half the global market and on average has 
+displayed steady annual growth. 
+Since the late 1990s, the U.S. has been the 
+global sales market share leader for chips. 
+In 2024, the U.S. semiconductor industry 
+continued that trend, with U.S. headquartered 
+companies reaching sales of $318 billion, 
+accounting for 50.4% of global sales revenue. 
+In addition, U.S. semiconductor firms maintain 
+a leading or highly competitive position in R&D, 
+design, and manufacturing process technology. 
+This leadership also allows the U.S. 
+semiconductor industry to benefit from 
+a virtuous cycle of innovation. America’s 
+semiconductor industry’s global sales 
+leadership fuels R&D investment, which, in turn, 
+widens U.S. technological dominance, thereby 
+perpetuating America’s position as a global 
+sales leader . As long as the U.S. semiconductor 
+industry maintains global market share 
+leadership, it will continue to benefit from this 
+virtuous cycle of innovation.
+GLOBAL MARKET SHARE BY COMPANY HQ VIRTUOUS CYCLE 
+OF INNOVATION
+Source: World Semiconductor Trade Statistics (WSTS), 
+Gartner , Omdia, and SIA Estimates.
+50.4%
+21.1%
+9.2% 8.2% 6.5% 4.5%
+U.S. South 
+Korea
+Europe Japan Taiwan China
+Higher revenue and profits             Higher R&D Investment
+U.S.  
+technology 
+leadership
+total of $165.5 billion. DRAM products, a 
+subset of memory, recorded an 82.6% sales 
+increase, the largest percentage growth of 
+any product category in 2024.
+Throughout the year , sales were significantly 
+higher than 2023. Global sales in 2024 
+were at least 15% higher each month when 
+compared to the same month in 2023. 
+This increase was largely due to increased 
+demand for chips in AI, autos, and industrial 
+applications. However , mature-node chip 
+shipment revenue declined 7 .4% from 2023 
+to 2024. Overall, sales in 2024 increased by 
+19.6% compared to sales in 2023. 
+Estimates from the World Semiconductor 
+Trade Statistics (WSTS) project that 
+worldwide semiconductor industry sales will 
+increase to $701 billion in 2025, marking 
+growth of 11.2% compared to 2024.  

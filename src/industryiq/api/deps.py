@@ -37,6 +37,9 @@ from industryiq.core.chat.adapters.session_documents import SessionDocuments
 from industryiq.core.chat.adapters.store_pg import PgConversationStore
 from industryiq.core.embeddings import Embedder, FakeEmbedder
 from industryiq.core.generation import FakeLLM, GenerativeLLM
+from industryiq.core.ingestion import IngestionService, IngestStateStore
+from industryiq.core.ingestion.adapters.store_memory import InMemoryIngestStateStore
+from industryiq.core.ingestion.adapters.store_pg import PgIngestStateStore
 from industryiq.core.pgvectorstore import PgVectorStore
 from industryiq.core.pipeline import RagPipeline
 from industryiq.core.retrieval import Retriever
@@ -107,6 +110,18 @@ def _build_conversation_store(settings: Settings) -> ConversationStore:
     return InMemoryConversationStore()
 
 
+def _build_ingest_state_store(settings: Settings) -> IngestStateStore:
+    """Choose the ingestion state store: persistent Postgres, or in-memory (default).
+
+    Without Postgres the manifest does not survive a restart, so each process
+    re-ingests the whole tree -- fine for local dev; the live service uses Postgres
+    so the schedule's dedup is durable.
+    """
+    if settings.database_url:
+        return PgIngestStateStore(settings.database_url)
+    return InMemoryIngestStateStore()
+
+
 def _build_user_store(settings: Settings) -> UserStore:
     """Choose the user store: persistent Postgres, or in-memory (default)."""
     if settings.database_url:
@@ -153,6 +168,17 @@ def get_pipeline() -> RagPipeline:
     embedder, llm = _build_ai_providers(settings)
     store = _build_vector_store(settings, embedder.dim)
     return RagPipeline(Retriever(embedder, store), llm)
+
+
+@lru_cache(maxsize=1)
+def get_ingestion_service() -> IngestionService:
+    """Return the process-wide ingestion service (built once, then cached).
+
+    Reuses the cached :func:`get_pipeline`, so the scheduled/admin-triggered
+    ingest writes through the same embedder + vector store the live app queries
+    with -- no chance of an ingest-vs-query dimension mismatch.
+    """
+    return IngestionService(get_pipeline(), _build_ingest_state_store(get_settings()))
 
 
 @lru_cache(maxsize=1)

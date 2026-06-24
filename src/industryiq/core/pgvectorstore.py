@@ -81,3 +81,12 @@ class PgVectorStore(VectorStore):
                 f"SELECT id, metadata FROM {self._table} LIMIT %s", (limit,)
             ).fetchall()
         return [(row[0], row[1]) for row in rows]
+
+    def delete_by_source(self, source: str) -> int:
+        # Match on the JSONB ``source`` key the pipeline stamps on every chunk.
+        with self._connect() as conn:
+            cur = conn.execute(
+                f"DELETE FROM {self._table} WHERE metadata->>'source' = %s", (source,)
+            )
+            conn.commit()
+            return cur.rowcount

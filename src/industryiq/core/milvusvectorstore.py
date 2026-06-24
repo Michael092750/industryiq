@@ -468,6 +468,23 @@ class MilvusVectorStore(VectorStore):
             for hit in results[0]
         ]
 
+    def delete_by_source(self, source: str) -> int:
+        """Delete every chunk whose promoted ``source`` column equals ``source``.
+
+        ``source`` is an indexed VARCHAR column (exact equality), so this is a
+        cheap server-side filtered delete. The value is escaped so a path
+        containing a quote or backslash can't break out of the filter literal.
+        """
+        escaped = source.replace("\\", "\\\\").replace('"', '\\"')
+        result = self._client.delete(
+            collection_name=self._collection,
+            filter=f'{_SOURCE_FIELD} == "{escaped}"',
+        )
+        # Milvus returns either a {"delete_count": N} mapping or a list of pks.
+        if isinstance(result, dict):
+            return int(result.get("delete_count", 0))
+        return len(result)
+
     def all_items(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
         items: list[tuple[str, dict[str, Any]]] = []
         iterator = self._client.query_iterator(

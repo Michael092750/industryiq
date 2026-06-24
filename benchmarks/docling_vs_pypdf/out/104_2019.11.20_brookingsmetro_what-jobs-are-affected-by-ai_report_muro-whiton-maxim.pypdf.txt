@@ -1,0 +1,436 @@
+MARK MURO,  JACOB WHITON, and  ROBERT MAXIM
+November 2019
+WHAT JOBS ARE AFFECTED BY AI?
+Better-paid, better-educated workers face the most exposure
+
+WHAT JOBS ARE AFFECTED BY AI?
+2
+Contents
+Introduction 3
+What we know about AI, and what we don’t 5
+Approach: Using AI to assess AI’s workforce impacts 8
+Findings 11
+Discussion 22
+References 25
+Endnotes 26
+Appendix 28
+Acknowledgements 44
+
+WHAT JOBS ARE AFFECTED BY AI?
+3
+T
+he debate between experts over how 
+automation will affect the future of work has 
+been one of the most active cottage industries 
+in labor economics in recent years. Numerous 
+scholars forecast major disruptions of human 
+work; others minimize those impacts.
+And yet, the field has nevertheless managed to 
+generate a number of shared insights, with none 
+more consistent than the finding that least well-
+off will suffer automation’s greatest shocks on 
+the labor market.
+“The vulnerable will be the most vulnerable” 
+was a key takeaway of the report on AI and 
+automation we released earlier this year , for 
+example. That analysis, based on forecasts 
+of occupation-level automation exposure 
+from expert assessment by the McKinsey 
+Global Institute, showed that higher-wage, 
+better-educated workers will largely make out 
+alright as automation spreads. This result was not 
+an outlier . Similar findings have accumulated in 
+numerous reports, ranging from those by teams 
+at Oxford University and the OECD to the African 
+American Mayors Association.
+But what about artificial intelligence (AI), the 
+increasingly powerful form of digital automation 
+using machines that can learn, reason, and act 
+for themselves? 
+In recent years, AI applications have generated 
+increasing interest in “future of work” discussions 
+as the technology achieved superhuman 
+performance in a range of valuable tasks, from 
+radiology to legal contracts. However , it has been 
+difficult to get a specific read on AI’s implications 
+on the labor market.  
+Introduction
+
+
+WHAT JOBS ARE AFFECTED BY AI?
+4
+In part because the technologies have not 
+yet been widely adopted, analyses such as 
+Brookings’s or those from Oxford, OECD, and 
+McKinsey have had to rely either on case 
+studies or subjective assessments by experts 
+to determine which occupations might be 
+susceptible to an AI takeover . What’s more, none 
+of these analyses focused solely and specifically 
+on AI. Instead, most research has concentrated 
+on an undifferentiated array of “automation” 
+technologies including robotics, software, and 
+AI all at once. The result has been a lot of 
+discussion—but not a lot of clarity—about AI, with 
+prognostications that range from utopian to 
+apocalyptic.1
+But now comes a new approach. By quantifying 
+the overlap between the text of AI patents and 
+the text of job descriptions, Stanford University 
+Ph.D. candidate Michael Webb has developed an 
+elegant new way to identify the kinds of tasks and 
+occupations likely to be affected by particular 
+AI capabilities—and has graciously shared his 
+“exposure scores” for occupations to allow 
+further analysis by Brookings.2 In doing so, Webb 
+has allowed us to further test a new analytic 
+approach that is extremely important, as it allows 
+us to probe the kinds of occupations likely to be 
+affected by AI specifically, as opposed to those 
+affected by the broader swath of automation 
+technologies. With these data we are able to rely 
+fully on statistical associations, as opposed to 
+relying in large part on expert prognostications.
+What do we find in working with Webb’s 
+data? Above all, that Webb’s AI measures depict a 
+very different range of impacts on the workforce 
+than those from robotics and software. Where 
+the robotics and software that dominate the 
+automation field seem mostly to involve “routine” 
+or “rule-based” tasks (and thus lower- or middle-
+pay roles), AI’s distinctive capacities suggest that 
+higher-wage occupations will be some of the 
+most exposed. 
+Unlike robotics (associated with the factory 
+floor) and computers (associated with routine 
+office activities), AI has a distinctly white-collar 
+bent. While earlier waves of automation have led 
+to disruption across the lower half of the wage 
+distribution, AI appears likely to have different 
+impacts, with its own windfalls and challenges. 
+White-collar , well-paid America—radiologists, legal 
+professionals, optometrists, and many more—will 
+likely get no free pass on this flavor of digital 
+disruption.
+Given the potential of these technologies, it 
+behooves us to get a clearer read on their labor 
+market reach, which is what the following pages 
+begin to do.  
+
+WHAT JOBS ARE AFFECTED BY AI?
+5
+What we know about AI, and what we don’t
+F
+irst, some context: What is AI, and why are 
+its workforce impacts so hard to assess? This 
+is an important question, because the problem 
+of gauging its effects owes to the disparate, 
+changing nature of AI itself, which draws on an 
+ever-evolving set of algorithms and approaches 
+to generating machines with human-level 
+intelligence. 
+What is AI?
+Part of the challenge of analyzing AI in 
+general is that no single definition of the 
+technology serves to pin down its operations 
+and capabilities.3 It’s only somewhat helpful to 
+say that AI involves programming computers 
+to do things which—if done by humans—would 
+be said to require “intelligence,” whether it be 
+planning, learning, reasoning, problem-solving, 
+perception, or prediction.4 The problem here is 
+that “intelligence” has always been defined as 
+whatever it is that humans can do that computers 
+cannot. But since that frontier has been changing 
+rapidly, the definition doesn’t limit the field much.
+The definitional problem does not disappear even 
+if the aperture is narrowed to focus on machine 
+learning (ML)—the branch of statistics on which 
+most AI currently depends. Machine learning 
+can be straightforwardly defined as computers’ 
+use of algorithms to find statistical patterns in 
+massive amounts of data, which can then be used 
+to make predictions. Such statistical pattern-
+finding has been around for decades, but this 
+field also is evolving rapidly. Recent years have 
+seen a surge in improved algorithms that have 
+been accelerated by advances in computer speed, 
+data collection, and storage, driving an explosion 
+of improved applications including image 
+recognition, voice interpretation, preference 
+
+
+WHAT JOBS ARE AFFECTED BY AI?
+6
+prediction, autonomy, and decision support.5 This 
+explosion of applications is continually changing 
+the nature and boundaries of ML, adding to the 
+difficulty of defining and analyzing AI as a field 
+and set of applications.
+Why AI’s workplace impacts are 
+hard to assess
+Because AI is such a moving target, efforts to 
+assess its impacts on work are also complicated. 
+Our earlier report on automation explained how 
+assessments of well-recognized technologies—
+heavily dependent on experts’ experience—could 
+be employed to identify the aspects of jobs most 
+susceptible to particular technologies. In that 
+instance, our analyses were made easier by the 
+availability of McKinsey’s expert forecasts, which 
+reflected extensive experience with relatively 
+well-established, well-understood robotics and 
+software technologies (several types of AI were 
+included too).
+AI presents a more challenging set of issues. Even 
+by reducing the scope of the present analysis to 
+ML applications, analysis of AI on the workforce 
+must contend with a profusion of relatively new, 
+hard-to-discern technologies that have not yet 
+been widely adopted by firms or diffused far 
+across the economy into practical use.  
+Contrary to robotics and software, for example, 
+researchers have had little time to learn about 
+AI’s primary use cases in the economy—as is 
+indicated by Figure 1, which tracks the recent 
+emergence of machine learning patenting.6
+0
+5,000
+10,000
+15,000
+20,000
+25,000
+30,000
+1980
+1984
+1988
+1992
+1996
+2000
+2004
+2008
+2012
+2016
+0
+10,000
+20,000
+30,000
+40,000
+50,000
+60,000
+1980
+1984
+1988
+1992
+1996
+2000
+2004
+2008
+2012
+2016
+0
+100
+200
+300
+400
+500
+600
+1980
+1984
+1988
+1992
+1996
+2000
+2004
+2008
+2012
+2016
+SEMICONDUCTORS SOFTWARE MACHINE LEARNING
+Figure 1. Index of patent counts by technology
+Patent counts by technology, 1980 - 2016
+Source: Webb, Short, Bloom, and Lerner (2018) “Some facts of high-tech patenting.”
+
+WHAT JOBS ARE AFFECTED BY AI?
+7
+Consequently, as the scholars Erik Brynjolfsson 
+and Tom Mitchell have written, there is “no widely 
+shared agreement on the tasks where machine 
+learning systems excel, and thus little agreement 
+on the expected impacts on the workforce and on 
+the economy more broadly.”7 
+Brynjolfsson and Mitchell have done their best 
+to identify AI-suitable tasks (and therefore 
+AI-exposed jobs) using multicriteria subjective 
+rubrics informed by their deep knowledge of the 
+field.8 However , even they express humility about 
+such efforts. The general takeaway is that the 
+evolving, emergent nature of AI poses a tough 
+challenge for analyses of its impact—especially 
+those that rely on standard expert judgement. 
+Another approach is needed.
+
+WHAT JOBS ARE AFFECTED BY AI?
+8
+Approach: Using AI to assess AI’s workforce impacts 
+T
+his is where Michael Webb’s new approach 
+comes in. To circumvent many of the problems 
+posed by AI for labor market analysis, this brief 
+uses the outputs of Webb’s novel AI method for 
+quantifying the “exposure” of occupations to 
+assess the broader labor market impacts. 
+The general approach resembles that of our 
+earlier automation analysis, but draws its 
+special interest from Webb’s statistical method 
+for estimating occupations’ AI exposure. Those 
+estimates are then employed to evaluate the 
+exposure of U.S. occupational groups, industries, 
+demographic groups, and geographies (the nation 
+as a whole, states, and metropolitan areas).  
+Webb’s exposure estimates are novel because 
+they employ the text of patents to identify 
+the capabilities of AI, and then quantify the 
+extent to which each occupation involves 
+these technologies. (For more on the process 
+see Michael Webb, “The Impact of Artificial 
+Intelligence on the Labor Market” and its 
+appendices.)
+Patent texts are useful here because they provide 
+timely predictions of the commercial relevance 
+of specific technological applications. That 
+applicants must pay nontrivial fees for filing them 
+enhances their predictive value. Occupational 
+descriptions are also useful because they provide 
+detailed insight into economic activities at the 
+scale of the whole economy. Studying the two 
+measures’ interplay solves a very difficult analytic 
+problem.
+This is why Webb uses machine learning in 
+the form of natural language processing to 
+quantify the overlap between patent texts and 
+job description text. The key idea, writes Webb, 
+
+
+WHAT JOBS ARE AFFECTED BY AI?
+9
+is that “verb-object pairs, such as ‘diagnose-
+disease,’ capture both technological capabilities 
+and economic activities in a transparent, 
+parsimonious way.”
+Webb first manually identified a pool of 16,400 
+AI patents containing such keywords as “neural 
+network” in their titles or abstracts. (See Figure 
+2 nearby). Then, he used an algorithm to extract 
+8,000 verb-object pairs, such as “diagnose 
+disease” or “recognize aircraft” and tested to 
+see how often those surfaced in the patent titles, 
+which tend to include phrases like “Method for 
+diagnosing diseases” or “Method for recognizing 
+aircraft.” Ultimately, Webb produced and ranked 
+a list of frequency information on the appearance 
+of particular jobs in hundreds of AI capabilities, 
+such as the aforementioned “diagnose disease” 
+and “recognize aircraft” as well as phrases 
+such as “predict prognosis” and “generate 
+recommendation.” 
+With these verb-object pairs in hand, Webb 
+then turned to the occupational information 
+contained in the U.S. Department of Labor’s 
+O*NET database and located textual overlaps. In 
+O*NET, the work of particular occupations—for 
+example, “doctor”—is broken down into tasks 
+described in free-form text, such as “Interpret 
+tests to diagnose patients’ condition.” Using that 
+language, Webb was again able to extract the 
+relevant capability pairs (interpret, test; diagnose, 
+condition) from the task description and establish 
+the degree of overlap between specific word-
+based occupational activities and even brand-new 
+AI capabilities.
+That degree of that overlap was converted into 
+a measure of each occupations’ “exposure to AI 
+applications in the near future” by weighing each 
+occupational description’s degree of overlap with 
+AI patent capabilities, as determined by particular 
+tasks’ frequency, importance, and relevance to 
+the job. Finally, these raw exposure scores were 
+normalized with a mean of zero, meaning that 
+the standardized scores presented in our analysis 
+reflect the number of standard deviations above 
+or below the average occupational exposure to 
+AI. 
+Through this method, Webb has been able to 
+assemble a granular , statistical readout of the 
+specific documented task content of hundreds 
+of occupations that are exposed to emerging 
+real-world AI capabilities. For instance, in the 
+precision agriculture field, Webb’s data details 
+the specific statistical extent to which patented 
+AI capabilities (reflected in extracted word 
+pairs such as “develop, grid” or “identify, site” 
+or “test, characteristic”) show up in the work 
+descriptions of agricultural technicians, one of 
+which—according to O*NET —calls for a well-paid 
+worker to “Use geospatial technology to develop 
+soil sampling grids or identify sampling sites 
+for testing characteristics such as nitrogen, 
+phosphorus, or potassium content.”9
+Patents
+database
+Occupations
+database
+Patent titles
+Tasks
+Task-level
+capability
+matches
+aggregated
+into occupations
+Relative
+frequency
+of capability
+matches
+Patent
+capabilities
+Task
+capabilities
+Figure 2. Illustration of process for constructing AI exposure measure
+Source: Webb (2019)
+
+WHAT JOBS ARE AFFECTED BY AI?
+10
+As to what such potential “exposure” means, 
+it does not signify that AI has already made 
+inroads into the named occupation, or that it will 
+necessarily replace work or jobs once it does. 
+Rather , the exposure measure employed here 
+only suggests that in particular occupations 
+some kind of impact can be expected, whether 
+positive or negative.10 With that said, Webb’s 
+work brings an additional degree of disquiet to 
+the automation story. Webb’s modeling suggests 
+that just as the impacts of robotics and software 
+tend to be sizable and negative on exposed 
+middle- and low-skill occupations, so AI’s inroads 
+are projected to negatively impact higher-skill 
+occupations. 
+Hence the present analysis. By applying Webb’s 
+occupational exposure values to other data on 
+employment and workforce characteristics, we 
+develop an array of employment-weighted and 
+normalized AI-exposure averages for industry 
+groupings, demographic groups, and geographies 
+of interest.
+Verb Example nouns
+recognize pattern, image, speech, face, voice, automobile, emotion, gesture, disease
+predict quality, time, performance, fault, behavior , traffic, prognosis, treatment
+detect signal, abnormality, defect, object, fraud, event, spammer , human, cancer
+identify object, type, damage, illegality, classification, relationship, importance
+determine state, similarity, relevance, importance, characteristic, strategy, risk
+control process, emission, traffic, engine, robot, turbine, plant, discharging
+generate image, rating, lexicon, warning, description, recommendation
+classify data, object, image, pattern, signal, text, electrogram, speech, motion
+Table 1. Top extracted verbs and characteristic nouns of artificial 
+intelligence patents
+Note: Table reflects the top eight verbs by pair frequency for AI patents, and their characteristic direct objects. 
+Source: Webb (2019) 

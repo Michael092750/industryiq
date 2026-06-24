@@ -1,0 +1,312 @@
+Artificial Intelligence
+Index Report 2025
+CHAPTER 1: 
+Research and Development
+
+2
+Overview 3
+Chapter Highlights 4
+1.1 Publications 6
+Overview 6
+ Total Number of AI Publications 6
+ By Venue 8
+ By National Affiliation 9
+ By Sector 13
+ By Topic 15
+Top 100 Publications 16
+ By National Affiliation 16
+ By Sector 17
+ By Organization 18
+1.2 Patents 19
+ Overview  19
+ By National Affiliation 20
+1.3 Notable AI Models 23
+ By National Affiliation 23
+ By Sector 24
+ By Organization 26
+ Model Release 27
+ Parameter Trends 29
+ Compute Trends 33
+ Highlight: Will Models Run  
+ Out of Data? 36
+ Inference Cost 41
+ Training Cost 42
+1.4 Hardware 45
+Overview 45
+ Highlight: Energy Efficiency and 
+ Environmental Impact 48
+1.5 AI Conferences 52
+Conference Attendance 52
+1.6 Open-Source AI Software 54
+Projects 54
+Stars  56
+Appendix 58
+Chapter 1: Research and Development
+Artificial Intelligence
+Index Report 2025
+ACCESS THE PUBLIC DATA
+
+3
+Artificial Intelligence
+Index Report 2025Chapter 1 Preview
+This chapter explores trends in AI research and development, beginning with an 
+analysis of AI publications, patents, and notable AI systems. These topics are examined 
+through the lens of the countries, organizations, and sectors producing them. The 
+chapter also covers AI model training costs, AI conference attendance, and open-
+source AI software. New additions this year include profiles of the evolving AI hardware 
+ecosystem, an assessment of AI training’s energy requirements and environmental 
+impact, and a temporal analysis of model inference costs.
+Overview
+CHAPTER 1: 
+Research and Development
+Artificial Intelligence
+Index Report 2025
+
+4
+Artificial Intelligence
+Index Report 2025Chapter 1 Preview
+Chapter Highlights
+1. Industry continues to make significant investments in AI and leads in notable AI model development, 
+while academia leads in highly cited research.  Industry’s lead in notable model development, highlighted in the two 
+previous AI Index reports, has only grown more pronounced, with nearly 90% of notable models in 2024 (compared to 60% 
+in 2023) originating from industry. Academia has remained the single leading institutional producer of highly cited (top 100) 
+publications over the past three years.
+2. China leads in AI research publication totals, while the United States leads in highly influential research. 
+In 2023, China produced more AI publications (23.2%) and citations (22.6%) than any other country. Over the past three years, 
+U.S. institutions have contributed the most top-100-cited AI publications.
+3. AI publication totals continue to grow and increasingly dominate computer science.  Between 2013 and 
+2023, the total number of AI publications in venues related to computer science and other scientific disciplines nearly tripled, 
+increasing from approximately 102,000 to over 242,000. Proportionally, AI’s share of computer science publications has risen 
+from 21.6% in 2013 to 41.8% in 2023.
+4. The United States continues to be the leading source of notable AI models.  In 2024, U.S.-based institutions 
+produced 40 notable AI models, significantly surpassing China’s 15 and Europe’s combined total of three. In the past decade, 
+more notable machine learning models have originated from the United States than any other country.
+5. AI models get increasingly bigger, more computationally demanding, and more energy intensive. 
+New research finds that the training compute for notable AI models doubles approximately every five months, dataset sizes 
+for training LLMs every eight months, and the power required for training annually. Large-scale industry investment continues 
+to drive model scaling and performance gains.
+CHAPTER 1: 
+Research and Development
+Artificial Intelligence
+Index Report 2025
+
+5
+Artificial Intelligence
+Index Report 2025Chapter 1 Preview
+Chapter Highlights (cont’d)
+CHAPTER 1: 
+Research and Development
+Artificial Intelligence
+Index Report 2025
+6. AI models become increasingly affordable to use. The cost of querying an AI model that scores the equivalent 
+of GPT-3.5 (64.8) on MMLU, a popular benchmark for assessing language model performance, dropped from $20.00 per 
+million tokens in November 2022 to just $0.07 per million tokens by October 2024 (Gemini-1.5-Flash-8B)—a more than 280-
+fold reduction in approximately 18 months. Depending on the task, LLM inference prices have fallen anywhere from 9 to 900 
+times per year.
+7 . AI patenting is on the rise. Between 2010 and 2023, the number of AI patents has grown steadily and significantly, 
+ballooning from 3,833 to 122,511. In just the last year, the number of AI patents has risen 29.6%. As of 2023, China leads in total 
+AI patents, accounting for 69.7% of all grants, while South Korea and Luxembourg stand out as top AI patent producers on a per 
+capita basis.
+8. AI hardware gets faster, cheaper, and more energy efficient.  New research suggests that machine learning 
+hardware performance, measured in 16-bit floating-point operations, has grown 43% annually, doubling every 1.9 years. Price 
+performance has improved, with costs dropping 30% per year, while energy efficiency has increased by 40% annually.
+9. Carbon emissions from AI training are steadily increasing. Training early AI models, such as AlexNet (2012), had 
+modest amounts of carbon emissions at 0.01 tons. More recent models have significantly higher emissions for training: GPT-3 
+(2020) at 588 tons, GPT-4 (2023) at 5,184 tons, and Llama 3.1 405B (2024) at 8,930 tons. For perspective, the average American 
+emits 18 tons of carbon per year.
+
+6
+Artificial Intelligence
+Index Report 2025Chapter 1 Preview
+242.74
+2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023
+0
+50
+100
+150
+200
+250
+Number of AI publications in CS (in thousands)
+Number of AI publications in CS worldwide, 2013–23
+Source: AI Index, 2025 | Chart: 2025 AI Index report
+1.1 Publications
+The figures below show the global count of English-language 
+AI publications from 2010 to 2023, categorized by affiliation 
+type, publication type, and region. New to this year’s report, 
+the AI Index includes a section analyzing trends among the 
+100 most-cited AI publications, which can offer insights 
+into particularly high-impact research. This year, the AI 
+Index analyzed AI publication trends using the OpenAlex 
+database. As a result, the numbers in this year’s report differ 
+slightly from those in previous editions.1 Given that there is a 
+significant lag in the collection of publication metadata, and 
+that in some cases it takes until the middle of any given year 
+to fully capture the previous year’s publications, in this year’s 
+report, the AI Index team elected to examine publication 
+trends only through 2023.
+Overview
+The following section reports on trends in the total number of 
+English-language AI publications. 
+Total Number of AI Publications
+Figure 1.1.1 displays the global count of AI publications. These 
+are the publications with a computer science (CS) label in the 
+OpenAlex catalog that were classified by the AI Index as being 
+related to AI.2 Between 2013 and 2023, the total number of AI 
+1.1 Publications
+Chapter 1: Research and Development
+Figure 1.1.1
+1 OpenAlex is a fully open catalog of scholarly metadata, including scientific papers, authors, institutions, and more. The AI Index used OpenAlex as a bibliographic database and 
+automatically classified AI-related research using the latest version of the CSO Classifier. In previous years, the Index relied on third-party providers with different underlying data sources 
+and classification methods. As a result, this year’s findings differ slightly from those included in previous reports. Additionally, the AI Index applied the classifier only to papers that OpenAlex 
+categorized under the broad field of computer science. This approach may have led to an undercount of AI-related publications by excluding research from fields like social sciences that 
+employ AI methodologies but fall outside the computer science–designated classification.
+2 The CSO Classifier (v3.3) is an automated text classification system designed to categorize research papers in computer science using a comprehensive ontology of 15,000 topics and 
+166,000 relationships, including emerging fields like GenAI, LLMs, and prompt engineering. It processes metadata (such as title and abstract) through three modules: a syntactic module for 
+exact topic matches, a semantic module leveraging word embeddings to infer related topics, and a post-processing module that refines results by filtering outliers and adding relevant higher-
+level areas.
+
+7
+Artificial Intelligence
+Index Report 2025Chapter 1 Preview
+publications more than doubled, rising from approximately 
+102,000 in 2013 to more than 242,000 in 2023. The increase 
+over the last year was a meaningful 19.7%. Many fields within 
+computer science, from hardware and software engineering 
+to human-computer interaction, are now contributing to 
+AI. As a result, the observed growth reflects a broader and 
+increased interest in AI across the discipline.
+2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023
+0%
+5%
+10%
+15%
+20%
+25%
+30%
+35%
+40%
+45%
+AI publications in CS (% of total)
+41.76%
+AI publications in CS (% of total) worldwide, 2013–23
+Source: AI Index, 2025 | Chart: 2025 AI Index report
+Figure 1.1.2
+1.1 Publications
+Chapter 1: Research and Development
+
+8
+Artificial Intelligence
+Index Report 2025Chapter 1 Preview
+Figure 1.1.2 shows the proportion of computer science 
+publications in the OpenAlex corpus classified as AI-related. 
+Figure 1.1.2 features the same data included in Figure 1.1.1 but 
+in a proportional form. The share of AI publications has grown 
+significantly, almost doubling from 2013 to 2023.
+By Venue
+AI researchers publish their work across various venues. 
+Figure 1.1.3 visualizes the total number of AI publications 
+by venue type. In 2023, journals accounted for the largest 
+share of AI publications (41.8%), followed by conferences 
+(34.3%). Even though the total number of journal and 
+conference publications has increased since 2013, the share 
+of AI publications in journals and conferences has steadily 
+declined, from 52.6% and 36.4% in 2013 to 41.8% and 
+34.3%, respectively, in 2023. Conversely, AI publications in 
+repositories like arXiv have seen a growing share.
+1.1 Publications
+Chapter 1: Research and Development
+2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023
+0
+20
+40
+60
+80
+100
+Number of AI publications in CS (in thousands)
+0.96, Dissertation
+1.64, Other
+10.73, Book
+44.54, Repository
+83.30, Conference
+101.57, Journal
+Number of AI publications in CS by venue type, 2013–23
+Source: AI Index, 2025 | Chart: 2025 AI Index report
+Figure 1.1.3
+
+9
+Artificial Intelligence
+Index Report 2025Chapter 1 Preview
+By National Affiliation
+Figure 1.1.4 visualizes AI publications over time by region. 3 
+In 2023, East Asia and the Pacific led AI research output, 
+accounting for 34.5% of all AI publications, followed by 
+Europe and Central Asia (18.2%) and North America (10.3%).4
+While Figure 1.1.4 examines the geographic distribution of 
+AI publications, identifying which regions produce the most 
+research, Figure 1.1.5 focuses on citations, measuring the share 
+of total AI publication citations attributed to work originating 
+from each region. As of 2023, AI publications from East Asia 
+and the Pacific accounted for the largest share of AI article 
+citations at 37.1% (Figure 1.1.5). In 2017, citation shares from 
+East Asia and the Pacific and North America were roughly 
+equal, but since then, North American and European citation 
+shares have declined, while East Asia and the Pacific’s share 
+has risen sharply.
+1.1 Publications
+Chapter 1: Research and Development
+2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023
+0%
+5%
+10%
+15%
+20%
+25%
+30%
+35%
+AI publications in CS (% of total)
+0.89%, Sub-Saharan Africa
+1.66%, Latin America and the Caribbean
+5.18%, Middle East and North Africa
+9.98%, South Asia
+10.31%, North America
+18.15%, Europe and Central Asia
+19.37%, Unknown
+34.46%, East Asia and Pacic
+AI publications in CS (% of total) by region, 2013–23
+Source: AI Index, 2025 | Chart: 2025 AI Index report
+Figure 1.1.4
+3 Regions in this chapter are classified according to the World Bank analytical grouping. The AI Index determines the country affiliation of authors using the “countries” field from the 
+authorship data. This field lists all the countries an author is affiliated with, as retrieved from OpenAlex based on institutional affiliations. These affiliations can be explicitly stated in the paper 
+or inferred from the author’s most recent publications. When counting publications by country, the AI Index assigns one count to each country linked to the publication. For example, if a 
+paper has three authors, two affiliated with institutions in the U.S. and one in China, the publication is counted once for the U.S. and once for China.
+4 A publication may have an “unknown” country affiliation when the author’s institutional affiliation is missing or incomplete. This issue arises due to various factors, including unstructured or 
+omitted institution names, platform functional deficiencies, group authorship practices, unstandardized affiliation labeling, document type inconsistencies, or the author’s limited publication 
+record. The problem as it relates to OpenAlex is addressed in this paper; however, the issue of missing institutions pertains to other bibliographic databases as well.
+
+10
+Artificial Intelligence
+Index Report 2025Chapter 1 Preview
+1.1 Publications
+Chapter 1: Research and Development
+2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 2023
+0%
+5%
+10%
+15%
+20%
+25%
+30%
+35%
+40%
+AI publication citations in CS (% of total)
+0.89%, Sub-Saharan Africa
+1.35%, Latin America and the Caribbean
+7.55%, Unknown
+7.69%, South Asia
+7.97%, Middle East and North Africa
+15.59%, North America
+21.88%, Europe and Central Asia
+37.07%, East Asia and Pacic
+AI publication citations in CS (% of total) by region, 2013–23
+Source: AI Index, 2025 | Chart: 2025 AI Index report
+Figure 1.1.5

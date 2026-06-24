@@ -1,0 +1,476 @@
+64
+  1.8 AI AUTHORS AND INVENTORS  |  RESEARCH AND DEVELOPMENT  |  AI INDEX REPORT 2026
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+Australia Brazil Canada Denmark
+Finland France Germany India
+Israel Italy Japan Netherlands
+Saudi Arabia Singapore South Korea Spain
+Sweden Switzerland United Arab Emirates United Kingdom
+United States
+50.46%, PhD
+25.70%, MA/MS
+14.81%, BA/BS
+8.68%, Other
+0.30%, Diploma
+0.05%, HS
+41.85%, Other
+31.60%, MA/MS
+18.16%, PhD
+8.16%, BA/BS
+0.18%, HS
+0.05%, Diploma
+39.90%, MA/MS
+36.56%, PhD
+12.52%, Other
+10.74%, BA/BS
+0.21%, Diploma
+0.07%, HS
+38.75%, PhD
+38.72%, MA/MS
+16.66%, Other
+5.68%, BA/BS
+0.17%, Diploma
+0.03%, HS
+44.63%, MA/MS
+36.09%, PhD
+15.82%, Other
+3.26%, BA/BS
+0.13%, Diploma
+0.08%, HS
+40.65%, PhD
+34.19%, MA/MS
+23.64%, Other
+1.27%, BA/BS
+0.16%, Diploma
+0.08%, HS
+45.34%, MA/MS
+25.83%, PhD
+23.77%, Other
+3.91%, BA/BS
+1.04%, Diploma
+0.11%, HS
+34.54%, MA/MS
+33.83%, BA/BS
+18.52%, PhD
+12.85%, Other
+0.20%, HS
+0.07%, Diploma
+39.94%, MA/MS
+32.54%, PhD
+17.05%, Other
+10.39%, BA/BS
+0.06%, Diploma
+0.02%, HS
+33.91%, PhD
+30.44%, Other
+29.57%, MA/MS
+3.92%, Diploma
+1.82%, BA/BS
+0.34%, HS
+35.70%, PhD
+34.84%, MA/MS
+22.28%, Other
+7.16%, BA/BS
+0.02%, HS
+0.02%, Diploma
+49.33%, MA/MS
+29.78%, PhD
+15.22%, Other
+5.44%, BA/BS
+0.14%, Diploma
+0.10%, HS
+38.71%, PhD
+31.02%, MA/MS
+22.37%, BA/BS
+7.58%, Other
+0.21%, Diploma
+0.10%, HS
+35.99%, PhD
+32.98%, MA/MS
+19.58%, BA/BS
+10.96%, Other
+0.35%, Diploma
+0.14%, HS
+42.50%, PhD
+31.76%, MA/MS
+16.00%, Other
+9.60%, BA/BS
+0.11%, HS
+0.02%, Diploma
+39.14%, PhD
+32.36%, MA/MS
+24.70%, Other
+3.17%, BA/BS
+0.49%, Diploma
+0.15%, HS
+42.08%, MA/MS
+34.03%, PhD
+18.15%, Other
+5.49%, BA/BS
+0.13%, Diploma
+0.12%, HS
+43.63%, PhD
+33.92%, MA/MS
+19.02%, Other
+3.00%, BA/BS
+0.33%, Diploma
+0.10%, HS
+38.90%, MA/MS
+32.59%, PhD
+19.08%, BA/BS
+9.13%, Other
+0.19%, Diploma
+0.11%, HS
+51.13%, PhD
+26.09%, MA/MS
+13.80%, Other
+8.66%, BA/BS
+0.23%, Diploma
+0.09%, HS
+41.99%, PhD
+34.28%, MA/MS
+12.51%, BA/BS
+11.01%, Other
+0.14%, HS
+0.06%, Diploma
+% of AI authors and inventors by education level
+Percentage of top AI authors and inventors by education level and country, 2010–25
+Source: Zeki Data, 2025 | Chart: 2026 AI Index report
+Figure 1.8.3
+
+----- PAGE BREAK -----
+
+65
+  1.8 AI AUTHORS AND INVENTORS  |  RESEARCH AND DEVELOPMENT  |  AI INDEX REPORT 2026
+By Gender
+The gender gap among AI authors and inventors is visible across all countries, with men making up the 
+majority in all cases, though the size of the gap varies (Figure 1.8.4). In Brazil, South Korea, and Japan, more 
+than 80% of identified AI talent is male. Female representation is somewhat higher in Saudi Arabia (32.3%), 
+Australia (30.1%), Canada (29.6%), and Italy (29.5%), but no country comes close to parity. More significantly, 
+in almost every country, the male-female ratio has remained flat from 2010 to 2025. Even with the growth in 
+AI talent overall, there has been no meaningful progress on gender balance. Chapter 7 (Education) describes 
+a similar pattern in AI-related degree attainment, where women remain underrepresented across all levels.
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+2010 2015 2020 2025
+0%
+20%
+40%
+60%
+80%
+100%
+Australia Brazil Canada Denmark
+Finland France Germany India
+Israel Italy Japan Netherlands
+Saudi Arabia Singapore South Korea Spain
+Sweden Switzerland United Arab Emirates United Kingdom
+United States
+Top AI authors and inventors (% of total) 
+Top AI authors and inventors (% of total) by gender, 2010–25
+Source: Zeki Data, 2025 | Chart: 2026 AI Index report
+69.73%, Male
+30.27%, Female
+80.16%, Male
+19.84%, Female
+70.41%, Male
+29.59%, Female
+77.83%, Male
+22.17%, Female
+73.23%, Male
+26.77%, Female
+74.92%, Male
+25.08%, Female
+78.24%, Male
+21.76%, Female
+71.96%, Male
+28.04%, Female
+78.43%, Male
+21.57%, Female
+70.47%, Male
+29.53%, Female
+82.50%, Male
+17.50%, Female
+73.43%, Male
+26.57%, Female
+67.72%, Male
+32.28%, Female
+73.11%, Male
+26.89%, Female
+81.44%, Male
+18.56%, Female
+77.38%, Male
+22.62%, Female
+75.13%, Male
+24.87%, Female
+78.45%, Male
+21.55%, Female
+73.83%, Male
+26.17%, Female
+72.57%, Male
+27.43%, Female
+72.35%, Male
+27.65%, Female
+Figure 1.8.4

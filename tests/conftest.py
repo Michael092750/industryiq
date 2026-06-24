@@ -5,6 +5,18 @@ from collections.abc import Callable
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _pin_pdf_parser_to_pypdf(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the unit suite fast and hermetic.
+
+    The app default is now ``PDF_PARSER=docling`` (heavy, loads ML models). Pin
+    every test to pypdf so PDF-loading tests don't invoke Docling when the extra
+    happens to be installed locally. Tests that exercise Docling override this
+    with ``monkeypatch.setenv("PDF_PARSER", "docling")``.
+    """
+    monkeypatch.setenv("PDF_PARSER", "pypdf")
+
+
 class _FakeClock:
     """Deterministic monotonic clock: advances a fixed step on every call."""
 

@@ -83,6 +83,38 @@ def test_ingest_pages_tags_page_title_and_metadata() -> None:
     assert by_text["alpha beta gamma"]["source"] == "report.pdf"
 
 
+def test_ingest_pages_tags_section_from_markdown_headings() -> None:
+    pipeline = _pipeline(chunk_size=50, overlap=0)
+    pipeline.ingest_pages(
+        ["# Report\nintro words\n## Outlook\nforecast words"],
+        source="r.pdf",
+        title="R",
+    )
+    by_section = {meta.get("section"): meta["text"] for _id, meta in pipeline.list_chunks()}
+    assert by_section["Report"] == "# Report intro words"
+    assert by_section["Outlook"] == "## Outlook forecast words"
+
+
+def test_ingest_pages_carries_section_across_page_boundary() -> None:
+    pipeline = _pipeline(chunk_size=50, overlap=0)
+    # Heading opens on page 1; page 2 continues under it with no new heading.
+    pipeline.ingest_pages(
+        ["## Methodology\nstep one", "step two continues"],
+        source="r.pdf",
+        title="R",
+    )
+    by_page = {meta["page"]: meta for _id, meta in pipeline.list_chunks()}
+    assert by_page[1]["section"] == "Methodology"
+    assert by_page[2]["section"] == "Methodology"  # carried across the boundary
+
+
+def test_ingest_pages_without_headings_leaves_section_unset() -> None:
+    pipeline = _pipeline(chunk_size=10, overlap=0)
+    pipeline.ingest_pages(["just plain words"], source="n.txt", title="N")
+    meta = pipeline.list_chunks()[0][1]
+    assert "section" not in meta
+
+
 def test_ingest_pages_single_page_omits_page() -> None:
     pipeline = _pipeline()
     pipeline.ingest_pages(["just one page of text"], source="note.txt", title="Note")

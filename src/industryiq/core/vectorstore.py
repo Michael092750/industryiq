@@ -45,6 +45,14 @@ class VectorStore(Protocol):
         """Return up to ``limit`` stored ``(id, metadata)`` pairs, for inspection."""
         ...
 
+    def delete_by_source(self, source: str) -> int:
+        """Delete every chunk whose ``metadata["source"]`` equals ``source``.
+
+        Used to replace a document's chunks when its file changes (delete the old
+        set, then re-ingest). Returns the number of chunks removed.
+        """
+        ...
+
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
     """Cosine similarity of two equal-length vectors; 0.0 if either is all zeros."""
@@ -88,3 +96,10 @@ class InMemoryVectorStore(VectorStore):
 
     def all_items(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
         return list(self._metadatas.items())[:limit]
+
+    def delete_by_source(self, source: str) -> int:
+        ids = [id_ for id_, meta in self._metadatas.items() if meta.get("source") == source]
+        for id_ in ids:
+            del self._vectors[id_]
+            del self._metadatas[id_]
+        return len(ids)

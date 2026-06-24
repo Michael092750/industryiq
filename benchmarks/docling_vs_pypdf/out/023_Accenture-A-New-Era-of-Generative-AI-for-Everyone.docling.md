@@ -1,0 +1,161 @@
+<!-- image -->
+
+## Table of Contents
+
+|   03 | WelcometoAI's newinflection point                                              |
+|------|--------------------------------------------------------------------------------|
+|   04 | Howdidwegethere?&#124;MilestonesinthejourneytogenerativeAI                     |
+|   05 | Consumeorcustomize:GenerativeAIforeveryone                                     |
+|   08 | Alook ahead at the fast-paced evolution of technology, regulation and business |
+|   12 | Embrace the generative AI era: Six adoption essentials                         |
+|   19 | Thefuture of AI is accelerating                                                |
+|   21 | GlossaryandReferences                                                          |
+|   22 | Authors                                                                        |
+
+Introduction
+
+## Welcome to AI's new inflection point
+
+ChatGPT has woken up the world to the transformative potential of artificial intelligence (AI), capturing global attention and sparking a wave of creativity rarely seen before. Its ability to mimic human dialogue and decision-making has given us AI's first true inflection point in public adoption. Finally, everyone, everywhere can see the technology's true disruptive potential for themselves.
+
+ChatGPT reached 100 million monthly active users just two months after launch, making it the fastest-growing consumer application in history. 1
+
+A foundation model is a generic term for large models with billions of parameters. With recent advances, companies can now build specialized image- and language-generating models on top of these foundation models. Large language models (LLMs) are both a type of generative AI and a type of foundation model.
+
+The LLMs behind ChatGPT mark a significant turning point and milestone in artificial intelligence. Two things make LLMs game changing. First, they've cracked the code on language complexity. Now, for the first time, machines can learn language, context and intent and be independently generative and creative. Second, after being pre-trained on vast quantities of data (text, images or audio), these models can be adapted or finetuned for a wide range of tasks. This allows them to be reused or repurposed in many different ways.
+
+Business leaders recognize the significance of this moment. They can see how LLMs and generative AI will fundamentally transform everything from business, to science, to society itself-unlocking new performance frontiers. The positive impact on human creativity and productivity will be massive. Consider that, across all industries, Accenture found 40% of all working hours can be impacted by LLMs like GPT-4. This is because language tasks account for 62% of the total time employees work, and 65% of that time can be transformed into more productive activity through augmentation and automation (see Figure 3).
+
+## How did we get here?
+
+Milestones in the journey to generative AI
+
+## Machine learning: Analysis and prediction phase
+
+The first decade of the 2000s marked the rapid advance of various machine learning techniques that could analyze massive amounts of online data to draw conclusions or 'learn' - from the results. Since then, companies have viewed machine learning as an incredibly powerful field of AI for analyzing data, finding patterns, generating insights, making predictions and automating tasks at a pace and on a scale that was previously impossible.
+
+## Deep learning: Vision and speech phase
+
+The 2010s produced advances in AI's perception capabilities in the field of machine learning called deep learning. Breakthroughs in deep learning enable the computer vision that search engines and self-driving cars use to classify and detect objects, as well as the voice recognition that allows popular AI speech assistants to respond to users in a natural way.
+
+## Generative AI: Enter the language-mastery phase
+
+Building on exponential increases in the size and capabilities of deep learning models, the 2020s will be about language mastery. The GPT-4 language model, developed by OpenAI, marks the beginning of a new phase in the abilities of language-based AI applications. Models such as this will have far-reaching consequences for business, since language permeates everything an organization does day to day-its institutional knowledge, communication and processes. 2
+
+<!-- image -->
+
+<!-- image -->
+
+## Consume or customize: Generative AI for everyone
+
+Easy-to-consume generative AI applications like ChatGPT, DALL-E, Stable Diffusion and others are rapidly democratizing the technology in business and society. The effect on organizations will be profound. The ability of LLMs to process massive data sets allows them to potentially 'know' everything an organization has ever known-the entire history, context, nuance and intent of a business, and its products, markets and customers. Anything conveyed through language (applications, systems, documents, emails, chats, video and audio recordings) can be harnessed to drive next-level innovation, optimization and reinvention.
+
+97% of global executives agree AI foundation models will enable connections across data types, revolutionizing where and how AI is used. 3
+
+We're at a phase in the adoption cycle when most organizations are starting to experiment by consuming foundation models 'off the shelf.' However, the biggest value for many will come when they customize or fine tune models using their own data to address their unique needs:
+
+## Consume
+
+Generative AI and LLM applications are ready to consume and easy to access. Companies can consume them through APIs and tailor them, to a small degree, for their own use cases through prompt engineering techniques such as prompt tuning and prefix learning.
+
+## Customize
+
+But most companies will need to customize models, by fine-tuning them with their own data, to make them widely usable and valuable. This will allow the models to support specific downstream tasks all the way across the business. The effect will be to increase a company's efficacy in using AI to unlock new performance frontiers-elevating employee capabilities, delighting customers, introducing new business models and boosting responsiveness to signals of change.
+
+<!-- image -->
+
+Companies will use these models to reinvent the way work is done . Every role in every enterprise has the potential to be reinvented, as humans working with AI co-pilots becomes the norm, dramatically amplifying what people can achieve. In any given job, some tasks will be automated, some will be assisted, and some will be unaffected by the technology. There will also be a large number of new tasks for humans to perform, such as ensuring the accurate and responsible use of new AI-powered systems.
+
+Consider the impact in these key functions:
+
+Advising. AI models will become an ever-present co-pilot for every worker, boosting productivity by putting new kinds of hyper-personalized intelligence into human hands. Examples include customer support, sales enablement, human resources, medical and scientific research, corporate strategy and competitive intelligence. Large language models could be useful in tackling the roughly 70% of customer service communication that is not straightforward and can benefit from a conversational, powerful and intelligent bot, understanding a customer's intent, formulate answers on its own and improve the accuracy and quality of answers. 4
+
+Creating. Generative AI will become an essential creative partner for people, revealing new ways to reach and appeal to audiences and bringing unprecedented speed and innovation in areas like production design, design research, visual identity, naming, copy generation and testing, and realtime personalization. Companies are turning to state-of-the-art artificial intelligence systems like DALL·E, Midjourney and Stable Diffusion for their social media visual content generation outreach. DALL·E, for example,  creates realistic images and art based on text descriptions and can process up to 12 billion parameters when transforming words into pictures. Images created can then be shared on Instagram and Twitter. 5
+
+Coding. Software coders will use generative AI to significantly boost productivity - rapidly converting one programming language to another, mastering programming tools and methods, automating code writing, predicting and pre-empting problems, and managing system documentation. Accenture is piloting the use of OpenAI LLMs to enhance developer productivity by automatically generating documentation - for example, SAP configuration rationale and functional or technical specs. The solution enables users to submit requests through a Microsoft Teams chat as they work. Correctly packaged documents are then returned at speed a great example of how specific tasks, rather than entire jobs, will be augmented and automated.
+
+Automating. Generative AI's sophisticated understanding of historical context, next best actions, summarization capabilities, and predictive intelligence will catalyze a new era of hyper-efficiency and hyper-personalization in both the back and front office-taking business process automation to a transformative new level. One multinational bank is using generative AI and LLMs to transform how it manages volumes of post-trade processing emails-automatically drafting messages with recommended actions and routing them to the recipient. The result is less manual effort and smoother interactions with customers.
+
+Protecting. In time, generative AI will support enterprise governance and information security, protecting against fraud, improving regulatory compliance, and proactively identifying risk by drawing cross-domain connections and inferences both within and outside the organization. In strategic cyber defense, LLMs could offer useful capabilities, such as explaining malware and quickly classifying websites. 6 In the short term, however, organizations can expect criminals to capitalize on generative AI's capabilities to generate malicious code or write the perfect phishing email. 7
+
+<!-- image -->
+
+## A look ahead at the fast-paced evolution of technology, regulation and business
+
+Moments like this don't come around often. The coming years will see outsized investment in generative AI, LLMs and foundation models. What's unique about this evolution is that the technology, regulation, and business adoption are all accelerating exponentially at the same time. In previous innovation curves, the technology typically outpaced both adoption and regulation.
+
+## The technology stack
+
+The complex technology underpinning generative AI is expected to evolve rapidly at each layer. This has broad business implications. Consider that the amount of compute needed to train the largest AI models has grown exponentially - now doubling between every 3.4 to 10 months, according to various reports. 8  Cost and carbon emissions are therefore central considerations in adopting energy-intensive generative AI.
+
+## 'The hottest new programming platform is the napkin.'
+
+Paul Daugherty, Accenture Group Chief Executive &amp; Chief Technology Officer
+
+Referring to the use of OpenAI to generate a working website from a napkin drawing
+
+<!-- image -->
+
+## The risk and regulatory environment
+
+Companies will have thousands of ways to apply generative AI and foundation models to maximize efficiency and drive competitive advantage. Understandably, they'll want to get started as soon as possible. But an enterprisewide strategy needs to account for all the variants of AI and associated technologies they intend to use, not only generative AI and large language models.
+
+ChatGPT raises important questions about the responsible use of AI. The speed of technology evolution and adoption requires companies to pay close attention to any legal, ethical and reputational risks they may be incurring.
+
+It's critical that generative AI technologies, including ChatGPT, are responsible and compliant by design, and that models and applications do not create unacceptable risk for the business. Accenture was a pioneer in the responsible use of technology including the responsible use of AI in its Code of Business Ethics from 2017. Responsible AI is the practice of designing, building and deploying AI in accordance with clear principles to empower businesses, respect people, and benefit society - allowing companies to engender trust in AI and to scale AI with confidence.
+
+AI systems need to be 'raised' with a diverse and inclusive set of inputs so that they reflect the broader business and societal norms of responsibility, fairness and transparency. When AI is designed and put into practice within an ethical framework, it accelerates the potential for responsible collaborative intelligence, where human ingenuity converges with intelligent technology.
+
+This creates a foundation for trust with consumers, the workforce, and society, and can boost business performance and unlock new sources of growth.
+
+## Figure 2: Key risk and regulatory questions for generative AI
+
+Intellectual property:
+
+How will the business protect its own
+
+IP? And how will it prevent the inadvertent breach of third-party
+
+copyright in using pre-trained foundation models?
+
+Data privacy and security:
+
+How will upcoming laws like
+
+the EU AI Act be incorporated in the way data is handled,
+
+processed, protected, secured and used?
+
+Discrimination:
+
+Is the company using or creating tools
+
+that need to factor in anti-discrimination or anti-bias
+
+considerations?
+
+Product liability:
+
+What health and safety mechanisms need
+
+to be put in place before a generative AI-based product is
+
+taken to market?
+
+Trust:
+
+What level of transparency should be provided to
+
+consumers and employees? How can the business ensure the
+
+accuracy of generative AI outputs and maintain user confidence?
+
+Identity:
+
+When establishing proof-of-personhood depends on voice
+
+or facial recognition, how will verification methods be enhanced and
+
+improved? What will be the consequences of its misuse?
+
+<!-- image -->
