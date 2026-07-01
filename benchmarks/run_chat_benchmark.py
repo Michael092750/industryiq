@@ -46,13 +46,22 @@ Provider
 --------
 The chat LLM + embedder follow ``RAG_PROVIDER`` (``anthropic`` or ``bedrock``),
 exactly like the retrieval benchmark -- the embedder must match the one that
-populated the pgvector table. The judge always calls the Anthropic API directly
-and needs ``ANTHROPIC_API_KEY`` regardless of provider (that is the "other" API).
+populated the store. The judge always calls the Anthropic API directly and needs
+``ANTHROPIC_API_KEY`` regardless of provider (that is the "other" API).
+
+Backend
+-------
+``--backend pgvector`` (default) or ``--backend milvus`` picks the live vector store
+the chatbot retrieves from -- the same choice the retrieval benchmark exposes. Both
+hold the same corpus (see scripts/migrate_pg_to_milvus.py), so holding the chat model
+and judge fixed and swapping only ``--backend`` isolates the retrieval engine's effect
+on the final answer.
 
 Usage
 -----
     python benchmarks/run_chat_benchmark.py
     python benchmarks/run_chat_benchmark.py --limit 5
+    python benchmarks/run_chat_benchmark.py --backend milvus --label milvus --out milvus.json
     python benchmarks/run_chat_benchmark.py --rewriter noop --label baseline --out baseline.json
     python benchmarks/run_chat_benchmark.py --rewriter llm  --label rewrite  --out rewrite.json
 """
@@ -87,7 +96,7 @@ from industryiq.core.embeddings import Embedder
 from industryiq.core.generation import GenerativeLLM
 from industryiq.core.pgvectorstore import PgVectorStore
 from industryiq.core.retrieval import Retriever
-from industryiq.core.vectorstore import Hit
+from industryiq.core.vectorstore import Hit, VectorStore
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_QUERIES = HERE / "queries.json"
@@ -146,14 +155,43 @@ def build_providers(settings: Settings) -> tuple[Embedder, GenerativeLLM]:
     )
 
 
+def build_store(settings: Settings, backend: str, dim: int) -> VectorStore:
+    """The live store the chatbot retrieves from, selected by ``backend``.
+
+    Mirrors ``run_benchmark.build_store``: ``pgvector`` and ``milvus`` hold the same
+    corpus (see scripts/migrate_pg_to_milvus.py), so pointing the same chat questions
+    at each measures the engine, not a data difference. The Milvus import is deferred
+    so pgvector-only runs don't need pymilvus.
+    """
+    if backend == "milvus":
+        from industryiq.core.milvusvectorstore import MilvusVectorStore
+
+        return MilvusVectorStore(
+            settings.milvus_uri,
+            dim=dim,
+            collection=settings.milvus_collection,
+            token=settings.milvus_token,
+            index_type=settings.milvus_index_type,
+        )
+    if not settings.database_url:
+        raise SystemExit("DATABASE_URL is not set (the live Postgres store to retrieve from).")
+    return PgVectorStore(settings.database_url, dim=dim)
+
+
 def build_chat_service(
-    settings: Settings, embedder: Embedder, llm: GenerativeLLM, k: int, rewriter: QueryRewriter
+    settings: Settings,
+    embedder: Embedder,
+    llm: GenerativeLLM,
+    k: int,
+    rewriter: QueryRewriter,
+    backend: str,
 ) -> ChatService:
     """The real ``ChatService`` the app serves (mirrors ``deps.get_chat_service``),
-    against the live pgvector store -- so router/rewriter/filter changes you make to
-    the backend show up here. ``rewriter`` is the hot-swappable technique under test
-    (see ``REWRITERS``); the only other swap is an in-memory conversation store, so
-    benchmark turns are never written to your database.
+    against the live store selected by ``backend`` (pgvector or milvus) -- so
+    router/rewriter/filter changes you make to the backend show up here. ``rewriter``
+    is the hot-swappable technique under test (see ``REWRITERS``); the only other swap
+    is an in-memory conversation store, so benchmark turns are never written to your
+    database.
     """
     router: RetrievalRouter = (
         LlmRouter(llm, settings.chat_kb_description)
@@ -161,7 +199,7 @@ def build_chat_service(
         else AlwaysRetrieveRouter()
     )
     return ChatService(
-        retriever=Retriever(embedder, PgVectorStore(settings.database_url, dim=embedder.dim)),
+        retriever=Retriever(embedder, build_store(settings, backend, embedder.dim)),
         router=router,
         rewriter=rewriter,
         llm=llm,
@@ -359,6 +397,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("--queries", type=Path, default=DEFAULT_QUERIES)
     parser.add_argument(
+        "--backend",
+        choices=["pgvector", "milvus"],
+        default="pgvector",
+        help="Which live vector store the chatbot retrieves from (default: pgvector).",
+    )
+    parser.add_argument(
         "--provider",
         choices=["anthropic", "bedrock"],
         default=None,
@@ -398,7 +442,7 @@ def main(argv: list[str]) -> int:
         settings = Settings(**{**settings.__dict__, **overrides})
 
     k = args.k or settings.chat_retrieval_k
-    if not settings.database_url:
+    if args.backend == "pgvector" and not settings.database_url:
         raise SystemExit("DATABASE_URL is not set (the live Postgres store to retrieve from).")
 
     spec = json.loads(args.queries.read_text(encoding="utf-8"))
@@ -408,7 +452,7 @@ def main(argv: list[str]) -> int:
 
     embedder, llm = build_providers(settings)
     rewriter = REWRITERS[args.rewriter](llm)
-    service = build_chat_service(settings, embedder, llm, k, rewriter)
+    service = build_chat_service(settings, embedder, llm, k, rewriter, args.backend)
     judge = judge_lib.JudgeLLM(model_id=args.judge_model, api_key=settings.anthropic_api_key)
 
     # Full experiment setup, recorded with the results so each run is self-documenting
@@ -416,6 +460,9 @@ def main(argv: list[str]) -> int:
     config: dict[str, Any] = {
         "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
         "label": args.label,
+        "backend": args.backend,
+        # The Milvus index that produced these numbers (None for pgvector).
+        "milvus_index_type": settings.milvus_index_type if args.backend == "milvus" else None,
         "provider": settings.provider,
         "chat_model": chat_model_id(settings),
         "judge_model": judge.model_id,
@@ -429,7 +476,7 @@ def main(argv: list[str]) -> int:
         "k": k,
         "queries_file": args.queries.name,
         "n_queries": len(queries),
-        "n_chunks": count_chunks(settings.database_url),
+        "n_chunks": count_chunks(settings.database_url) if settings.database_url else None,
     }
     print("SETUP: " + json.dumps(config, ensure_ascii=False))
 

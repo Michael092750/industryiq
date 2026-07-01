@@ -166,12 +166,18 @@ python benchmarks/run_chat_benchmark.py
 
 # Quick smoke run on the first few questions.
 python benchmarks/run_chat_benchmark.py --limit 5
+
+# Run the same chat pipeline against Milvus instead of pgvector.
+python benchmarks/run_chat_benchmark.py --backend milvus --label milvus --out milvus.json
 ```
 
-Useful flags: `--rewriter {llm,noop}` (the technique under test, see below),
+Useful flags: `--backend {pgvector,milvus}` (which live store the chatbot retrieves
+from, default `pgvector` — same choice the retrieval benchmark exposes),
+`--rewriter {llm,noop}` (the technique under test, see below),
 `--label TEXT` / `--out PATH` (tag and save a run), `--judge-model ID`,
 `--chat-model ID` (the model under test), `--provider {anthropic,bedrock}`, `--k N`,
-`--limit N`, `--queries PATH`.
+`--limit N`, `--queries PATH`. With `--backend milvus`, `DATABASE_URL` is only used
+(best-effort) to record the corpus size in `config`, not required.
 
 ## Comparing techniques (hot-swappable)
 
