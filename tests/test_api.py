@@ -143,7 +143,7 @@ def test_admin_ingest_pdf(client: TestClient, monkeypatch: pytest.MonkeyPatch) -
     with pdf.open("rb") as handle:
         response = client.post(
             "/admin/ingest",
-            files={"file": ("sample.pdf", handle, "application/pdf")},
+            files={"files": ("sample.pdf", handle, "application/pdf")},
             headers={"X-Admin-Key": "adm1n"},
         )
     assert response.status_code == 200
@@ -157,7 +157,7 @@ def test_admin_ingest_docx(client: TestClient, monkeypatch: pytest.MonkeyPatch) 
         response = client.post(
             "/admin/ingest",
             files={
-                "file": (
+                "files": (
                     "sample.docx",
                     handle,
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -169,13 +169,188 @@ def test_admin_ingest_docx(client: TestClient, monkeypatch: pytest.MonkeyPatch) 
     assert response.json()["chunk_ids"]
 
 
+def test_admin_ingest_tags_optional_metadata(
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The optional form fields ride along on every chunk, mirroring the bulk path,
+    # so an admin upload is faceted/attributable just like a bulk-ingested file.
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    response = client.post(
+        "/admin/ingest",
+        files={"files": ("a.txt", b"hello world from an admin upload", "text/plain")},
+        data={
+            "category": "AI",
+            "publisher": "mckinsey.com",
+            "source_type": "consultancy",
+            "published_date": "2024",
+        },
+        headers={"X-Admin-Key": "adm1n"},
+    )
+    assert response.status_code == 200
+    meta = pipeline.list_chunks()[0][1]
+    assert meta["category"] == "AI"
+    assert meta["publisher"] == "mckinsey.com"
+    assert meta["source_type"] == "consultancy"
+    assert meta["published_date"] == "2024"
+
+
+def test_admin_ingest_omits_blank_metadata(
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A blank/whitespace field is treated as unset, not stored as an empty value
+    # (which in Milvus would still create the promoted column).
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    response = client.post(
+        "/admin/ingest",
+        files={"files": ("a.txt", b"hello world from an admin upload", "text/plain")},
+        data={"category": "AI", "publisher": "   "},
+        headers={"X-Admin-Key": "adm1n"},
+    )
+    assert response.status_code == 200
+    meta = pipeline.list_chunks()[0][1]
+    assert meta["category"] == "AI"
+    assert "publisher" not in meta
+    assert "source_type" not in meta
+    assert "published_date" not in meta
+
+
+def test_admin_ingest_multiple_files(
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A batch ingests every file and applies the shared metadata to each; the
+    # response breaks the chunks down per file and aggregates them in chunk_ids.
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    response = client.post(
+        "/admin/ingest",
+        files=[
+            ("files", ("a.txt", b"first report about widgets", "text/plain")),
+            ("files", ("b.txt", b"second report about gadgets", "text/plain")),
+        ],
+        data={"category": "AI"},
+        headers={"X-Admin-Key": "adm1n"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert {f["filename"] for f in body["files"]} == {"a.txt", "b.txt"}
+    assert len(body["chunk_ids"]) == sum(len(f["chunk_ids"]) for f in body["files"])
+    # The shared tag lands on every chunk of every file.
+    assert all(meta["category"] == "AI" for _, meta in pipeline.list_chunks())
+
+
+def test_admin_ingest_rejects_whole_batch_on_bad_type(
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # One unsupported file rejects the batch (415) before anything is ingested,
+    # so a batch never lands half-applied.
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    response = client.post(
+        "/admin/ingest",
+        files=[
+            ("files", ("good.txt", b"a supported file", "text/plain")),
+            ("files", ("data.csv", b"a,b,c", "text/csv")),
+        ],
+        headers={"X-Admin-Key": "adm1n"},
+    )
+    assert response.status_code == 415
+    assert pipeline.list_chunks() == []  # nothing ingested
+
+
+def test_admin_ingest_manifest_sets_per_file_metadata(
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A manifest gives each file its own metadata, matched to files by order.
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    manifest = (
+        b"category,publisher,source_type,published_date\n"
+        b"AI,mckinsey.com,consultancy,2024\n"
+        b"Finance,bcg.com,consultancy,2023\n"
+    )
+    response = client.post(
+        "/admin/ingest",
+        files=[
+            ("files", ("a.txt", b"first report about widgets", "text/plain")),
+            ("files", ("b.txt", b"second report about gadgets", "text/plain")),
+            ("manifest", ("manifest.csv", manifest, "text/csv")),
+        ],
+        headers={"X-Admin-Key": "adm1n"},
+    )
+    assert response.status_code == 200
+    by_source = {meta["source"]: meta for _, meta in pipeline.list_chunks()}
+    assert by_source["a.txt"]["category"] == "AI"
+    assert by_source["a.txt"]["publisher"] == "mckinsey.com"
+    assert by_source["a.txt"]["published_date"] == "2024"
+    assert by_source["b.txt"]["category"] == "Finance"
+    assert by_source["b.txt"]["publisher"] == "bcg.com"
+    assert by_source["b.txt"]["published_date"] == "2023"
+
+
+def test_admin_ingest_manifest_cell_falls_back_to_inline_default(
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A filled manifest cell wins; a blank cell (or a column absent from the
+    # manifest) falls back to the like-named inline default.
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    manifest = b"category,publisher\nAI,mckinsey.com\n,bcg.com\n"  # row 2 leaves category blank
+    response = client.post(
+        "/admin/ingest",
+        files=[
+            ("files", ("a.txt", b"first report", "text/plain")),
+            ("files", ("b.txt", b"second report", "text/plain")),
+            ("manifest", ("m.csv", manifest, "text/csv")),
+        ],
+        data={"category": "Default", "source_type": "consultancy"},
+        headers={"X-Admin-Key": "adm1n"},
+    )
+    assert response.status_code == 200
+    by_source = {meta["source"]: meta for _, meta in pipeline.list_chunks()}
+    assert by_source["a.txt"]["category"] == "AI"  # manifest cell wins
+    assert by_source["a.txt"]["source_type"] == "consultancy"  # column absent -> default fills
+    assert by_source["b.txt"]["category"] == "Default"  # blank cell -> default
+    assert by_source["b.txt"]["publisher"] == "bcg.com"
+    assert by_source["b.txt"]["source_type"] == "consultancy"
+
+
+def test_admin_ingest_manifest_row_count_mismatch_is_400(
+    client: TestClient, pipeline: RagPipeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # One row for two files is rejected (400) before anything is ingested.
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    response = client.post(
+        "/admin/ingest",
+        files=[
+            ("files", ("a.txt", b"first", "text/plain")),
+            ("files", ("b.txt", b"second", "text/plain")),
+            ("manifest", ("m.csv", b"category\nAI\n", "text/csv")),
+        ],
+        headers={"X-Admin-Key": "adm1n"},
+    )
+    assert response.status_code == 400
+    assert pipeline.list_chunks() == []  # nothing ingested
+
+
+def test_admin_ingest_manifest_unrecognized_columns_is_400(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A header with none of the recognized columns is a wrong-format upload (400).
+    monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
+    response = client.post(
+        "/admin/ingest",
+        files=[
+            ("files", ("a.txt", b"first", "text/plain")),
+            ("manifest", ("m.csv", b"foo,bar\n1,2\n", "text/csv")),
+        ],
+        headers={"X-Admin-Key": "adm1n"},
+    )
+    assert response.status_code == 400
+
+
 def test_admin_ingest_unsupported_type_is_415(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
     response = client.post(
         "/admin/ingest",
-        files={"file": ("data.csv", b"a,b,c", "text/csv")},
+        files={"files": ("data.csv", b"a,b,c", "text/csv")},
         headers={"X-Admin-Key": "adm1n"},
     )
     assert response.status_code == 415
@@ -185,7 +360,7 @@ def test_admin_ingest_rejects_missing_or_wrong_key(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("ADMIN_API_KEY", "adm1n")
-    files = {"file": ("a.txt", b"hi", "text/plain")}
+    files = {"files": ("a.txt", b"hi", "text/plain")}
     assert client.post("/admin/ingest", files=files).status_code == 401
     assert (
         client.post("/admin/ingest", files=files, headers={"X-Admin-Key": "wrong"}).status_code
@@ -200,7 +375,7 @@ def test_admin_ingest_disabled_when_no_key_configured(
     # Even with a header, the endpoint is invisible (404) when unconfigured.
     response = client.post(
         "/admin/ingest",
-        files={"file": ("a.txt", b"hi", "text/plain")},
+        files={"files": ("a.txt", b"hi", "text/plain")},
         headers={"X-Admin-Key": "anything"},
     )
     assert response.status_code == 404
@@ -212,6 +387,10 @@ def test_admin_ui_page_is_served(client: TestClient) -> None:
     assert "text/html" in response.headers["content-type"]
     assert "shared knowledge base" in response.text
     assert "admin key" in response.text  # the key field is on the page
+    assert "meta-category" in response.text  # optional-metadata fields are on the page
+    assert 'id="manifest"' in response.text  # manifest upload input
+    assert "category,publisher,source_type,published_date" in response.text  # manifest example
+    assert 'id="file-list"' in response.text  # ordered, reorderable file list
 
 
 def test_debug_chunks_shows_ingested_documents(
