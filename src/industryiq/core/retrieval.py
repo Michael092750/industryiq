@@ -21,9 +21,22 @@ def _content_hash(text: str) -> str:
 class Retriever:
     """Embed-and-search retriever over a vector store."""
 
-    def __init__(self, embedder: Embedder, store: VectorStore) -> None:
+    def __init__(
+        self,
+        embedder: Embedder,
+        store: VectorStore,
+        *,
+        min_chunk_chars: int = 0,
+        overfetch: int = 6,
+    ) -> None:
         self._embedder = embedder
         self._store = store
+        # Drop retrieved chunks shorter than this many characters (bare headings /
+        # fragments): they embed close to topical queries but answer nothing. 0
+        # disables the filter. ``overfetch`` widens the search first so trimming
+        # still leaves ``k`` results.
+        self._min_chunk_chars = min_chunk_chars
+        self._overfetch = max(1, overfetch)
 
     def index(
         self,
@@ -61,9 +74,20 @@ class Retriever:
         The raw ``query`` is passed through as ``query_text`` so stores that
         support it (Milvus) can run a hybrid dense + BM25 search; dense-only
         stores ignore it.
+
+        When ``min_chunk_chars`` is set, the search is widened by ``overfetch``,
+        sub-threshold chunks (bare headings / fragments) are dropped, and the top
+        ``k`` of the rest are returned -- falling back to the unfiltered hits if
+        the filter would empty the result.
         """
         query_vector = self._embedder.embed([query])[0]
-        return self._store.search(query_vector, k=k, query_text=query)
+        if self._min_chunk_chars <= 0:
+            return self._store.search(query_vector, k=k, query_text=query)
+        raw = self._store.search(query_vector, k=k * self._overfetch, query_text=query)
+        substantive = [
+            hit for hit in raw if len(hit.metadata.get("text", "")) >= self._min_chunk_chars
+        ]
+        return (substantive or raw)[:k]
 
     def all_chunks(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
         """Return up to ``limit`` indexed ``(id, metadata)`` pairs, for inspection."""

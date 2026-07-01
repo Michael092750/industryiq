@@ -108,6 +108,11 @@ class Settings:
     chat_kb_description: str = "industry analysis reports"
     # Drop retrieved context whose top score is below this (0.0 = keep all).
     chat_relevance_threshold: float = 0.0
+    # Drop retrieved chunks shorter than this many characters: bare Markdown
+    # headings and fragments embed close to topical queries but answer nothing, so
+    # left in they crowd real paragraphs out of the top-k. The retriever
+    # over-fetches, then trims to k. 0 disables the filter.
+    retrieval_min_chunk_chars: int = 200
 
     # Scheduled bulk ingestion: a background loop that periodically scans a folder
     # (path + interval set by an admin via /admin/ingest-job) and ingests new/
@@ -157,6 +162,7 @@ def get_settings() -> Settings:
         chat_router=os.getenv("CHAT_ROUTER", "always"),
         chat_kb_description=os.getenv("CHAT_KB_DESCRIPTION", "industry analysis reports"),
         chat_relevance_threshold=float(os.getenv("CHAT_RELEVANCE_THRESHOLD", "0.0")),
+        retrieval_min_chunk_chars=int(os.getenv("RETRIEVAL_MIN_CHUNK_CHARS", "200")),
         ingest_scheduler_enabled=_env_bool("INGEST_SCHEDULER_ENABLED", True),
         ingest_scheduler_poll_seconds=int(os.getenv("INGEST_SCHEDULER_POLL_SECONDS", "60")),
     )

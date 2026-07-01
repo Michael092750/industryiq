@@ -334,6 +334,12 @@ ssh $SSHO $HOST "rm -rf industryiq && mkdir industryiq && tar xzf app.tar.gz -C 
 > (committed in `compose.prod.yml`), so you don't write it into `.env`. Bedrock
 > authenticates via the instance IAM role — no AWS key on the box.
 
+> Passing explicit `-f` files also **bypasses `docker-compose.override.yml`** — a
+> local-dev-only file Compose auto-loads for a *bare* `docker compose up`. It bakes the
+> `fastembed` embedder into the image and loads `.env` into the container (for
+> `RAG_PROVIDER=anthropic` locally). Production skips it, so the image stays lean and
+> needs no `ANTHROPIC_API_KEY`.
+
 > **Pin the secrets** so they're identical every deploy: `export DEBUG_API_KEY=...`,
 > `export ADMIN_API_KEY=...`, `export JWT_SECRET=...` before running. Changing
 > `JWT_SECRET` invalidates everyone's existing login tokens.

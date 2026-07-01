@@ -183,7 +183,8 @@ def get_pipeline() -> RagPipeline:
     settings = get_settings()
     embedder, llm = _build_ai_providers(settings)
     store = _build_vector_store(settings, embedder.dim)
-    return RagPipeline(Retriever(embedder, store), llm)
+    retriever = Retriever(embedder, store, min_chunk_chars=settings.retrieval_min_chunk_chars)
+    return RagPipeline(retriever, llm)
 
 
 @lru_cache(maxsize=1)
@@ -220,7 +221,9 @@ def get_chat_service() -> ChatService:
         else AlwaysRetrieveRouter()
     )
     return ChatService(
-        retriever=Retriever(embedder, vector_store),
+        retriever=Retriever(
+            embedder, vector_store, min_chunk_chars=settings.retrieval_min_chunk_chars
+        ),
         router=router,
         rewriter=LlmQueryRewriter(llm),
         llm=llm,

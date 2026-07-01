@@ -28,6 +28,26 @@ pytest
 
 ## Run the API locally
 
+Two ways, depending on what you're doing:
+
+**Whole stack in Docker — one command.** Brings up Postgres + the API and reads your
+`.env` automatically (provider, `ANTHROPIC_API_KEY`, secrets), so there's nothing to
+type each run:
+
+```powershell
+./scripts/start.ps1        # docker compose up -d --build, then waits for /health
+```
+
+For local dev, `docker compose` auto-loads [`docker-compose.override.yml`](docker-compose.override.yml),
+which bakes the local `fastembed` embedder into the app image (`EXTRAS=local`) and
+injects your `.env` into the container (`env_file`) — so `RAG_PROVIDER=anthropic` works
+inside Docker. (The explicit `-f` files used on deploy skip this override, so
+production stays lean — see [DEPLOY.md](DEPLOY.md).) Stop with `docker compose down`
+(keeps data); the first chat is slow while the embedding model downloads in the container.
+
+**Host venv — fast reload loop.** Run just the API in the foreground (in-memory by
+default, or against the Dockerized Postgres if `DATABASE_URL` is set):
+
 ```powershell
 python -m uvicorn industryiq.api.app:app --reload
 ```
@@ -101,8 +121,11 @@ pip install -e ".[dev,local]"
 ```
 
 This uses Claude via the Anthropic API and a local `fastembed` embedder — no AWS.
-On deploy, `RAG_PROVIDER=bedrock` (set by `compose.prod.yml`) switches to Amazon
-Bedrock automatically, authenticated by the instance IAM role.
+The `.[local]` install (fastembed) is only needed for the **host venv** path; running
+via [`./scripts/start.ps1`](scripts/start.ps1) installs it in the image automatically
+and picks up the same `.env`. On deploy, `RAG_PROVIDER=bedrock` (set by
+`compose.prod.yml`) switches to Amazon Bedrock automatically, authenticated by the
+instance IAM role.
 
 ## Bulk-ingest reports for local testing
 
@@ -279,8 +302,10 @@ Invoke-WebRequest "$base/conversations/$cid" -Method Delete -Headers $auth -UseB
 
 ## Stop and reset local services
 
-Local Postgres (and the optional Milvus stack) run under Docker Compose; the API
-itself runs in the foreground, so **Ctrl+C** stops it.
+Local Postgres (and the optional Milvus stack) run under Docker Compose. If you ran
+the API in the foreground (host venv), **Ctrl+C** stops it; if you started it with
+[`./scripts/start.ps1`](scripts/start.ps1) it runs as a container, stopped by
+`docker compose down` below.
 
 ```powershell
 docker compose down       # stop + remove containers (named data volumes survive)

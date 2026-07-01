@@ -60,3 +60,28 @@ def test_index_empty_texts_is_noop() -> None:
     retriever = _retriever()
     assert retriever.index([]) == []
     assert retriever.retrieve("x", k=5) == []
+
+
+def test_retrieve_keeps_short_chunks_by_default() -> None:
+    # min_chunk_chars defaults to 0, so the length filter is off.
+    retriever = _retriever()
+    retriever.index(["hi", "x " * 150])
+    assert retriever.retrieve("hi", k=1)[0].metadata["text"] == "hi"
+
+
+def test_retrieve_drops_short_chunks_when_min_chunk_chars_set() -> None:
+    long_chunk = "x " * 150  # 300 chars, well over the threshold
+    retriever = Retriever(FakeEmbedder(dim=16), InMemoryVectorStore(), min_chunk_chars=200)
+    retriever.index(["hi", long_chunk])
+    # Exact-match would rank the short "hi" top, but it's below the threshold and dropped.
+    hits = retriever.retrieve("hi", k=1)
+    assert len(hits) == 1
+    assert hits[0].metadata["text"] == long_chunk
+
+
+def test_retrieve_falls_back_when_all_chunks_short() -> None:
+    # If every candidate is below the threshold, return the raw hits rather than
+    # nothing -- a short answer beats no answer.
+    retriever = Retriever(FakeEmbedder(dim=16), InMemoryVectorStore(), min_chunk_chars=200)
+    retriever.index(["hi", "yo"])
+    assert len(retriever.retrieve("hi", k=1)) == 1

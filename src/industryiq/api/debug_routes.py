@@ -54,12 +54,22 @@ def list_chunks(pipeline: Pipeline, limit: int = 100) -> ChunksResponse:
     return ChunksResponse(count=len(chunks), chunks=chunks)
 
 
+# Upper bound on how many ranked chunks the debug retrieve returns when the
+# caller asks for "all" (``k <= 0``): high enough to cover the whole index in
+# practice, capped so a pathological corpus can't stream unbounded rows.
+_MAX_DEBUG_RESULTS = 100_000
+
+
 @router.get("/debug/retrieve", dependencies=[Depends(require_debug_key)])
 def debug_retrieve(
-    pipeline: Pipeline, q: Annotated[str, Query(min_length=1)], k: int = 5
+    pipeline: Pipeline, q: Annotated[str, Query(min_length=1)], k: int = 0
 ) -> RetrieveResponse:
-    """Return what retrieval surfaces for query ``q`` (ranked, with scores)."""
-    hits = pipeline.retrieve(q, k=k)
+    """Return what retrieval surfaces for query ``q`` (ranked, with scores).
+
+    ``k`` caps the number of chunks returned; ``k <= 0`` (the default) ranks and
+    returns the entire index.
+    """
+    hits = pipeline.retrieve(q, k=k if k > 0 else _MAX_DEBUG_RESULTS)
     chunks = [
         ScoredChunk(
             id=hit.id,
@@ -138,7 +148,7 @@ _DEBUG_UI_HTML = """<!doctype html>
     function retrieve() {
       const q = document.getElementById('query').value;
       if (!q) { document.getElementById('status').textContent = 'Enter a query first'; return; }
-      call('/debug/retrieve?q=' + encodeURIComponent(q) + '&k=5', true);
+      call('/debug/retrieve?q=' + encodeURIComponent(q), true);
     }
     function loadAll() { call('/debug/chunks', false); }
   </script>

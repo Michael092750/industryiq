@@ -1,0 +1,24 @@
+# Local-development overrides. Docker Compose auto-loads this file for a bare
+# `docker compose up` (no -f flags), so it only affects local dev. Production
+# deploys with explicit files (`-f docker-compose.yml -f compose.prod.yml`),
+# which does NOT load this override -- so none of the below reaches the AWS build.
+#
+# What it adds for local dev:
+#   * EXTRAS=local  -> bakes fastembed into the app image, so the local CPU
+#                      embedder (RAG_PROVIDER=anthropic) works inside the container.
+#   * env_file .env -> the app container automatically inherits every variable in
+#                      your root .env (notably ANTHROPIC_API_KEY) -- no secrets on
+#                      the command line. The explicit `environment:` block in
+#                      docker-compose.yml still wins where it overlaps, so
+#                      DATABASE_URL / MILVUS_URI keep their compose-network values
+#                      (db / milvus) rather than the host-style localhost ones.
+services:
+  app:
+    build:
+      args:
+        EXTRAS: local
+    env_file:
+      # required: false so `docker compose up -d db` (and a fresh clone with no .env
+      # yet) still works -- a missing .env is simply skipped instead of erroring.
+      - path: .env
+        required: false

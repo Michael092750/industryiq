@@ -7,10 +7,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Optional extras baked into the image. Empty by default so production (Bedrock)
+# stays lean; docker-compose.override.yml sets EXTRAS=local for local dev, which
+# pulls in fastembed -- the CPU embedder that RAG_PROVIDER=anthropic needs.
+ARG EXTRAS=
+
 # Install dependencies first (this layer is cached unless pyproject changes).
 COPY pyproject.toml ./
 COPY src/ ./src/
-RUN pip install --no-cache-dir .
+RUN if [ -n "$EXTRAS" ]; then pip install --no-cache-dir ".[$EXTRAS]"; else pip install --no-cache-dir .; fi
 
 EXPOSE 8000
 

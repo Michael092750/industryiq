@@ -32,6 +32,13 @@ def split_sections(
     as both retrievable content and the ``section`` tag. Any content before the
     first heading forms a leading block tagged with ``initial_section``.
 
+    Consecutive headings with no body between them (title pages, tables of
+    contents, stacked figure/table captions) are **coalesced**: they accumulate
+    into the next section's block rather than each becoming its own bodyless chunk.
+    A bare heading embeds very close to any topical query but answers nothing, so
+    left standalone it would crowd real paragraphs out of the top results. The
+    coalesced block is tagged with the nearest (last) heading.
+
     ``initial_section`` lets a caller carry the active heading across a boundary
     it splits on independently (e.g. page boundaries): a section that opened on
     one page still tags the body that continues onto the next. The last pair's
@@ -44,13 +51,19 @@ def split_sections(
     blocks: list[tuple[str | None, str]] = []
     current_section = initial_section
     current_lines: list[str] = []
+    has_body = False  # current_lines holds real content, not just heading lines
     for line in text.splitlines():
         match = _HEADING_RE.match(line)
         if match:
-            if current_lines:  # flush the block that this heading ends
+            # Only close the block if it has body text; otherwise let the heading
+            # accumulate so consecutive headings never split into bodyless chunks.
+            if current_lines and has_body:
                 blocks.append((current_section, "\n".join(current_lines)))
                 current_lines = []
+                has_body = False
             current_section = match.group(2)
+        elif line.strip():
+            has_body = True
         current_lines.append(line)
     if current_lines:
         blocks.append((current_section, "\n".join(current_lines)))

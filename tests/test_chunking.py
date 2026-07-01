@@ -78,3 +78,16 @@ def test_split_sections_leading_content_uses_initial_section() -> None:
 def test_split_sections_ignores_non_atx_hashes() -> None:
     # No space after '#', and a bare '###', are not headings.
     assert split_sections("#nospace\n###\ntext") == [(None, "#nospace\n###\ntext")]
+
+
+def test_split_sections_coalesces_consecutive_headings() -> None:
+    # Stacked headings with no body between them must not each become a bodyless
+    # block; they ride into the next section, tagged by the nearest (last) heading.
+    text = "## Title\n## 2.1 Overview\nreal body here"
+    assert split_sections(text) == [("2.1 Overview", "## Title\n## 2.1 Overview\nreal body here")]
+
+
+def test_split_sections_heading_only_text_stays_single_block() -> None:
+    # A block that is only headings (e.g. a table-of-contents page) yields one
+    # block, not one bodyless block per heading line.
+    assert split_sections("## A\n## B\n## C") == [("C", "## A\n## B\n## C")]

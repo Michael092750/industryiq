@@ -89,8 +89,10 @@ services:
       retries: 5
 
   app:
-    # Build our own image from the Dockerfile in this directory.
-    build: .
+    # Build our own image from the Dockerfile in this directory. Long form so
+    # docker-compose.override.yml can add a build arg (EXTRAS) for local dev.
+    build:
+      context: .
     container_name: industryiq_app
     environment:
       # Inside the compose network, the DB host is the service name "db" (not localhost).
