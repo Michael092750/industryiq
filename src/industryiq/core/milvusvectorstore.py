@@ -326,6 +326,7 @@ class MilvusVectorStore(VectorStore):
         results = self._client.search(
             collection_name=self._collection,
             data=[query],
+            anns_field="embedding",
             limit=k,
             output_fields=list(_OUTPUT_FIELDS),
             search_params=self._search_params(k),
