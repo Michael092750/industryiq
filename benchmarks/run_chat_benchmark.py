@@ -185,6 +185,7 @@ def build_chat_service(
     k: int,
     rewriter: QueryRewriter,
     backend: str,
+    min_chunk_chars: int,
 ) -> ChatService:
     """The real ``ChatService`` the app serves (mirrors ``deps.get_chat_service``),
     against the live store selected by ``backend`` (pgvector or milvus) -- so
@@ -192,6 +193,11 @@ def build_chat_service(
     is the hot-swappable technique under test (see ``REWRITERS``); the only other swap
     is an in-memory conversation store, so benchmark turns are never written to your
     database.
+
+    ``min_chunk_chars`` matches the app's query-time filter (``deps`` passes
+    ``RETRIEVAL_MIN_CHUNK_CHARS``): sub-threshold chunks (bare headings / fragments)
+    are dropped from the retrieved context, so the judged answer is grounded in what
+    the app would actually serve.
     """
     router: RetrievalRouter = (
         LlmRouter(llm, settings.chat_kb_description)
@@ -199,7 +205,9 @@ def build_chat_service(
         else AlwaysRetrieveRouter()
     )
     return ChatService(
-        retriever=Retriever(embedder, build_store(settings, backend, embedder.dim)),
+        retriever=Retriever(
+            embedder, build_store(settings, backend, embedder.dim), min_chunk_chars=min_chunk_chars
+        ),
         router=router,
         rewriter=rewriter,
         llm=llm,
@@ -421,6 +429,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--k", type=int, default=None, help="Top-k to retrieve (default: CHAT_RETRIEVAL_K)."
     )
+    parser.add_argument(
+        "--min-chunk-chars",
+        type=int,
+        default=None,
+        help="Drop retrieved chunks shorter than this many chars from the context, matching the "
+        "app's query-time filter (default: RETRIEVAL_MIN_CHUNK_CHARS). Pass 0 to disable.",
+    )
     parser.add_argument("--limit", type=int, default=None, help="Only run the first N queries.")
     parser.add_argument(
         "--out", type=Path, default=None, help="Write full results as JSON to this path."
@@ -442,6 +457,11 @@ def main(argv: list[str]) -> int:
         settings = Settings(**{**settings.__dict__, **overrides})
 
     k = args.k or settings.chat_retrieval_k
+    min_chunk_chars = (
+        args.min_chunk_chars
+        if args.min_chunk_chars is not None
+        else settings.retrieval_min_chunk_chars
+    )
     if args.backend == "pgvector" and not settings.database_url:
         raise SystemExit("DATABASE_URL is not set (the live Postgres store to retrieve from).")
 
@@ -452,7 +472,9 @@ def main(argv: list[str]) -> int:
 
     embedder, llm = build_providers(settings)
     rewriter = REWRITERS[args.rewriter](llm)
-    service = build_chat_service(settings, embedder, llm, k, rewriter, args.backend)
+    service = build_chat_service(
+        settings, embedder, llm, k, rewriter, args.backend, min_chunk_chars
+    )
     judge = judge_lib.JudgeLLM(model_id=args.judge_model, api_key=settings.anthropic_api_key)
 
     # Full experiment setup, recorded with the results so each run is self-documenting
@@ -474,6 +496,7 @@ def main(argv: list[str]) -> int:
         "relevance_threshold": settings.chat_relevance_threshold,
         "history_turns": settings.chat_history_turns,
         "k": k,
+        "min_chunk_chars": min_chunk_chars,
         "queries_file": args.queries.name,
         "n_queries": len(queries),
         "n_chunks": count_chunks(settings.database_url) if settings.database_url else None,
