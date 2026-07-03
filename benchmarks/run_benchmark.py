@@ -13,9 +13,10 @@ What it does
    table's metadata -- no separate corpus file, no re-embedding.
 2. Resolve each query's gold chunks: a chunk is gold when its text contains one
    of the query's ``gold_needles``.
-3. For each query: embed it, search the store for the top-k, and score the
-   ranked hit list against the gold set. Search is read-only, so the benchmark
-   never writes to your database.
+3. For each query: embed it, search the store for the top-k (passing the raw
+   query text too, so hybrid-capable stores fuse BM25), and score the ranked hit
+   list against the gold set. Search is read-only, so the benchmark never writes
+   to your database.
 
 Comparing engines / index methods
 ---------------------------------
@@ -23,8 +24,11 @@ Tag each run with ``--label`` (recorded in the JSON ``config``) and ``--out`` to
 a file, then diff. To compare pgvector against Milvus, populate both with the
 same corpus (scripts/migrate_pg_to_milvus.py) and run once per ``--backend`` --
 the query set and gold set are unchanged, so differences in recall / ``search_ms``
-are purely the engine. To compare index methods within one engine, rebuild its
-index between runs (e.g. a pgvector seqscan vs. HNSW).
+reflect each store's *production* retrieval path: the raw query text is passed to
+``search`` alongside the vector, so Milvus fuses dense + BM25 (hybrid) while
+pgvector stays dense-only (it ignores the text). This mirrors what the app serves
+rather than isolating the dense index. To compare index methods within one engine,
+rebuild its index between runs (e.g. a pgvector seqscan vs. HNSW).
 
 Provider
 --------
@@ -188,13 +192,19 @@ def cutoffs(k: int) -> list[int]:
 
 
 def evaluate_retriever(
-    corpus: Corpus, queries: list[dict[str, Any]], gold_by_id: dict[str, set[str]], k: int
+    corpus: Corpus,
+    queries: list[dict[str, Any]],
+    gold_by_id: dict[str, set[str]],
+    k: int,
+    *,
+    min_chunk_chars: int,
+    overfetch: int = 6,
 ) -> EvalOutput:
     """Embed and search each query, scoring the ranked hits against its gold set.
 
-    Times the embed and vector-search steps separately (calling the embedder and
-    store directly) so slow embedding can be told apart from slow search -- the
-    two have very different fixes (batch/cache the embedder vs. index the store).
+    Times the embed and search steps separately (calling the embedder and store
+    directly) so slow embedding can be told apart from slow search -- the two have
+    very different fixes (batch/cache the embedder vs. index the store).
     """
     out = EvalOutput()
     for q in queries:
@@ -203,7 +213,18 @@ def evaluate_retriever(
         query_vector = corpus.embedder.embed([q["query"]])[0]
         embed_ms = (time.perf_counter() - embed_start) * 1000
         search_start = time.perf_counter()
-        hits = corpus.store.search(query_vector, k=k)
+        # Mirror the production retrieval path (Retriever.retrieve) exactly, so recall
+        # reflects what the app actually serves rather than raw store hits:
+        #  * pass the raw query text so hybrid-capable stores (Milvus: dense + BM25,
+        #    RRF-fused) use it; dense-only stores (pgvector) accept it and ignore it;
+        #  * when ``min_chunk_chars`` is set, overfetch then drop sub-threshold chunks
+        #    (bare headings / fragments the app filters out), keeping the top ``k``.
+        if min_chunk_chars > 0:
+            raw = corpus.store.search(query_vector, k=k * overfetch, query_text=q["query"])
+            substantive = [h for h in raw if len(h.metadata.get("text", "")) >= min_chunk_chars]
+            hits = (substantive or raw)[:k]
+        else:
+            hits = corpus.store.search(query_vector, k=k, query_text=q["query"])
         search_ms = (time.perf_counter() - search_start) * 1000
         latency = embed_ms + search_ms
         hit_ids = [h.id for h in hits]
@@ -315,6 +336,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--k", type=int, default=None, help="Top-k to retrieve (default: CHAT_RETRIEVAL_K)."
     )
+    parser.add_argument(
+        "--min-chunk-chars",
+        type=int,
+        default=None,
+        help="Drop retrieved chunks shorter than this many chars before scoring, matching the "
+        "app's query-time filter (default: RETRIEVAL_MIN_CHUNK_CHARS). Pass 0 to score raw "
+        "store hits (bare headings included).",
+    )
     parser.add_argument("--limit", type=int, default=None, help="Only run the first N queries.")
     parser.add_argument(
         "--out", type=Path, default=None, help="Write full results as JSON to this path."
@@ -328,6 +357,11 @@ def main(argv: list[str]) -> int:
     if args.provider:
         settings = Settings(**{**settings.__dict__, "provider": args.provider})
     k = args.k or settings.chat_retrieval_k
+    min_chunk_chars = (
+        args.min_chunk_chars
+        if args.min_chunk_chars is not None
+        else settings.retrieval_min_chunk_chars
+    )
 
     spec = json.loads(args.queries.read_text(encoding="utf-8"))
     queries = spec["queries"]
@@ -352,6 +386,7 @@ def main(argv: list[str]) -> int:
         "embedder": type(embedder).__name__,
         "embed_dim": embedder.dim,
         "k": k,
+        "min_chunk_chars": min_chunk_chars,
         "queries_file": args.queries.name,
         "n_queries": len(queries),
         "n_chunks": corpus.n_chunks,
@@ -373,7 +408,7 @@ def main(argv: list[str]) -> int:
             + "\nFix the needle text in queries.json so it is a verbatim phrase in the corpus."
         )
 
-    out = evaluate_retriever(corpus, queries, gold_by_id, k)
+    out = evaluate_retriever(corpus, queries, gold_by_id, k, min_chunk_chars=min_chunk_chars)
     summary = retriever_summary(out, k)
     print_section("RETRIEVER", summary, out.rows)
 
