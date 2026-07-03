@@ -444,6 +444,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
+    # Windows consoles default to cp1252; judge rationales can contain non-ASCII
+    # (e.g. U+2248 "almost equal"). Force UTF-8 so printing rows never crashes a
+    # paid run on the way out.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+        except (AttributeError, ValueError):
+            pass
+
     args = parse_args(argv)
     settings = get_settings()
     overrides: dict[str, Any] = {}
@@ -505,11 +514,15 @@ def main(argv: list[str]) -> int:
 
     records, rows = evaluate(service, judge, queries)
     summary = chat_summary(records)
-    print_section("CHAT (LLM-as-judge)", summary, rows)
 
+    # Persist the (paid) results BEFORE printing them, so a console-encoding hiccup
+    # on a judge rationale can never discard a completed run.
     results: dict[str, Any] = {"config": config, "summary": summary, "rows": rows}
     if args.out:
         args.out.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    print_section("CHAT (LLM-as-judge)", summary, rows)
+    if args.out:
         print(f"\nwrote {args.out}")
 
     return 0
