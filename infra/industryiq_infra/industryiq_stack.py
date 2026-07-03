@@ -60,7 +60,7 @@ class IndustryIqStack(Stack):
             "AppInstance",
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            instance_type=ec2.InstanceType("t3.small"),
+            instance_type=ec2.InstanceType("t3.large"),
             machine_image=ec2.MachineImage.latest_amazon_linux2023(),
             security_group=sg,
             role=role,

@@ -8,7 +8,7 @@ The deployment has **two independent parts**:
 You almost always need **both**: `cdk deploy` creates an *empty server*; the app
 script puts your code on it.
 
-> **What you end up with:** one `t3.small` running the FastAPI backend + Postgres
+> **What you end up with:** one `t3.large` running the FastAPI backend + Postgres
 > (pgvector) in Docker, answering on port `8000`. There is **no web "front page"** —
 > only the JSON API plus `/docs` (interactive API explorer) and `/health`. The React
 > UI in `frontend/` is a *separate* app and is **not** deployed here; see
@@ -126,7 +126,10 @@ Just:
 
 A fresh deploy creates a **new** public IP **and a new SSH key** — don't reuse the
 old ones. (The stack creates the key pair, so `destroy` deletes it and the next
-`deploy` regenerates it.)
+`deploy` regenerates it.) `./scripts/deploy.ps1` handles both automatically: it
+auto-detects the new IP and, each run, compares your local `.pem` against the stack's
+current key and rewrites it if stale — so a leftover key from the destroyed stack
+won't silently break SSH.
 
 ---
 
@@ -219,8 +222,10 @@ a login token. Register or log in at `/auth/*` and send `Authorization: Bearer
 page, only the API. Use `http://<IP>:8000/docs`. The React UI isn't deployed here.
 
 **App container restarts / instance unresponsive after deploy** — you started the
-Milvus stack. Deploy **only `db app`** (Procedure B); a bare `docker compose up` also
-starts etcd + minio + milvus and OOMs the 2 GB `t3.small`.
+Milvus stack unintentionally. For the lean pgvector deploy, bring up **only `db app`**
+(Procedure B); a bare `docker compose up` also starts etcd + minio + milvus, far more
+than that path needs. (Running the full stack *is* supported on the `t3.large` — that's
+what `./scripts/deploy.ps1 -Backend both` does — but it wants the memory headroom.)
 
 **SSH `Connection timed out`** — port 22 isn't open to your IP. Happens if you ran a
 bare `cdk deploy` (SSH locked to `0.0.0.0/32`) or your IP changed. Open it:
@@ -242,20 +247,38 @@ installs a current buildx, so a fresh instance is fine; only relevant on hand-bu
 
 ## 7. Tear down
 
+**Pausing to stop the bill (keeps your data) — recommended.** The EC2 instance is the
+whole compute cost; stopping it pauses that charge while the EBS disk (~$1.60/mo),
+your ingested corpus, and the SSH key all survive. One command from the **repo root**
+(PowerShell):
+
+```powershell
+./scripts/stop-billing.ps1    # stops this stack's instance, then audits the account
+```
+
+`stop-billing.ps1` also prints a read-only **billing audit** — running instances, stray
+Elastic IPs, NAT gateways, load balancers, RDS — so nothing keeps billing unnoticed.
+Add `-AllInstances` to stop every running instance in the region, or `-Audit` to only
+report without stopping anything. Resume any time — a stopped box comes back with a
+**new public IP** and the app **won't auto-start**, but the deploy script handles both:
+
+```powershell
+./scripts/deploy.ps1 -Start   # starts the instance, then redeploys the app
+```
+
+> Prefer the console? EC2 → Instances → *Instance state* → **Stop** / **Start**. After
+> a manual start, re-run **[Procedure B](#procedure-b--deploy-the-app)** (or
+> `./scripts/deploy.ps1`) to bring the app back up.
+
+**Full teardown (ends all charges, destroys the corpus).** When you're done with the
+project — this deletes the instance, its disk, security group, IAM role, and key pair,
+so the ingested corpus is gone and a later redeploy must re-ingest from scratch:
+
 ```powershell
 cd infra
 .\.venv\Scripts\Activate.ps1
 cdk destroy          # deletes the instance, security group, IAM role, key pair
 ```
-
-> **Just pausing, not done?** Instead of destroying, **stop** the instance — compute
-> charges stop, while the disk (~$1.60/mo), your data, and the key survive:
-> ```powershell
-> aws ec2 stop-instances --instance-ids <InstanceId>     # start-instances to resume
-> ```
-> (Or Console → EC2 → Instances → *Instance state* → Stop.) On restart the **public
-> IP changes**, and the app **won't auto-start** — re-run the final `docker compose
-> ... up -d db app` from Procedure B. Use `cdk destroy` to end all charges.
 
 Optional extra cleanup (only if fully done with AWS):
 ```powershell
@@ -300,6 +323,14 @@ icacls $keyPath /inheritance:r /grant:r "$($env:USERNAME):(R)"
 
 ### Procedure B — Deploy the app
 
+> **Shortcut (PowerShell):** `./scripts/deploy.ps1` automates everything in this
+> procedure — auto-detects the IP, ensures/repairs the SSH key, resolves secrets
+> (reusing the server's existing ones so logins stay valid), bundles `HEAD`, and
+> starts the containers. Add `-Start` to boot a stopped instance first. Its default
+> `-Backend both` also brings up Milvus; pass `-Backend pgvector` for the lean
+> `db app` deploy shown below. The manual steps remain here for when you want to run
+> each part yourself.
+
 The instance installs Docker on first boot (~1–2 min). From the **repo root** in
 **Git Bash**, with `<PUBLIC_IP>` filled in:
 
@@ -326,9 +357,10 @@ ssh $SSHO $HOST "rm -rf industryiq && mkdir industryiq && tar xzf app.tar.gz -C 
 ```
 
 > **Start only `db app`** — not a bare `docker compose up`. The base compose also
-> defines a Milvus stack (etcd + minio + milvus) used for *local* benchmarking;
-> starting it would exhaust the 2 GB `t3.small`. Production uses **pgvector** (the
-> `db` service), which is the default backend.
+> defines a Milvus stack (etcd + minio + milvus); starting it is much heavier than
+> this lean deploy needs, which uses **pgvector** (the `db` service). To run Milvus in
+> production instead, use `./scripts/deploy.ps1 -Backend both` (the `t3.large` is
+> sized for it).
 
 > The `-f docker-compose.yml -f compose.prod.yml` overlay sets `RAG_PROVIDER=bedrock`
 > (committed in `compose.prod.yml`), so you don't write it into `.env`. Bedrock
@@ -409,8 +441,8 @@ step 3 errors, Bedrock model access probably isn't granted yet (step 1b).
 - **Debug:** `/debug/retrieve`, `/debug/chunks`, `/debug-ui` (need `X-Debug-Key`).
 - There is **no** route at `/`.
 
-**Cost:** the `t3.small` bills ~$0.50/day while running. `cdk destroy` stops it;
-stopping the instance pauses compute while keeping data (see [Tear down](#7-tear-down)).
+**Cost:** the `t3.large` bills ~$2/day while running. Pause it with `./scripts/stop-billing.ps1`
+(keeps data) or end all charges with `cdk destroy` — see [Tear down](#7-tear-down).
 
 **Security:** chat is behind email login but served over plain HTTP (fine for a
 demo). `/admin/*` and `/debug/*` require their keys and are disabled (404) unless the
