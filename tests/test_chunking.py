@@ -1,6 +1,6 @@
 import pytest
 
-from industryiq.core.chunking import chunk_text, split_sections
+from industryiq.core.chunking import chunk_markdown, chunk_text, split_sections
 
 
 def test_short_text_returns_single_chunk() -> None:
@@ -91,3 +91,44 @@ def test_split_sections_heading_only_text_stays_single_block() -> None:
     # A block that is only headings (e.g. a table-of-contents page) yields one
     # block, not one bodyless block per heading line.
     assert split_sections("## A\n## B\n## C") == [("C", "## A\n## B\n## C")]
+
+
+# --- chunk_markdown: keep tables / charts / figures whole -------------------- #
+
+
+def test_chunk_markdown_plain_prose_matches_chunk_text() -> None:
+    # With no tables/fences it must behave exactly like chunk_text.
+    words = " ".join(str(i) for i in range(20))
+    assert chunk_markdown(words, chunk_size=5, overlap=2) == chunk_text(
+        words, chunk_size=5, overlap=2
+    )
+
+
+def test_chunk_markdown_keeps_table_whole_even_when_oversized() -> None:
+    # A table longer than chunk_size words must still land in ONE chunk, intact.
+    table = "\n".join(["| a | b |", "|---|---|"] + [f"| {i} | {i * 2} |" for i in range(30)])
+    chunks = chunk_markdown(table, chunk_size=5, overlap=1)
+    assert chunks == [table]  # single, unsplit chunk
+    assert len(chunks[0].split()) > 5  # exceeds chunk_size, deliberately not split
+
+
+def test_chunk_markdown_table_not_split_from_surrounding_prose() -> None:
+    text = "Intro sentence before.\n| a | b |\n|---|---|\n| 1 | 2 |\nTrailing prose after."
+    chunks = chunk_markdown(text, chunk_size=100, overlap=10)
+    # The whole table survives verbatim in exactly one chunk...
+    table = "| a | b |\n|---|---|\n| 1 | 2 |"
+    assert any(c == table for c in chunks)
+    # ...and no chunk contains only part of it (a lone row).
+    assert not any("| 1 | 2 |" in c and "| a | b |" not in c for c in chunks)
+
+
+def test_chunk_markdown_keeps_fenced_block_whole() -> None:
+    text = "before\n```\nrow1,10\nrow2,20\nrow3,30\n```\nafter"
+    chunks = chunk_markdown(text, chunk_size=2, overlap=0)
+    assert "```\nrow1,10\nrow2,20\nrow3,30\n```" in chunks
+
+
+def test_chunk_markdown_single_pipe_line_is_not_a_table() -> None:
+    # A lone '|' line (not a real table) is prose, chunked normally.
+    chunks = chunk_markdown("a | b is prose here", chunk_size=100, overlap=0)
+    assert chunks == ["a | b is prose here"]

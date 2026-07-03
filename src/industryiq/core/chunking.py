@@ -70,6 +70,82 @@ def split_sections(
     return blocks
 
 
+# A GFM table row starts and ends with a pipe -- Docling renders tables (and, with
+# chart extraction, chart-to-CSV data) this way, including the ``|---|---|`` rule
+# row. A run of >=2 consecutive such lines is a table.
+_TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
+# A fenced code block delimiter (``` or ~~~) -- the other multi-line structure a
+# chart/table may serialize to.
+_FENCE_RE = re.compile(r"^\s*(```|~~~)")
+
+
+def _segment_markdown(text: str) -> list[tuple[bool, str]]:
+    """Split ``text`` into ordered ``(is_atomic, segment)`` runs.
+
+    Atomic segments are structures that must not be split across chunks -- GFM
+    tables and fenced code blocks (how Docling serializes tables and extracted
+    chart data). Everything else is prose. Consecutive prose lines merge into one
+    prose segment; each table / fenced block is its own atomic segment, in order.
+    """
+    lines = text.splitlines()
+    segments: list[tuple[bool, str]] = []
+    prose: list[str] = []
+
+    def flush_prose() -> None:
+        if prose:
+            segments.append((False, "\n".join(prose)))
+            prose.clear()
+
+    i, n = 0, len(lines)
+    while i < n:
+        if _FENCE_RE.match(lines[i]):
+            flush_prose()
+            block = [lines[i]]
+            i += 1
+            while i < n:  # consume up to and including the closing fence (or EOF)
+                block.append(lines[i])
+                closed = bool(_FENCE_RE.match(lines[i]))
+                i += 1
+                if closed:
+                    break
+            segments.append((True, "\n".join(block)))
+        elif _TABLE_ROW_RE.match(lines[i]) and i + 1 < n and _TABLE_ROW_RE.match(lines[i + 1]):
+            flush_prose()
+            block = []
+            while i < n and _TABLE_ROW_RE.match(lines[i]):
+                block.append(lines[i])
+                i += 1
+            segments.append((True, "\n".join(block)))
+        else:
+            prose.append(lines[i])
+            i += 1
+    flush_prose()
+    return segments
+
+
+def chunk_markdown(text: str, *, chunk_size: int = 200, overlap: int = 20) -> list[str]:
+    """Word-chunk Markdown ``text`` while keeping tables/charts/figures intact.
+
+    Prose runs are split exactly like :func:`chunk_text` (overlapping word chunks).
+    GFM tables and fenced code blocks -- how Docling renders tables and extracted
+    chart-to-CSV data -- are emitted **whole**, never cut across a chunk boundary,
+    even when one such block exceeds ``chunk_size`` words. Segments keep document
+    order, so a table stays adjacent to the prose (its caption/heading) around it.
+
+    Text with no such structures chunks identically to :func:`chunk_text`, so plain
+    ``.txt`` / pypdf output is unaffected.
+    """
+    chunks: list[str] = []
+    for is_atomic, segment in _segment_markdown(text):
+        if is_atomic:
+            block = segment.strip("\n")
+            if block.strip():
+                chunks.append(block)
+        else:
+            chunks.extend(chunk_text(segment, chunk_size=chunk_size, overlap=overlap))
+    return chunks
+
+
 def chunk_text(text: str, *, chunk_size: int = 200, overlap: int = 20) -> list[str]:
     """Split ``text`` into overlapping chunks of at most ``chunk_size`` words.
 

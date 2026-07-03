@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from industryiq.core.chunking import chunk_text, split_sections
+from industryiq.core.chunking import chunk_markdown, chunk_text, split_sections
 from industryiq.core.generation import LLM, generate_answer
 from industryiq.core.loaders import load_pages, load_title
 from industryiq.core.retrieval import Retriever
@@ -99,7 +99,9 @@ class RagPipeline:
         for page_number, page_text in enumerate(pages, start=1):
             for section, block in split_sections(page_text, initial_section=carried_section):
                 carried_section = section
-                for chunk in chunk_text(block, chunk_size=self._chunk_size, overlap=self._overlap):
+                for chunk in chunk_markdown(
+                    block, chunk_size=self._chunk_size, overlap=self._overlap
+                ):
                     chunks.append(chunk)
                     chunk_meta = dict(base)
                     if paginated:
