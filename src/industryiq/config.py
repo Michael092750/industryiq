@@ -48,6 +48,16 @@ class Settings:
     # any failure) or "pypdf" (fast pure-Python text, no fallback). Ingestion is
     # an offline batch, so the slower default is worth the chunk-quality win.
     pdf_parser: str = "docling"
+    # Hybrid text recovery (docling parser only; on by default). Docling routes
+    # charts/figures/boxed callouts to <!-- image --> and discards the text inside
+    # them -- so figure-attached prose (chart footnotes, source notes, average-line
+    # labels, timeline entries) is lost, even though the PDF's text layer has it.
+    # pypdf reads that layer flat, so after the Docling parse we append, per page,
+    # the pypdf lines Docling dropped (deduped against the Docling text and against
+    # running headers/footers). This is a lossless completeness net for exactly the
+    # numeric facts the figure-VLM pass can't reach; it never touches Docling's
+    # clean reading order. Set PDF_HYBRID_RECOVERY=0 for a Docling-only parse.
+    pdf_hybrid_recovery: bool = True
     # Whether Docling runs OCR while parsing PDFs (on by default, so text in
     # scanned pages and chart/figure bitmaps is captured). Set DOCLING_OCR=0 to
     # skip OCR for a faster born-digital-only ingest.
@@ -73,6 +83,37 @@ class Settings:
     # is ~9x lighter but weaker on small text. Applied by patching RapidOcrModel,
     # since the scale is not exposed through Docling's OCR options.
     docling_ocr_scale: int = 2
+    # Whether Docling extracts data from charts/figures the layout model detects as
+    # pictures. On, each chart is run through a vision model (Granite Vision V4) and
+    # emitted as a CSV of its values, so numeric facts that live *inside* a chart
+    # (which the plain layout export drops as an <!-- image --> placeholder) become
+    # retrievable text. Off by default: it downloads a multi-GB model and runs a
+    # vision model per figure, adding significant time + memory (raises the OOM/
+    # SIGSEGV risk this pipeline already guards against) -- enable for chart-heavy
+    # corpora and ingest through scripts/ingest_resilient.py.
+    docling_chart_extraction: bool = False
+    # Whether Docling captions each detected picture with a vision-language model
+    # (its description enters the document text). Complements chart extraction for
+    # non-chart figures (diagrams, photos). Same cost caveat -- a VLM runs per
+    # picture. The default model is a small local SmolVLM; off by default.
+    docling_picture_description: bool = False
+
+    # Figure understanding at ingest via a vision model (VLM), run as a *separate* pass
+    # over docling's finished document -- NOT inside its pipeline. "off" (default) leaves
+    # figures as <!-- image --> placeholders. "anthropic" makes one Claude vision call per
+    # detected figure and splices the result in place: a data chart/table image becomes a
+    # Markdown table of its values (recovering the numeric facts that live inside charts);
+    # any other figure becomes a one-line description. This replaces docling's local
+    # chart-extraction/picture-description stages (keep both above OFF) with an off-box call
+    # that can't crash the parse. See docs/figure-ingestion.md.
+    figure_vlm: str = "off"
+    figure_vlm_model: str = "claude-sonnet-5"
+    # Skip figures whose long edge is under this many pixels (logos, icons, rules): a VLM
+    # call on them wastes tokens and yields sub-threshold noise chunks.
+    figure_vlm_min_pixels: int = 200
+    # Cap the number of figures transcribed per document (0 = no cap). For cost-bounded
+    # test runs; leave 0 in production.
+    figure_vlm_max_figures: int = 0
 
     # AI provider: "fake" (offline default), "anthropic" (local: Anthropic API
     # key + a local CPU embedder), or "bedrock" (real Amazon Bedrock on AWS).
@@ -150,9 +191,16 @@ def get_settings() -> Settings:
         database_url=os.getenv("DATABASE_URL"),
         vector_backend=os.getenv("VECTOR_BACKEND", "pgvector"),
         pdf_parser=os.getenv("PDF_PARSER", "docling"),
+        pdf_hybrid_recovery=_env_bool("PDF_HYBRID_RECOVERY", True),
         docling_ocr=_env_bool("DOCLING_OCR", True),
         docling_page_batch_size=int(os.getenv("DOCLING_PAGE_BATCH_SIZE", "1")),
         docling_ocr_scale=int(os.getenv("DOCLING_OCR_SCALE", "2")),
+        docling_chart_extraction=_env_bool("DOCLING_CHART_EXTRACTION", False),
+        docling_picture_description=_env_bool("DOCLING_PICTURE_DESCRIPTION", False),
+        figure_vlm=os.getenv("FIGURE_VLM", "off"),
+        figure_vlm_model=os.getenv("FIGURE_VLM_MODEL", "claude-sonnet-5"),
+        figure_vlm_min_pixels=int(os.getenv("FIGURE_VLM_MIN_PIXELS", "200")),
+        figure_vlm_max_figures=int(os.getenv("FIGURE_VLM_MAX_FIGURES", "0")),
         milvus_uri=os.getenv("MILVUS_URI", "http://localhost:19530"),
         milvus_token=os.getenv("MILVUS_TOKEN"),
         milvus_collection=os.getenv("MILVUS_COLLECTION", "chunks"),

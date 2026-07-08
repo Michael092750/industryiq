@@ -42,6 +42,11 @@ class _FakeConverter:
 @pytest.fixture
 def use_docling(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PDF_PARSER", "docling")
+    # These tests assert the raw docling per-page glue; the pypdf hybrid-recovery net
+    # (on by default) is a separate concern with its own tests, so switch it off here to
+    # isolate the docling output. Its integration into this path is covered by
+    # test_docling_applies_hybrid_recovery below.
+    monkeypatch.setenv("PDF_HYBRID_RECOVERY", "0")
 
 
 def test_config_default_is_docling() -> None:
@@ -109,6 +114,26 @@ def test_docling_flows_through_load_pages_utf8_safe(
 
     assert pages == ["goodtext"]
     pages[0].encode("utf-8")  # must not raise
+
+
+def test_docling_applies_hybrid_recovery(
+    use_docling: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # With PDF_HYBRID_RECOVERY on, text pypdf has that docling dropped (a figure footnote)
+    # is appended to the right page; text docling already kept is not duplicated.
+    monkeypatch.setenv("PDF_HYBRID_RECOVERY", "1")
+    doc = _FakeDoclingDoc({1: "# Page one\n\ndocling kept this prose"})
+    monkeypatch.setattr(loaders, "_get_docling_converter", lambda: _FakeConverter(doc))
+    monkeypatch.setattr(
+        loaders,
+        "_load_pdf_pages_pypdf",
+        lambda _p: ["docling kept this prose\nrecovered figure footnote with plenty of words"],
+    )
+
+    (page,) = loaders.load_pdf_pages(FIXTURES / "sample.pdf")
+
+    assert "recovered figure footnote with plenty of words" in page  # dropped text restored
+    assert page.count("docling kept this prose") == 1  # kept text not duplicated
 
 
 def test_docling_missing_dependency_raises_helpful_error(

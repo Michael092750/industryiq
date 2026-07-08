@@ -6,6 +6,8 @@ on the file extension, so callers don't need to care about the format.
 """
 
 import logging
+import re
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -16,6 +18,18 @@ import pypdf
 from industryiq.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+# For dedup only: fold to lowercase alphanumerics so "17 .1" and a table cell "| 17.1 |"
+# compare equal regardless of the parser's spacing/punctuation.
+_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+
+
+def _dedup_key(text: str) -> str:
+    return _NON_ALNUM.sub("", text.lower())
+
+
+def _letters(text: str) -> int:
+    return sum(ch.isalpha() for ch in text)
 
 
 def load_text(path: str | Path) -> str:
@@ -73,6 +87,85 @@ def _load_pdf_pages_pypdf(p: Path) -> list[str]:
     return [page.extract_text() for page in reader.pages]
 
 
+def _recover_dropped_pages(
+    docling_pages: list[str],
+    pypdf_pages: list[str],
+    *,
+    min_letters: int = 10,
+    header_frac: float = 0.25,
+) -> list[str]:
+    """Per page, the pypdf lines whose text Docling dropped -- one block per page.
+
+    Docling routes charts/figures/boxed callouts to ``<!-- image -->`` and discards the
+    text inside them, so figure-attached prose (chart footnotes, source notes,
+    average-line labels, timeline entries) is lost even though the PDF's text layer has
+    it -- and the figure-VLM pass only recovers a chart's *data table*, not its footnotes.
+    pypdf reads the text layer flat, so a line pypdf has that Docling doesn't is exactly
+    that dropped content. Returned blocks are appended to each page's Markdown, giving a
+    lossless completeness net without disturbing Docling's clean reading order.
+
+    Dedup is whitespace/punctuation-insensitive (:func:`_dedup_key`), so text Docling kept
+    -- even reflowed into a table cell or respaced -- is not re-added. Lines with fewer
+    than ``min_letters`` letters (numeric table rows, axis-tick soup) are skipped: those
+    are the figure-VLM's job, not prose recovery. Running headers/footers (a line repeated
+    on >= ``header_frac`` of pages) are dropped so a page banner isn't re-added everywhere.
+    """
+    freq: Counter[str] = Counter()
+    per_page_lines: list[list[str]] = []
+    for text in pypdf_pages:
+        lines = [" ".join(ln.split()) for ln in text.splitlines() if ln.strip()]
+        per_page_lines.append(lines)
+        for key in {_dedup_key(ln) for ln in lines if _letters(ln) >= min_letters}:
+            freq[key] += 1
+    n_pages = len(pypdf_pages)
+    # A running header/footer repeats on *many* pages: require both an absolute floor
+    # (>= 3 pages, so a one-off footnote on a small doc isn't mistaken for a banner) and
+    # a fraction of pages (so the rule scales to long documents).
+    repeated = {k for k, c in freq.items() if c >= 3 and c / n_pages >= header_frac}
+
+    recovered: list[str] = []
+    for docling_md, lines in zip(docling_pages, per_page_lines, strict=False):
+        haystack = _dedup_key(docling_md)
+        kept: list[str] = []
+        seen: set[str] = set()
+        for ln in lines:
+            key = _dedup_key(ln)
+            if _letters(ln) < min_letters or not key or key in seen or key in repeated:
+                continue
+            if key in haystack:
+                continue
+            seen.add(key)
+            kept.append(ln)
+        recovered.append("\n".join(kept))
+    return recovered
+
+
+def _apply_hybrid_recovery(p: Path, pages: list[str]) -> list[str]:
+    """Append the text Docling dropped (per :func:`_recover_dropped_pages`) to ``pages``.
+
+    Aligns pypdf pages to Docling pages 1:1 when the counts match (so recovered text keeps
+    its page number for citations); on a count mismatch it recovers against the whole
+    document and appends to the last page, so content is never lost even if attribution is
+    imperfect. Best-effort: any pypdf failure logs and returns ``pages`` unchanged -- the
+    recovery net must never take down a parse that already succeeded.
+    """
+    try:
+        pypdf_pages = _load_pdf_pages_pypdf(p)
+    except Exception as exc:  # noqa: BLE001 -- recovery is best-effort; keep the docling parse
+        logger.warning("Hybrid recovery skipped for %s (pypdf failed: %s).", p.name, exc)
+        return pages
+    if len(pypdf_pages) == len(pages):
+        for i, extra in enumerate(_recover_dropped_pages(pages, pypdf_pages)):
+            if extra:
+                pages[i] = f"{pages[i]}\n\n{extra}"
+        return pages
+    # Page counts disagree: recover against the whole doc, append once, lose nothing.
+    whole = _recover_dropped_pages(["\n".join(pages)], ["\n".join(pypdf_pages)])
+    if whole and whole[0]:
+        pages[-1] = f"{pages[-1]}\n\n{whole[0]}"
+    return pages
+
+
 # Building a Docling converter loads ML models, so build it once and reuse it.
 _docling_converter: Any = None
 
@@ -101,6 +194,29 @@ def _patch_rapidocr_scale(scale: int) -> None:
         rapid_ocr_model.RapidOcrModel._iiq_scale_patched = True
     except Exception as exc:  # noqa: BLE001 -- Docling internals can shift across versions
         logger.warning("Could not lower RapidOCR render scale (%s); using its default.", exc)
+
+
+def _soften_torch_compile() -> None:
+    """Let ``torch.compile`` fall back to eager instead of failing the pipeline.
+
+    Docling's chart-extraction and picture-description vision models ``torch.compile``
+    under the hood. On a machine with no C++ compiler -- Windows without MSVC's
+    ``cl.exe`` -- TorchInductor raises ``Compiler: cl is not found`` and takes down
+    the whole ``StandardPdfPipeline`` (which our loader then falls back to pypdf for,
+    silently losing the layout parse). ``suppress_errors`` makes a failed compile
+    fall back to eager execution: slower, but it runs and produces the figure data.
+    Best-effort -- if Torch's internals shift, we log and continue.
+    """
+    try:  # pragma: no cover - only exercised with the heavy vision extras enabled
+        import torch._dynamo
+
+        torch._dynamo.config.suppress_errors = True
+    except Exception as exc:  # noqa: BLE001 -- torch internals can shift across versions
+        logger.warning(
+            "Could not soften torch.compile (%s); Docling figure enrichment may fail "
+            "on machines without a C++ compiler.",
+            exc,
+        )
 
 
 def _get_docling_converter() -> Any:
@@ -136,6 +252,22 @@ def _get_docling_converter() -> Any:
         # Force the detection step to downscale large bitmaps; RapidOCR's default
         # (limit_type=min) never shrinks them, so a full-size chart bitmap OOMs.
         pipeline_options.ocr_options = RapidOcrOptions(rapidocr_params={"Det.limit_type": "max"})
+        # Figure ingestion (opt-in; each runs a vision model per detected picture, so
+        # both are heavy and off by default). Chart extraction turns a chart the
+        # layout model tagged as a picture into a CSV of its values -- recovering the
+        # numeric facts the plain layout export drops as an <!-- image --> placeholder.
+        # Picture description captions the remaining (non-chart) figures. Their vision
+        # models torch.compile, so soften that first (no MSVC on this box -> eager).
+        if settings.docling_chart_extraction or settings.docling_picture_description:
+            _soften_torch_compile()
+        pipeline_options.do_chart_extraction = settings.docling_chart_extraction
+        pipeline_options.do_picture_description = settings.docling_picture_description
+        # FIGURE_VLM transcribes figures in a separate off-box pass (see figure_vlm.py),
+        # which needs the cropped picture images. images_scale keeps the crops modest so
+        # generating them doesn't blow the memory budget this pipeline already guards.
+        if settings.figure_vlm != "off":
+            pipeline_options.generate_picture_images = True
+            pipeline_options.images_scale = 2
         _docling_converter = DocumentConverter(
             format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
         )
@@ -145,13 +277,50 @@ def _get_docling_converter() -> Any:
 def _load_pdf_pages_docling(p: Path) -> list[str]:
     """Per-page Markdown via Docling (layout-aware, opt-in engine).
 
-    Falls back to a single whole-document element if Docling reports no pages.
+    Falls back to a single whole-document element if Docling reports no pages. When
+    ``FIGURE_VLM`` is set, a separate pass (:mod:`industryiq.core.figure_vlm`) transcribes
+    each detected figure with a vision model and splices the result into the page Markdown
+    in place of its ``<!-- image -->`` placeholder -- recovering chart/figure content the
+    layout export otherwise drops. The pass runs *after* conversion, so a VLM failure loses
+    one figure, never the document's parse.
     """
+    settings = get_settings()
     doc: Any = _get_docling_converter().convert(str(p)).document
+
+    inject = None
+    figures_by_page: dict[int, list[str]] = {}
+    if settings.figure_vlm != "off":
+        from industryiq.core.figure_vlm import (
+            annotate_document_figures,
+            build_annotator,
+            inject_figures,
+        )
+
+        inject = inject_figures
+        figures_by_page = annotate_document_figures(
+            doc,
+            build_annotator(settings),
+            min_pixels=settings.figure_vlm_min_pixels,
+            max_figures=settings.figure_vlm_max_figures,
+        )
+
     page_count = len(doc.pages)
     if page_count == 0:
-        return [doc.export_to_markdown()]
-    return [doc.export_to_markdown(page_no=n) for n in range(1, page_count + 1)]
+        md = doc.export_to_markdown()
+        if inject and figures_by_page:
+            md = inject(md, [t for texts in figures_by_page.values() for t in texts])
+        return _apply_hybrid_recovery(p, [md]) if settings.pdf_hybrid_recovery else [md]
+
+    pages: list[str] = []
+    for n in range(1, page_count + 1):
+        md = doc.export_to_markdown(page_no=n)
+        if inject and n in figures_by_page:
+            md = inject(md, figures_by_page[n])
+        pages.append(md)
+    # Recover the text Docling dropped into <!-- image --> picture regions (figure
+    # footnotes/annotations/callouts) from pypdf's flat text layer. Runs last, so it
+    # sees the figure-VLM injections and won't re-add anything they already restored.
+    return _apply_hybrid_recovery(p, pages) if settings.pdf_hybrid_recovery else pages
 
 
 def load_pdf(path: str | Path) -> str:
