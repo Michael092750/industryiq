@@ -123,7 +123,41 @@ def _segment_markdown(text: str) -> list[tuple[bool, str]]:
     return segments
 
 
-def chunk_markdown(text: str, *, chunk_size: int = 200, overlap: int = 20) -> list[str]:
+def _coalesce_small(pieces: list[str], min_chars: int) -> list[str]:
+    """Merge runs of *small* adjacent ``pieces`` so figure-dense pages don't shed orphans.
+
+    Only pieces **under** ``min_chars`` are combined, and only with each other -- a piece
+    already at/over the floor (a substantial prose chunk or a large table) is emitted
+    untouched. So a run of small tables + one-line captions on a figure-dense page coalesces
+    into one substantial block, while a full prose paragraph is **never diluted** by having a
+    stray table/caption prepended to it (that dilution is what dragged retrieval down when we
+    merged indiscriminately). A leftover small run that never reaches the floor is emitted as
+    its own chunk -- still short, but the query-time length filter demotes it.
+
+    Pieces are merged **whole** and never re-split, so the atomic guarantee holds -- a table
+    lands complete inside its (possibly merged) chunk, never cut across a boundary.
+    """
+    out: list[str] = []
+    buffer = ""  # accumulates a run of consecutive sub-floor pieces
+    for piece in pieces:
+        if len(piece) >= min_chars:
+            if buffer:  # flush the pending small run before the substantial piece
+                out.append(buffer)
+                buffer = ""
+            out.append(piece)  # substantial piece stands alone -- no dilution
+        else:
+            buffer = f"{buffer}\n\n{piece}" if buffer else piece
+            if len(buffer) >= min_chars:
+                out.append(buffer)
+                buffer = ""
+    if buffer:
+        out.append(buffer)
+    return out
+
+
+def chunk_markdown(
+    text: str, *, chunk_size: int = 200, overlap: int = 20, min_chars: int = 0
+) -> list[str]:
     """Word-chunk Markdown ``text`` while keeping tables/charts/figures intact.
 
     Prose runs are split exactly like :func:`chunk_text` (overlapping word chunks).
@@ -131,6 +165,12 @@ def chunk_markdown(text: str, *, chunk_size: int = 200, overlap: int = 20) -> li
     chart-to-CSV data -- are emitted **whole**, never cut across a chunk boundary,
     even when one such block exceeds ``chunk_size`` words. Segments keep document
     order, so a table stays adjacent to the prose (its caption/heading) around it.
+
+    ``min_chars`` (> 0) enables a final **coalescing** pass (:func:`_coalesce_small`) that
+    merges adjacent pieces so no chunk is left under the floor -- a small table/caption/
+    remainder is bundled with its context rather than emitted as an orphan short chunk. This
+    fixes the short-chunk problem at ingest instead of papering over it with the query-time
+    length filter. Tables are still never split; a merged chunk holds them whole.
 
     Text with no such structures chunks identically to :func:`chunk_text`, so plain
     ``.txt`` / pypdf output is unaffected.
@@ -143,6 +183,8 @@ def chunk_markdown(text: str, *, chunk_size: int = 200, overlap: int = 20) -> li
                 chunks.append(block)
         else:
             chunks.extend(chunk_text(segment, chunk_size=chunk_size, overlap=overlap))
+    if min_chars > 0:
+        return _coalesce_small(chunks, min_chars)
     return chunks
 
 

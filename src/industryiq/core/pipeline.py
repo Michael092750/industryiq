@@ -39,11 +39,13 @@ class RagPipeline:
         *,
         chunk_size: int = 200,
         overlap: int = 20,
+        chunk_min_chars: int = 0,
     ) -> None:
         self._retriever = retriever
         self._llm = llm
         self._chunk_size = chunk_size
         self._overlap = overlap
+        self._chunk_min_chars = chunk_min_chars
 
     def ingest_text(
         self,
@@ -100,7 +102,10 @@ class RagPipeline:
             for section, block in split_sections(page_text, initial_section=carried_section):
                 carried_section = section
                 for chunk in chunk_markdown(
-                    block, chunk_size=self._chunk_size, overlap=self._overlap
+                    block,
+                    chunk_size=self._chunk_size,
+                    overlap=self._overlap,
+                    min_chars=self._chunk_min_chars,
                 ):
                     chunks.append(chunk)
                     chunk_meta = dict(base)

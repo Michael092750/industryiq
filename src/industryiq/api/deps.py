@@ -184,7 +184,7 @@ def get_pipeline() -> RagPipeline:
     embedder, llm = _build_ai_providers(settings)
     store = _build_vector_store(settings, embedder.dim)
     retriever = Retriever(embedder, store, min_chunk_chars=settings.retrieval_min_chunk_chars)
-    return RagPipeline(retriever, llm)
+    return RagPipeline(retriever, llm, chunk_min_chars=settings.chunk_min_chars)
 
 
 @lru_cache(maxsize=1)

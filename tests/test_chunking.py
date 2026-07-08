@@ -132,3 +132,54 @@ def test_chunk_markdown_single_pipe_line_is_not_a_table() -> None:
     # A lone '|' line (not a real table) is prose, chunked normally.
     chunks = chunk_markdown("a | b is prose here", chunk_size=100, overlap=0)
     assert chunks == ["a | b is prose here"]
+
+
+# --- chunk_markdown: min-size coalescing (no orphan short chunks) ------------- #
+
+_SMALL_TABLE = "| a | b |\n|---|---|\n| 1 | 2 |"
+
+
+def test_chunk_markdown_min_chars_zero_leaves_small_pieces_separate() -> None:
+    # Default (no coalescing): a small table and a short prose line stay separate chunks.
+    text = f"{_SMALL_TABLE}\n\nShort caption prose."
+    assert len(chunk_markdown(text, chunk_size=100, overlap=10)) == 2
+
+
+def test_chunk_markdown_coalesces_small_pieces_up_to_floor() -> None:
+    # With a floor, the small table + short prose merge into one non-orphan chunk.
+    text = f"{_SMALL_TABLE}\n\nShort caption prose."
+    merged = chunk_markdown(text, chunk_size=100, overlap=10, min_chars=40)
+    assert len(merged) == 1
+    assert "| a | b |" in merged[0] and "Short caption prose." in merged[0]
+
+
+def test_chunk_markdown_coalesce_keeps_table_whole() -> None:
+    # Even when merged into a bigger chunk, the table is never split.
+    text = f"Intro sentence.\n\n{_SMALL_TABLE}\n\nOutro prose after the table."
+    merged = chunk_markdown(text, chunk_size=100, overlap=10, min_chars=1000)
+    assert any(_SMALL_TABLE in c for c in merged)  # whole table in one chunk
+    assert not any("| 1 | 2 |" in c and "| a | b |" not in c for c in merged)  # no lone row
+
+
+def test_chunk_markdown_coalesce_does_not_dilute_substantial_prose() -> None:
+    # A small table after a substantial prose chunk must NOT be merged into it (that
+    # dilutes the prose embedding); the prose stands alone and the table stays whole.
+    long_prose = "word " * 120  # one ~600-char prose chunk, over the floor
+    text = f"{long_prose}\n\n{_SMALL_TABLE}"
+    merged = chunk_markdown(text, chunk_size=200, overlap=20, min_chars=400)
+    assert len(merged) == 2
+    assert merged[0].strip() == long_prose.strip()  # prose un-diluted
+    assert _SMALL_TABLE in merged[1]  # table whole, on its own
+
+
+def test_chunk_markdown_coalesce_merges_a_run_of_small_tables() -> None:
+    # Consecutive small tables (a figure-dense page) merge into one substantial block.
+    t2 = "| c | d |\n|---|---|\n| 3 | 4 |"
+    merged = chunk_markdown(f"{_SMALL_TABLE}\n\n{t2}", chunk_size=100, overlap=10, min_chars=1000)
+    assert len(merged) == 1
+    assert _SMALL_TABLE in merged[0] and t2 in merged[0]  # both tables whole, together
+
+
+def test_chunk_markdown_coalesce_whole_text_under_floor_is_one_chunk() -> None:
+    # If the whole text is under the floor, keep it as a single chunk (don't drop it).
+    assert chunk_markdown("Tiny.", chunk_size=100, overlap=10, min_chars=400) == ["Tiny."]
