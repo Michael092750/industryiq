@@ -78,6 +78,7 @@ from typing import Any
 
 import judge as judge_lib
 import metrics
+import textmatch
 
 from industryiq.config import Settings, get_settings
 from industryiq.core.chat import (
@@ -273,10 +274,14 @@ def answer_question(
 
 
 def is_rag_hit(hits: list[Hit], needles: list[str]) -> bool:
-    """True if any retrieved chunk's text contains any gold needle (case-insensitive)
-    -- i.e. retrieval actually surfaced the answer for this query."""
-    lowered = [n.lower() for n in needles]
-    return any(n in hit.metadata.get("text", "").lower() for hit in hits for n in lowered)
+    """True if any retrieved chunk's text contains any gold needle -- i.e. retrieval
+    actually surfaced the answer for this query.
+
+    Matching is whitespace/punctuation-insensitive (benchmarks/textmatch.py), the
+    same as the retrieval benchmark's gold resolution, so a needle authored against
+    the old pypdf parse still counts a hit against the reflowed Docling/OCR text.
+    """
+    return any(textmatch.contains_any(hit.metadata.get("text", ""), needles) for hit in hits)
 
 
 def evaluate(

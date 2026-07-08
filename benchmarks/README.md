@@ -45,6 +45,14 @@ chunk as gold when its text contains one of those needles, resolving them to chu
 ids. Because the query set ties to *content*, not ids, it keeps working after a
 re-ingest.
 
+Matching is **parser-tolerant** (`benchmarks/textmatch.py`, shared with the chat
+benchmark): both sides are normalized (whitespace/punctuation/HTML-entity-insensitive)
+before the substring test, so a needle authored against the old pypdf parse still
+resolves against the reflowed Docling/OCR text when only the *surface* differs
+(`"17 .1"` ≡ `"17.1"`, `"R&amp;D"` ≡ `"R&D"`). A genuinely **reworded** sentence still
+fails to match — so it surfaces for re-anchoring rather than silently resolving to the
+wrong chunk (see the re-anchor assist under Notes).
+
 `queries.json` schema (per query):
 
 ```jsonc
@@ -52,9 +60,24 @@ re-ingest.
   "id": "ai-private-investment-2025",     // stable identifier
   "query": "How much did U.S. private ...", // what we send to the retriever
   "category": "AI",                        // expected source industry (for category-hit@1)
-  "gold_needles": ["...$285.9 billion..."] // verbatim phrase(s) marking a relevant chunk
+  "gold_needles": ["...$285.9 billion..."], // verbatim phrase(s) marking a relevant chunk
+  "gold_type": "prose",                    // optional: "prose" (default) | "figure" — the
+                                           //   answer's chunk kind; metrics split on it
+  "expected_missing": false                // optional: true = fact known-absent from the
+                                           //   corpus; tracked, not scored, no hard-fail
 }
 ```
+
+Two optional fields keep the set honest across parser/corpus changes:
+
+- **`gold_type`** (`"prose"` default | `"figure"`) — whether the answer lives in prose or a
+  chart/figure chunk. Once any `figure` query exists, the summary reports recall/mrr **split by
+  type**, so a change that helps figures but costs prose (chunk coalescing, the figure backfill)
+  shows *both* effects instead of only the prose loss.
+- **`expected_missing`** (`true` marks a known content gap — a missing source document, or a
+  figure value the backfill dropped) — the query is tracked and reported but **not scored**, and
+  a run does **not** hard-fail on it. Clear the flag once the content is recovered; if it resolves
+  while still flagged, the runner warns that the flag is stale.
 
 ## Running it
 
@@ -113,9 +136,14 @@ tradeoff this benchmark surfaces.
 
 ## Notes & limitations
 
-- The corpus is whatever is currently in the `chunks` table. After re-ingesting,
-  check that every `gold_needle` still resolves — the runner errors out and names
-  the query if a needle no longer matches any chunk's text.
+- The corpus is whatever is currently in the `chunks` table. After re-ingesting, every
+  `gold_needle` must still resolve. If one doesn't, the runner distinguishes two cases: a query
+  flagged `expected_missing` is reported as a known gap and the run continues; any *other*
+  unresolved needle is **benchmark rot** (the parser reworded the text) and still fails the run —
+  but with a guided **re-anchor assist** that runs the app's hybrid search on the needle and prints
+  the nearest current chunk text, so you copy a fresh verbatim phrase into `queries.json` (or, if
+  nothing is found, mark the query `expected_missing`). Pure surface drift (spacing, punctuation,
+  HTML entities) no longer breaks a needle — the matcher normalizes it away.
 - `search_ms` is the real pgvector latency (distance op + SQL round trip). With no
   index on `chunks` it reflects a sequential scan; add an HNSW/IVFFlat index to
   benchmark approximate search.

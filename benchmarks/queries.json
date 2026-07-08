@@ -1,5 +1,5 @@
 {
-  "description": "Gold benchmark for the IndustryIQ retriever, scored against the real chunks in the live Postgres store. Each query lists the industry it targets and the substring(s) that mark a relevant chunk (gold_needles); the runner resolves those to the gold chunk ids and scores whether retrieval surfaced them. Queries per category track each category's share of chunks in the store, with a floor of 5 for the smaller categories so they stay meaningfully covered: AI 20, Finance 15, Healthcare 5, Agriculture 5, Semiconductor 5 (22,156 chunks total, 50 queries).",
+  "description": "Gold benchmark for the IndustryIQ retriever, scored against the real chunks in the live vector store. Each query lists the industry it targets and the substring(s) that mark a relevant chunk (gold_needles); the runner resolves those to the gold chunk ids (whitespace/punctuation-insensitively, so a needle authored against the old pypdf parse still matches the reflowed Docling/OCR text) and scores whether retrieval surfaced them. Per-query optional fields: `gold_type` ('prose' default | 'figure') marks whether the answer lives in prose or a chart/figure chunk — metrics are reported split on it so a figure-vs-prose tradeoff (e.g. chunk coalescing) is visible, not averaged away; `expected_missing: true` marks a fact known-absent from the corpus (missing document or a figure the backfill dropped) so it is tracked but not scored and does not hard-fail the run — clear the flag once the content is recovered. Queries per category track each category's share of chunks in the store, with a floor of 5 for the smaller categories: AI 20, Finance 15, Healthcare 5, Agriculture 5, Semiconductor 5 (50 queries; 0 currently expected_missing — the 4 Docling-dropped facts were recovered 2026-07-07 by hybrid pypdf recovery).",
   "queries": [
     {
       "id": "ai-private-investment-2025",
@@ -41,7 +41,8 @@
       "id": "ai-stargate-investment",
       "query": "How much does the Stargate venture plan to invest to build advanced AI data centers in the US?",
       "category": "AI",
-      "gold_needles": ["$100 billion and $500 billion to build advanced AI data centers", "Stargate Project announced by OpenAI"]
+      "gold_needles": ["$100 billion and $500 billion to build advanced AI data centers", "Stargate Project announced by OpenAI"],
+      "note": "Recovered 2026-07-07: was a Docling parse regression (present in the pypdf baseline, dropped by Docling); restored by hybrid pypdf recovery (PDF_HYBRID_RECOVERY) after the batch-path fix + rechunk."
     },
     {
       "id": "ai-us-defence-budget",
@@ -65,7 +66,8 @@
       "id": "ai-field-acquisitions",
       "query": "How many acquisitions did the leading AI companies make, and what share of the field was that?",
       "category": "AI",
-      "gold_needles": ["79 acquisitions (18 percent of the total number of acquisitions in the AI field)"]
+      "gold_needles": ["79 acquisitions in total"],
+      "note": "Re-anchored 2026-07-06 to the Docling parse (WIPO): the old '(18 percent…)' parenthetical was reworded away; the invariant is '79 acquisitions in total'."
     },
     {
       "id": "ai-us-vs-china-europe-genai",
@@ -101,7 +103,8 @@
       "id": "ai-thinking-machines-seed",
       "query": "What seed round and valuation did the AI company founded by Mira Murati raise?",
       "category": "AI",
-      "gold_needles": ["raises a $2 billion seed round at a $12 billion valuation"]
+      "gold_needles": ["raises a $2 billion seed round at a $12 billion valuation"],
+      "note": "Recovered 2026-07-07: was a Docling parse regression (present in the pypdf baseline, dropped by Docling); restored by hybrid pypdf recovery (PDF_HYBRID_RECOVERY) after the batch-path fix + rechunk."
     },
     {
       "id": "ai-microsoft-three-mile-island",
@@ -125,7 +128,8 @@
       "id": "finance-life-insurance-surrender-risk",
       "query": "How much in US life insurance policies could be surrendered with low penalty, according to Moody's?",
       "category": "Finance",
-      "gold_needles": ["estimated that $500 billion (almost one-third of US life insurance policies) could be surrendered with low penalty"]
+      "gold_needles": ["estimated that $500 billion (almost one-third of US life insurance policies) could be surrendered with low penalty"],
+      "note": "Recovered 2026-07-07: was a Docling parse regression (present in the pypdf baseline, dropped by Docling); restored by hybrid pypdf recovery (PDF_HYBRID_RECOVERY) after the batch-path fix + rechunk."
     },
     {
       "id": "finance-qbp-yoy-increase",
@@ -179,7 +183,8 @@
       "id": "finance-discount-window-credit",
       "query": "How much did primary credit through the discount window increase during the first week?",
       "category": "Finance",
-      "gold_needles": ["increased from less than $5 billion to more than $150 billion"]
+      "gold_needles": ["all-time high of 153 billion"],
+      "note": "Re-anchored 2026-07-06 to the Docling parse: 'discount window's standing Primary Credit facility surged to an all-time high of 153 billion on March 15' (the old '$5B→$150B' phrasing/number was the pypdf rendering)."
     },
     {
       "id": "finance-cet1-adverse-scenario",
@@ -203,7 +208,8 @@
       "id": "finance-variable-rate-debt-share",
       "query": "What is the average share of variable-rate debt for European high-yield corporate bond issuers?",
       "category": "Finance",
-      "gold_needles": ["average share of variable rate debt is 29.4 percent"]
+      "gold_needles": ["average share of variable rate debt is 29.4 percent"],
+      "note": "Recovered 2026-07-07: was a Docling parse regression (present in the pypdf baseline, dropped by Docling); restored by hybrid pypdf recovery (PDF_HYBRID_RECOVERY) after the batch-path fix + rechunk."
     },
     {
       "id": "finance-failed-bank-fund-cost",

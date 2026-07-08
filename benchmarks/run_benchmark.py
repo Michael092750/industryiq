@@ -56,6 +56,7 @@ from pathlib import Path
 from typing import Any
 
 import metrics
+import textmatch
 
 from industryiq.config import Settings, get_settings
 from industryiq.core.embeddings import Embedder
@@ -105,6 +106,10 @@ class Corpus:
     embedder: Embedder
     store: VectorStore
     chunk_text_by_id: dict[str, str]
+    # ``chunk_text_by_id`` folded through textmatch.normalize once, so gold
+    # resolution (which scans every chunk per query) matches parser-tolerantly
+    # without re-normalizing 30k chunks on each query.
+    norm_text_by_id: dict[str, str]
     chunk_category_by_id: dict[str, str]
     n_chunks: int
 
@@ -147,17 +152,60 @@ def build_corpus(embedder: Embedder, settings: Settings, backend: str) -> Corpus
     for cid, meta in store.all_items(limit=1_000_000):
         text_by_id[cid] = meta.get("text", "")
         category_by_id[cid] = meta.get("category", "uncategorized")
-    return Corpus(embedder, store, text_by_id, category_by_id, len(text_by_id))
+    norm_by_id = {cid: textmatch.normalize(text) for cid, text in text_by_id.items()}
+    return Corpus(embedder, store, text_by_id, norm_by_id, category_by_id, len(text_by_id))
 
 
 def resolve_gold(corpus: Corpus, needles: list[str]) -> set[str]:
-    """The set of chunk ids whose text contains any of ``needles`` (case-insensitive)."""
-    lowered = [n.lower() for n in needles]
-    return {
-        cid
-        for cid, text in corpus.chunk_text_by_id.items()
-        if any(n in text.lower() for n in lowered)
-    }
+    """Chunk ids whose text contains any of ``needles``, matched parser-tolerantly.
+
+    Matching is whitespace/punctuation-insensitive (see benchmarks/textmatch.py),
+    so a needle copied from the old pypdf parse still resolves against the reflowed
+    Docling/OCR text when only the *surface* differs ("17 .1" vs "17.1"). A genuinely
+    reworded sentence still fails to resolve, so it surfaces for re-anchoring.
+    """
+    wanted = [textmatch.normalize(n) for n in needles]
+    return {cid for cid, norm in corpus.norm_text_by_id.items() if any(n in norm for n in wanted)}
+
+
+def reanchor_hints(
+    corpus: Corpus, needles: list[str], *, max_hits: int = 5, window: int = 140
+) -> list[str]:
+    """The corpus chunks most likely to hold this query's answer, with their current
+    text -- so a fresh verbatim needle can be copied out.
+
+    Used only on the failure path (a needle that no longer resolves). It runs the
+    *same hybrid search the app uses* (dense + BM25 via ``query_text``) on each
+    needle to find the actually-relevant chunk -- far more targeted than scanning
+    for a bare number, which collides with unrelated tables. Within the found
+    chunk the snippet is centered on the needle's numeric anchor when present, so
+    the copyable phrase sits in view; otherwise the chunk head is shown.
+    """
+    lines: list[str] = []
+    seen: set[str] = set()
+    anchors = textmatch.numeric_anchors(" ".join(needles))
+    anchor_patterns = [textmatch.ws_tolerant_pattern(a) for a in anchors]
+    for needle in needles:
+        if len(lines) >= max_hits:
+            break
+        vector = corpus.embedder.embed([needle])[0]
+        for hit in corpus.store.search(vector, k=3, query_text=needle):
+            if hit.id in seen or len(lines) >= max_hits:
+                continue
+            seen.add(hit.id)
+            text = corpus.chunk_text_by_id.get(hit.id) or hit.metadata.get("text", "")
+            pos = next((m.start() for m in (p.search(text) for p in anchor_patterns) if m), None)
+            if pos is None:
+                snippet = " ".join(text[: 2 * window].split())
+            else:
+                snippet = " ".join(text[max(0, pos - window) : pos + window].split())
+            lines.append(f"      · {hit.id[:8]} …{snippet}…")
+    if not lines:
+        lines.append(
+            "      · (nothing retrieved — likely a missing document or dropped figure; "
+            "mark the query expected_missing until the content is recovered)"
+        )
+    return lines
 
 
 # --------------------------------------------------------------------------- #
@@ -173,6 +221,10 @@ class Record:
     hit_ids: list[str]
     expected_category: str | None
     top_category: str | None
+    # Whether the answer lives in a prose chunk or a figure/chart chunk. Metrics are
+    # reported split on this so a change that helps figures but costs prose (e.g.
+    # coalescing) shows *both* effects instead of only the prose loss.
+    gold_type: str
     latency_ms: float
     embed_ms: float
     search_ms: float
@@ -236,6 +288,7 @@ def evaluate_retriever(
                 hit_ids,
                 q["category"],
                 top_category,
+                q.get("gold_type", "prose"),
                 latency_ms=latency,
                 embed_ms=embed_ms,
                 search_ms=search_ms,
@@ -280,6 +333,15 @@ def _multi_k(records: list[Record], ks: list[int]) -> dict[str, float]:
     return out
 
 
+def _split_metrics(records: list[Record], k: int) -> dict[str, Any]:
+    """The recall/hit/mrr subset for one slice of records (a gold_type split)."""
+    return {
+        "n": len(records),
+        **_multi_k(records, cutoffs(k)),
+        "mrr": round(_mean([metrics.reciprocal_rank(r.hit_ids, r.gold) for r in records]), 3),
+    }
+
+
 def retriever_summary(out: EvalOutput, k: int) -> dict[str, Any]:
     recs = out.records
     summary: dict[str, Any] = {"queries_scored": len(recs)}
@@ -296,6 +358,13 @@ def retriever_summary(out: EvalOutput, k: int) -> dict[str, Any]:
     summary["latency_ms"] = _round_stats(metrics.summarize([r.latency_ms for r in recs]))
     mean_latency = _mean([r.latency_ms for r in recs])
     summary["throughput_qps"] = round(1000 / mean_latency, 2) if mean_latency else 0.0
+    # Split recall/mrr by gold_type once more than one kind of answer is present, so a
+    # figure-vs-prose tradeoff (the coalescing decision) is visible, not averaged away.
+    types = sorted({r.gold_type for r in recs})
+    if len(types) > 1:
+        summary["splits"] = {
+            t: _split_metrics([r for r in recs if r.gold_type == t], k) for t in types
+        }
     return summary
 
 
@@ -393,23 +462,65 @@ def main(argv: list[str]) -> int:
     }
     print("SETUP: " + json.dumps(config, ensure_ascii=False))
 
-    # Resolve + validate gold for every query up front.
+    # Resolve + validate gold for every query up front, sorting into three states:
+    #   * resolved            -> scored below
+    #   * unresolved, flagged expected_missing -> a known content gap (missing document
+    #     or dropped figure); tracked, not scored, and NOT a hard failure
+    #   * unresolved, not flagged             -> benchmark rot: the needle drifted and
+    #     must be re-anchored. This still hard-fails, but with guided hints (below).
     gold_by_id: dict[str, set[str]] = {}
     missing: list[str] = []
+    known_gaps: list[str] = []
+    stale_flags: list[str] = []  # flagged expected_missing yet resolved -> clear the flag
+    by_id = {q["id"]: q for q in queries}
     for q in queries:
         gold = resolve_gold(corpus, q["gold_needles"])
         gold_by_id[q["id"]] = gold
-        if not gold:
+        if gold:
+            if q.get("expected_missing"):
+                stale_flags.append(q["id"])
+        elif q.get("expected_missing"):
+            known_gaps.append(q["id"])
+        else:
             missing.append(q["id"])
+
+    if known_gaps:
+        print(f"\nexpected-missing (known content gaps, not scored): {', '.join(known_gaps)}")
+    if stale_flags:
+        print(
+            "\nNOTE: these resolved despite expected_missing — the content is back, "
+            f"clear the flag in queries.json: {', '.join(stale_flags)}"
+        )
     if missing:
+        print("\n" + "=" * 72)
+        print(f"UNRESOLVED GOLD ({len(missing)}) — needle no longer matches any chunk's text.")
+        print("The parser likely reflowed or reworded the source. For each query, the nearest")
+        print("current corpus text is shown below — copy a fresh verbatim phrase into")
+        print("queries.json's gold_needles. If nothing is found, the content is genuinely")
+        print('gone: mark the query "expected_missing": true until it is recovered.')
+        print("=" * 72)
+        for qid in missing:
+            q = by_id[qid]
+            print(f"\n  {qid}")
+            print(f"    query : {q['query']}")
+            print(f"    needle: {q['gold_needles']}")
+            for line in reanchor_hints(corpus, q["gold_needles"]):
+                print(line)
         raise SystemExit(
-            "no chunk matched the gold_needles for: "
-            + ", ".join(missing)
-            + "\nFix the needle text in queries.json so it is a verbatim phrase in the corpus."
+            f"\n{len(missing)} query(ies) have unresolved gold needles (see above). "
+            "Re-anchor them against the current corpus, then re-run."
         )
 
-    out = evaluate_retriever(corpus, queries, gold_by_id, k, min_chunk_chars=min_chunk_chars)
+    scored = [q for q in queries if gold_by_id[q["id"]]]
+    config["n_queries_scored"] = len(scored)
+    config["n_expected_missing"] = len(known_gaps)
+
+    out = evaluate_retriever(corpus, scored, gold_by_id, k, min_chunk_chars=min_chunk_chars)
     summary = retriever_summary(out, k)
+    if known_gaps:
+        summary["expected_missing"] = known_gaps
+    if stale_flags:
+        summary["stale_expected_missing"] = stale_flags
     print_section("RETRIEVER", summary, out.rows)
 
     results: dict[str, Any] = {"config": config, "summary": summary, "rows": out.rows}
