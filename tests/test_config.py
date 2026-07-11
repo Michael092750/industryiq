@@ -28,6 +28,16 @@ def test_redis_url_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
     assert get_settings().redis_url is None
 
 
+def test_session_doc_ttl_defaults_to_seven_days(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SESSION_DOC_TTL_SECONDS", raising=False)
+    assert get_settings().session_doc_ttl_seconds == 60 * 60 * 24 * 7
+
+
+def test_session_doc_ttl_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SESSION_DOC_TTL_SECONDS", "3600")
+    assert get_settings().session_doc_ttl_seconds == 3600
+
+
 def test_provider_defaults_to_fake(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RAG_PROVIDER", raising=False)
     assert get_settings().provider == "fake"

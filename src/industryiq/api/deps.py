@@ -34,6 +34,7 @@ from industryiq.core.chat import (
     LlmQueryRewriter,
     LlmRouter,
     RetrievalRouter,
+    SessionDocumentStore,
     ThresholdFilter,
 )
 from industryiq.core.chat.adapters.session_documents import SessionDocuments
@@ -221,13 +222,26 @@ def get_ingestion_service() -> IngestionService:
 
 
 @lru_cache(maxsize=1)
-def get_session_documents() -> SessionDocuments:
+def get_session_documents() -> SessionDocumentStore:
     """Return the process-wide session-document index (built once, then cached).
 
     Shared between the chat service (which retrieves from it) and the upload route
-    (which adds to it) -- they must be the same in-memory instance.
+    (which adds to it). With Redis configured (REDIS_URL set), that shared index is
+    Redis-backed -- so it is visible across processes and survives a restart, with
+    a sliding TTL; otherwise it is the in-process :class:`SessionDocuments`, which
+    only the one process sees and which is cleared on restart.
     """
-    embedder, _ = _build_ai_providers(get_settings())
+    settings = get_settings()
+    embedder, _ = _build_ai_providers(settings)
+    redis = get_redis()
+    if redis is not None:
+        from industryiq.core.chat.adapters.session_documents_redis import (
+            RedisSessionDocumentStore,
+        )
+
+        return RedisSessionDocumentStore(
+            redis, embedder, ttl_seconds=settings.session_doc_ttl_seconds
+        )
     return SessionDocuments(embedder)
 
 

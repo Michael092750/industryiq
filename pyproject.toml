@@ -29,7 +29,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest", "pytest-cov", "pre-commit", "httpx"]
+# fakeredis: an in-process Redis emulator, so the Redis-backed adapters get real
+# unit coverage in the offline default suite (no server needed).
+dev = ["ruff", "mypy", "pytest", "pytest-cov", "pre-commit", "httpx", "fakeredis"]
 # Local-dev AI provider (RAG_PROVIDER=anthropic): a CPU embedder for retrieval.
 # Not needed in production, which uses Bedrock.
 local = ["fastembed>=0.3"]
