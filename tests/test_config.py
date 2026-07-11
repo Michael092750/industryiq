@@ -18,6 +18,16 @@ def test_database_url_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert get_settings().database_url == "postgresql://u:p@localhost:5432/db"
 
 
+def test_redis_url_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    assert get_settings().redis_url == "redis://localhost:6379/0"
+
+
+def test_redis_url_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    assert get_settings().redis_url is None
+
+
 def test_provider_defaults_to_fake(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RAG_PROVIDER", raising=False)
     assert get_settings().provider == "fake"

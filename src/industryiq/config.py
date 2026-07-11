@@ -31,6 +31,12 @@ class Settings:
     # vector store (data does not survive restarts).
     database_url: str | None = None
 
+    # Redis connection string (e.g. redis://localhost:6379/0). Redis is the hot,
+    # shared, ephemeral tier for agent working-memory and cross-agent context.
+    # When None, Redis-backed features are disabled -- mirroring the database_url
+    # seam: the app runs without it, callers of get_redis() get None.
+    redis_url: str | None = None
+
     # Which vector store to use: "pgvector" (Postgres, the default) or "milvus".
     # pgvector is kept for benchmarking; "milvus" routes the live app to Milvus.
     vector_backend: str = "pgvector"
@@ -189,6 +195,7 @@ def get_settings() -> Settings:
         debug_api_key=os.getenv("DEBUG_API_KEY"),
         admin_api_key=os.getenv("ADMIN_API_KEY"),
         database_url=os.getenv("DATABASE_URL"),
+        redis_url=os.getenv("REDIS_URL"),
         vector_backend=os.getenv("VECTOR_BACKEND", "pgvector"),
         pdf_parser=os.getenv("PDF_PARSER", "docling"),
         pdf_hybrid_recovery=_env_bool("PDF_HYBRID_RECOVERY", True),

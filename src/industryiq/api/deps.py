@@ -13,10 +13,13 @@ Tests override ``get_pipeline`` / ``get_chat_service`` via FastAPI's
 """
 
 from functools import lru_cache
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+if TYPE_CHECKING:
+    from redis import Redis
 
 from industryiq.config import Settings, get_settings
 from industryiq.core.auth import AuthService, User, UserStore
@@ -143,6 +146,25 @@ def _build_user_store(settings: Settings) -> UserStore:
     if settings.database_url:
         return PgUserStore(settings.database_url)
     return InMemoryUserStore()
+
+
+@lru_cache(maxsize=1)
+def get_redis() -> "Redis | None":
+    """Return the process-wide Redis client, or ``None`` when REDIS_URL is unset.
+
+    The single seam through which Redis-backed features reach the server. Cached
+    so one client (and its connection pool) is shared process-wide. ``None`` means
+    "Redis not configured" -- callers degrade rather than fail, mirroring how the
+    stores treat an unset ``DATABASE_URL``. The client is lazy, so building it here
+    opens no socket; use :func:`industryiq.core.redis_client.ping` to check
+    reachability.
+    """
+    settings = get_settings()
+    if not settings.redis_url:
+        return None
+    from industryiq.core.redis_client import build_redis_client
+
+    return build_redis_client(settings.redis_url)
 
 
 @lru_cache(maxsize=1)

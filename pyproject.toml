@@ -24,6 +24,8 @@ dependencies = [
     "boto3>=1.34",
     "bcrypt>=4.1",
     "pyjwt>=2.8",
+    # Hot working-memory / shared agent-context tier (see core/redis_client.py).
+    "redis>=5.0",
 ]
 
 [project.optional-dependencies]
@@ -49,7 +51,7 @@ files = ["src"]
 
 [[tool.mypy.overrides]]
 # These ship no type stubs; don't fail on their untyped imports.
-module = ["docx.*", "pgvector.*", "pymilvus.*", "boto3.*", "botocore.*", "fastembed.*", "bcrypt.*", "docling.*"]
+module = ["docx.*", "pgvector.*", "pymilvus.*", "boto3.*", "botocore.*", "fastembed.*", "bcrypt.*", "docling.*", "redis.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -68,6 +70,7 @@ filterwarnings = [
 omit = [
     "src/industryiq/core/pgvectorstore.py",
     "src/industryiq/core/milvusvectorstore.py",
+    "src/industryiq/core/redis_client.py",
     "src/industryiq/core/bedrock.py",
     "src/industryiq/core/anthropic_llm.py",
     "src/industryiq/core/local_embeddings.py",

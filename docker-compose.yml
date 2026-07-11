@@ -88,6 +88,26 @@ services:
       timeout: 20s
       retries: 5
 
+  # ---- Redis (hot working-memory / shared agent-context tier) ----------------
+  # Not a vector store: this is the fast, shared, ephemeral tier for agent working
+  # memory and cross-agent coordination (the durable corpus stays in pgvector/
+  # Milvus). appendonly + a periodic save keep session context across a restart;
+  # `docker compose down -v` wipes it. The app reaches it at service name "redis".
+  redis:
+    image: redis:7-alpine
+    container_name: industryiq_redis
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    ports:
+      # host:container -> reach Redis from host scripts at localhost:6379
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     # Build our own image from the Dockerfile in this directory. Long form so
     # docker-compose.override.yml can add a build arg (EXTRAS) for local dev.
@@ -101,6 +121,9 @@ services:
       VECTOR_BACKEND: ${VECTOR_BACKEND:-pgvector}
       # Inside the compose network, Milvus is reachable at the service name "milvus".
       MILVUS_URI: ${MILVUS_URI:-http://milvus:19530}
+      # Inside the compose network, Redis is reachable at the service name "redis".
+      # Unset REDIS_URL to run without the working-memory tier (features disabled).
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       DEBUG_API_KEY: ${DEBUG_API_KEY:-}
       # Admin ingestion key (POST /admin/ingest); unset -> endpoint disabled (404).
       ADMIN_API_KEY: ${ADMIN_API_KEY:-}
@@ -132,3 +155,4 @@ volumes:
   etcd_data:
   minio_data:
   milvus_data:
+  redis_data:

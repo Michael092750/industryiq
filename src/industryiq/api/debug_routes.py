@@ -11,9 +11,10 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from industryiq.api.deps import get_pipeline
+from industryiq.api.deps import get_pipeline, get_redis
 from industryiq.api.security import require_debug_key
 from industryiq.core.pipeline import RagPipeline
+from industryiq.core.redis_client import ping as redis_ping
 
 Pipeline = Annotated[RagPipeline, Depends(get_pipeline)]
 
@@ -42,6 +43,20 @@ class RetrieveResponse(BaseModel):
     query: str
     count: int
     chunks: list[ScoredChunk]
+
+
+class RedisHealth(BaseModel):
+    configured: bool  # REDIS_URL is set (a client was built)
+    reachable: bool  # the server answered PING
+
+
+@router.get("/debug/redis", dependencies=[Depends(require_debug_key)])
+def redis_health() -> RedisHealth:
+    """Report whether Redis is configured and reachable (onboarding smoke test)."""
+    client = get_redis()
+    if client is None:
+        return RedisHealth(configured=False, reachable=False)
+    return RedisHealth(configured=True, reachable=redis_ping(client))
 
 
 @router.get("/debug/chunks", dependencies=[Depends(require_debug_key)])
