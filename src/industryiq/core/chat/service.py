@@ -49,18 +49,24 @@ class ConversationNotFound(Exception):
 _DEFAULT_POLICY = ChatPolicy()
 
 
-def merge_hits(primary: list[Hit], secondary: list[Hit], k: int) -> list[Hit]:
-    """Combine two hit lists into the top ``k`` by score, de-duplicated by id.
+def order_session_first(session: list[Hit], shared: list[Hit], k: int) -> list[Hit]:
+    """Order uploaded session documents ahead of the shared corpus, capped at ``k``.
 
-    Both lists come from the same embedder (shared store + session docs), so
-    their scores are comparable.
+    Documents uploaded into a conversation are the user's chosen context, so they
+    lead: every session hit -- in descending score order -- comes before any
+    shared-corpus hit *regardless of score*. The shared knowledge base only
+    backfills the slots the uploads leave open. De-duped by id so a chunk somehow
+    present in both stores is never listed twice (the session copy wins).
     """
-    best: dict[str, Hit] = {}
-    for hit in (*primary, *secondary):
-        current = best.get(hit.id)
-        if current is None or hit.score > current.score:
-            best[hit.id] = hit
-    return sorted(best.values(), key=lambda hit: hit.score, reverse=True)[:k]
+    ordered = sorted(session, key=lambda hit: hit.score, reverse=True)
+    seen = {hit.id for hit in ordered}
+    for hit in sorted(shared, key=lambda hit: hit.score, reverse=True):
+        if len(ordered) >= k:
+            break
+        if hit.id not in seen:
+            ordered.append(hit)
+            seen.add(hit.id)
+    return ordered[:k]
 
 
 class ChatService:
@@ -159,17 +165,26 @@ class ChatService:
                 with timer.measure("rewrite"):
                     standalone = self._rewriter.condense(history, question)
                 with timer.measure("retrieve"):
-                    shared = self._retriever.retrieve(standalone, k=self._policy.k)
-                    session = (
+                    # Documents uploaded into this session are the primary context:
+                    # take (and relevance-filter) them first. Only when they don't
+                    # fill the whole k-budget do we consult the shared corpus for
+                    # additional grounding -- "retrieve from the knowledge base if
+                    # needed". Both go through the same coverage backstop.
+                    session = self._relevance_filter.keep(
                         self._session_documents.retrieve(
                             conversation_id, standalone, self._policy.k
                         )
                         if self._session_documents is not None
                         else []
                     )
-                    retrieved = merge_hits(shared, session, self._policy.k)
-                # Coverage backstop: drop hits not relevant enough to ground on.
-                hits = self._relevance_filter.keep(retrieved)
+                    shared = (
+                        self._relevance_filter.keep(
+                            self._retriever.retrieve(standalone, k=self._policy.k)
+                        )
+                        if len(session) < self._policy.k
+                        else []
+                    )
+                    hits = order_session_first(session, shared, self._policy.k)
 
             yield StreamStart(standalone_question=standalone, hits=hits)
             yield StreamStatus(phase="generating")

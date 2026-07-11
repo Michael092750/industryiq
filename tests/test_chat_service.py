@@ -27,7 +27,11 @@ from industryiq.core.chat.ports import (
     RetrievalRouter,
     SessionDocumentStore,
 )
-from industryiq.core.chat.service import ChatService, ConversationNotFound, merge_hits
+from industryiq.core.chat.service import (
+    ChatService,
+    ConversationNotFound,
+    order_session_first,
+)
 from industryiq.core.embeddings import FakeEmbedder
 from industryiq.core.generation import FakeLLM, StreamingLLM
 from industryiq.core.retrieval import Retriever
@@ -269,26 +273,56 @@ def test_list_conversations_returns_all_started() -> None:
     assert {c.id for c in service.list_conversations()} == {a.id, b.id}
 
 
-def test_merge_hits_takes_top_k_by_score() -> None:
-    primary = [Hit("a", 0.9, {}), Hit("b", 0.3, {})]
-    secondary = [Hit("c", 0.7, {}), Hit("d", 0.1, {})]
-    assert [hit.id for hit in merge_hits(primary, secondary, k=3)] == ["a", "c", "b"]
+def test_order_session_first_leads_with_uploads_over_higher_scoring_shared() -> None:
+    session = [Hit("s", 0.2, {})]
+    shared = [Hit("g", 0.9, {})]
+    # The uploaded session hit leads even though the shared hit scores higher.
+    assert [hit.id for hit in order_session_first(session, shared, k=5)] == ["s", "g"]
 
 
-def test_merge_hits_dedups_by_id_keeping_higher_score() -> None:
-    merged = merge_hits([Hit("x", 0.4, {})], [Hit("x", 0.8, {})], k=5)
-    assert len(merged) == 1
-    assert merged[0].score == 0.8
+def test_order_session_first_backfills_remaining_slots_from_shared() -> None:
+    session = [Hit("s", 0.4, {})]
+    shared = [Hit("g1", 0.9, {}), Hit("g2", 0.1, {})]
+    # k=2: one session slot, one shared slot -- the higher-scoring shared hit fills it.
+    assert [hit.id for hit in order_session_first(session, shared, k=2)] == ["s", "g1"]
 
 
-def test_reply_merges_session_and_shared_hits() -> None:
-    shared = RecordingRetriever(hits=[Hit("g", 0.5, {"text": "global"})])
-    session = StubSessionDocuments(hits=[Hit("s", 0.9, {"text": "session"})])
+def test_order_session_first_dedups_by_id_keeping_the_session_copy() -> None:
+    ordered = order_session_first([Hit("x", 0.4, {})], [Hit("x", 0.8, {})], k=5)
+    assert [hit.id for hit in ordered] == ["x"]
+    assert ordered[0].score == 0.4  # the session copy leads; the shared duplicate is dropped
+
+
+def test_reply_puts_session_uploads_first() -> None:
+    shared = RecordingRetriever(hits=[Hit("g", 0.9, {"text": "global"})])
+    session = StubSessionDocuments(hits=[Hit("s", 0.2, {"text": "session"})])
     service = _service(retriever=shared, session_documents=session)
     convo = service.start("c")
     events = list(service.reply_stream(convo.id, "q"))
     start = next(event for event in events if isinstance(event, StreamStart))
-    assert [hit.id for hit in start.hits] == ["s", "g"]  # session 0.9 ranks above global 0.5
+    # Upload leads despite a higher-scoring corpus hit; the corpus still backfills.
+    assert [hit.id for hit in start.hits] == ["s", "g"]
+    assert shared.queries == ["STANDALONE"]  # corpus consulted to fill the leftover slots
+
+
+def test_reply_skips_shared_when_session_fills_the_budget() -> None:
+    shared = RecordingRetriever(hits=[Hit("g", 0.9, {"text": "global"})])
+    session = StubSessionDocuments(hits=[Hit("s", 0.5, {"text": "session"})])
+    service = ChatService(
+        retriever=shared,
+        router=AlwaysRetrieveRouter(),
+        rewriter=RecordingRewriter(),
+        llm=FakeLLM(response="ANSWER"),
+        store=InMemoryConversationStore(),
+        relevance_filter=ThresholdFilter(),
+        session_documents=session,
+        policy=ChatPolicy(k=1),
+    )
+    convo = service.start("c")
+    events = list(service.reply_stream(convo.id, "q"))
+    start = next(event for event in events if isinstance(event, StreamStart))
+    assert [hit.id for hit in start.hits] == ["s"]  # only the upload
+    assert shared.queries == []  # corpus never consulted -- the upload already filled k
 
 
 def test_history_limit_caps_turns_sent_to_the_rewriter() -> None:

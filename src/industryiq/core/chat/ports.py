@@ -100,8 +100,10 @@ class SessionDocumentStore(Protocol):
     """Ephemeral per-conversation document index (in memory, lost on restart).
 
     Lets a chat search the files uploaded into *that session* only, separate
-    from the persistent shared knowledge base. Same embedder as the shared
-    store, so the two result sets can be merged by score.
+    from the persistent shared knowledge base. Uploaded documents are the
+    primary context: they lead the results, and the shared store only backfills
+    (see :func:`industryiq.core.chat.service.order_session_first`). Same embedder
+    as the shared store, so scores stay comparable within each backfilled slot.
     """
 
     def add(self, conversation_id: str, filename: str, text: str) -> list[str]: ...

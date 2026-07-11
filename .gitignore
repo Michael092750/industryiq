@@ -11,3 +11,6 @@ htmlcov/
 .DS_Store
 cdk.out/
 *.pem
+
+# Personal / AI reference notes (not part of the tracked project docs in docs/)
+documentation/
