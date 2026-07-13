@@ -142,7 +142,9 @@ def _picture_image(picture: Any, doc: Any) -> "Image | None":
     with no recoverable image is simply skipped rather than failing the pass.
     """
     try:
-        return picture.get_image(doc)
+        # ``picture`` is an untyped docling item, so ``get_image`` returns Any; pin it to
+        # the declared return type rather than leaking Any out of the function.
+        return cast("Image | None", picture.get_image(doc))
     except Exception:  # noqa: BLE001 -- a missing/unreadable image just skips this figure
         return None
 

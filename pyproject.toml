@@ -31,7 +31,10 @@ dependencies = [
 [project.optional-dependencies]
 # fakeredis: an in-process Redis emulator, so the Redis-backed adapters get real
 # unit coverage in the offline default suite (no server needed).
-dev = ["ruff", "mypy", "pytest", "pytest-cov", "pre-commit", "httpx", "fakeredis"]
+# Pillow: the figure tests build tiny in-memory PNGs to exercise the crop/encode and
+# placeholder-splice logic offline. In production it arrives transitively via the docling
+# extra, but the default (offline) suite must run without that heavy PyTorch extra.
+dev = ["ruff", "mypy", "pytest", "pytest-cov", "pre-commit", "httpx", "fakeredis", "Pillow"]
 # Local-dev AI provider (RAG_PROVIDER=anthropic): a CPU embedder for retrieval.
 # Not needed in production, which uses Bedrock.
 local = ["fastembed>=0.3"]
@@ -47,13 +50,16 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "UP", "B"]  # errors, pyflakes, import-sort, pyupgrade, bugbear
 
 [tool.mypy]
-python_version = "3.11"
+# 3.12 matches CI and production (Python 3.12); it also lets mypy parse numpy's stubs,
+# which use the 3.12-only `type` statement and are a hard parse error under 3.11.
+python_version = "3.12"
 strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-# These ship no type stubs; don't fail on their untyped imports.
-module = ["docx.*", "pgvector.*", "pymilvus.*", "boto3.*", "botocore.*", "fastembed.*", "bcrypt.*", "docling.*", "redis.*"]
+# These ship no type stubs (or, like torch, are only present with the heavy `docling`
+# extra and stay uninstalled in CI); don't fail on their untyped/absent imports.
+module = ["docx.*", "pgvector.*", "pymilvus.*", "boto3.*", "botocore.*", "fastembed.*", "bcrypt.*", "docling.*", "redis.*", "torch.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
