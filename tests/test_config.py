@@ -38,6 +38,16 @@ def test_session_doc_ttl_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert get_settings().session_doc_ttl_seconds == 3600
 
 
+def test_agent_blackboard_ttl_defaults_to_one_day(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AGENT_BLACKBOARD_TTL_SECONDS", raising=False)
+    assert get_settings().agent_blackboard_ttl_seconds == 60 * 60 * 24
+
+
+def test_agent_blackboard_ttl_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_BLACKBOARD_TTL_SECONDS", "120")
+    assert get_settings().agent_blackboard_ttl_seconds == 120
+
+
 def test_provider_defaults_to_fake(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RAG_PROVIDER", raising=False)
     assert get_settings().provider == "fake"

@@ -41,6 +41,10 @@ class Settings:
     # idle sessions self-evict while active ones persist. Default 7 days. Ignored
     # by the in-memory session store (which is cleared on restart anyway).
     session_doc_ttl_seconds: int = 60 * 60 * 24 * 7
+    # Sliding TTL (seconds) for an agent run's Redis blackboard namespace, refreshed
+    # on each write, so a finished/abandoned run's scratch state self-evicts. Default
+    # 1 day. Ignored by the in-memory blackboard.
+    agent_blackboard_ttl_seconds: int = 60 * 60 * 24
 
     # Which vector store to use: "pgvector" (Postgres, the default) or "milvus".
     # pgvector is kept for benchmarking; "milvus" routes the live app to Milvus.
@@ -202,6 +206,9 @@ def get_settings() -> Settings:
         database_url=os.getenv("DATABASE_URL"),
         redis_url=os.getenv("REDIS_URL"),
         session_doc_ttl_seconds=int(os.getenv("SESSION_DOC_TTL_SECONDS", str(60 * 60 * 24 * 7))),
+        agent_blackboard_ttl_seconds=int(
+            os.getenv("AGENT_BLACKBOARD_TTL_SECONDS", str(60 * 60 * 24))
+        ),
         vector_backend=os.getenv("VECTOR_BACKEND", "pgvector"),
         pdf_parser=os.getenv("PDF_PARSER", "docling"),
         pdf_hybrid_recovery=_env_bool("PDF_HYBRID_RECOVERY", True),

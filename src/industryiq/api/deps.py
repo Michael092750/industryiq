@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from redis import Redis
 
 from industryiq.config import Settings, get_settings
+from industryiq.core.agents import Blackboard, TaskQueue
 from industryiq.core.auth import AuthService, User, UserStore
 from industryiq.core.auth.adapters.store_memory import InMemoryUserStore
 from industryiq.core.auth.adapters.store_pg import PgUserStore
@@ -166,6 +167,43 @@ def get_redis() -> "Redis | None":
     from industryiq.core.redis_client import build_redis_client
 
     return build_redis_client(settings.redis_url)
+
+
+@lru_cache(maxsize=1)
+def get_blackboard() -> Blackboard:
+    """Return the process-wide agent blackboard (shared working memory).
+
+    Redis-backed when REDIS_URL is set -- so agents in different processes share it
+    and it survives a restart, with a per-run TTL -- otherwise the in-process
+    :class:`InMemoryBlackboard`. Built once, then cached.
+    """
+    settings = get_settings()
+    redis = get_redis()
+    if redis is not None:
+        from industryiq.core.agents.adapters.blackboard_redis import RedisBlackboard
+
+        return RedisBlackboard(redis, ttl_seconds=settings.agent_blackboard_ttl_seconds)
+    from industryiq.core.agents.adapters.blackboard_memory import InMemoryBlackboard
+
+    return InMemoryBlackboard()
+
+
+@lru_cache(maxsize=1)
+def get_task_queue() -> TaskQueue:
+    """Return the process-wide agent task queue (supervisor -> workers dispatch).
+
+    Redis Streams when REDIS_URL is set -- so workers in different processes compete
+    for the same tasks with at-least-once delivery -- otherwise the in-process
+    :class:`InMemoryTaskQueue`. Built once, then cached.
+    """
+    redis = get_redis()
+    if redis is not None:
+        from industryiq.core.agents.adapters.queue_redis import RedisTaskQueue
+
+        return RedisTaskQueue(redis)
+    from industryiq.core.agents.adapters.queue_memory import InMemoryTaskQueue
+
+    return InMemoryTaskQueue()
 
 
 @lru_cache(maxsize=1)
