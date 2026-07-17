@@ -16,7 +16,7 @@ from collections.abc import Iterator
 import pytest
 
 from industryiq.config import get_settings
-from industryiq.core.vectorstore import VectorStore
+from industryiq.core.vectorstore import ScoreKind, VectorStore
 
 pytestmark = pytest.mark.integration
 
@@ -113,6 +113,7 @@ def test_semantic_search_is_dense_cosine(store: VectorStore) -> None:
     hits = store.semantic_search([0.0, 1.0], k=3)
     assert [hit.id for hit in hits] == ["b", "c", "a"]
     assert hits[0].score == pytest.approx(1.0)
+    assert all(hit.score_kind is ScoreKind.COSINE for hit in hits)
 
 
 def test_lexical_search_matches_terms_without_embedding(store: VectorStore) -> None:
@@ -128,6 +129,7 @@ def test_lexical_search_matches_terms_without_embedding(store: VectorStore) -> N
     assert hits, "lexical search returned no hits"
     assert hits[0].id == "b"  # only chunk containing "banana"
     assert hits[0].score > 0.0  # raw BM25 score, not a cosine
+    assert hits[0].score_kind is ScoreKind.BM25  # tagged so filters don't cosine-threshold it
 
 
 def test_weighted_search_blends_and_returns_results(store: VectorStore) -> None:
@@ -146,6 +148,7 @@ def test_weighted_search_blends_and_returns_results(store: VectorStore) -> None:
     # Score is the blended/normalized fusion score, not raw cosine; ranking is
     # non-increasing because the reported score IS what we ranked by.
     assert [h.score for h in hits] == sorted((h.score for h in hits), reverse=True)
+    assert all(h.score_kind is ScoreKind.NORMALIZED for h in hits)
 
 
 def test_upsert_replaces_existing_id(store: VectorStore) -> None:

@@ -162,8 +162,18 @@ class Settings:
     # What the knowledge base holds; injected into the LLM router prompt so it can
     # judge whether a question is in scope instead of guessing blind.
     chat_kb_description: str = "industry analysis reports"
-    # Drop retrieved context whose top score is below this (0.0 = keep all).
+    # Drop retrieved context whose top score is below this (0.0 = keep all). This
+    # is the *cosine* cutoff -- it only applies to cosine-scored hits (dense/hybrid).
     chat_relevance_threshold: float = 0.0
+    # Per-scale cutoffs for the non-cosine strategies (see
+    # industryiq.core.vectorstore.ScoreKind). BM25 is an unbounded lexical weight
+    # and the weighted blend is a query-relative [0, 1] score, so the cosine cutoff
+    # above is meaningless for them. ``None`` = keep all of that kind (the safe
+    # default). Starting points to tune on the benchmark: ~1.0 for BM25, ~0.2 for
+    # the normalized blend. Only bite once a search strategy actually returns those
+    # score kinds.
+    chat_bm25_threshold: float | None = None
+    chat_normalized_threshold: float | None = None
     # Drop retrieved chunks shorter than this many characters: bare Markdown
     # headings, short one-line figure descriptions, and other fragments embed close
     # to topical queries but answer nothing, so left in they crowd real paragraphs
@@ -194,6 +204,12 @@ def _env_bool(name: str, default: bool) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() not in ("0", "false", "no", "off", "")
+
+
+def _env_float_opt(name: str) -> float | None:
+    """Parse an optional float env var; unset or blank -> ``None`` (no cutoff)."""
+    raw = os.getenv(name)
+    return float(raw) if raw is not None and raw.strip() != "" else None
 
 
 def get_settings() -> Settings:
@@ -240,6 +256,8 @@ def get_settings() -> Settings:
         chat_router=os.getenv("CHAT_ROUTER", "always"),
         chat_kb_description=os.getenv("CHAT_KB_DESCRIPTION", "industry analysis reports"),
         chat_relevance_threshold=float(os.getenv("CHAT_RELEVANCE_THRESHOLD", "0.0")),
+        chat_bm25_threshold=_env_float_opt("CHAT_BM25_THRESHOLD"),
+        chat_normalized_threshold=_env_float_opt("CHAT_NORMALIZED_THRESHOLD"),
         retrieval_min_chunk_chars=int(os.getenv("RETRIEVAL_MIN_CHUNK_CHARS", "400")),
         chunk_min_chars=int(os.getenv("CHUNK_MIN_CHARS", "400")),
         ingest_scheduler_enabled=_env_bool("INGEST_SCHEDULER_ENABLED", True),

@@ -9,16 +9,42 @@ tests.
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Protocol, runtime_checkable
+
+
+class ScoreKind(Enum):
+    """What a :class:`Hit`'s ``score`` numerically *is*, so consumers can read it right.
+
+    A bare float is meaningless without its scale. A cosine similarity is bounded
+    ``[-1, 1]`` and calibrated *across* queries, so an absolute threshold transfers.
+    A raw BM25 weight is unbounded and query-specific; a min-max--normalized blend
+    is query-*relative* in ``[0, 1]`` (the worst hit of every query floors near 0).
+    For those two an absolute cosine cutoff is nonsense -- it would pass every BM25
+    hit and chop a fixed slice off every normalized set. Carrying the kind on the
+    hit lets a :class:`~industryiq.core.chat.ports.RelevanceFilter` pick the right
+    policy per kind instead of assuming cosine.
+    """
+
+    COSINE = "cosine"  # bounded, cross-query comparable -> value thresholds work
+    BM25 = "bm25"  # unbounded lexical weight, query-specific -> value thresholds don't transfer
+    NORMALIZED = "normalized"  # min-max blend in [0, 1], query-relative -> ditto
 
 
 @dataclass(frozen=True)
 class Hit:
-    """A single search result."""
+    """A single search result.
+
+    ``score_kind`` names the scale of ``score`` (see :class:`ScoreKind`); it
+    defaults to ``COSINE`` because every dense/hybrid store reports a cosine
+    similarity, so existing producers stay correct without change -- only the
+    lexical/weighted Milvus paths stamp a different kind.
+    """
 
     id: str
     score: float
     metadata: dict[str, Any]
+    score_kind: ScoreKind = ScoreKind.COSINE
 
 
 @runtime_checkable

@@ -213,7 +213,11 @@ def build_chat_service(
         rewriter=rewriter,
         llm=llm,
         store=InMemoryConversationStore(),
-        relevance_filter=ThresholdFilter(settings.chat_relevance_threshold),
+        relevance_filter=ThresholdFilter.from_settings(
+            settings.chat_relevance_threshold,
+            bm25=settings.chat_bm25_threshold,
+            normalized=settings.chat_normalized_threshold,
+        ),
         policy=ChatPolicy(k=k, history_limit=settings.chat_history_turns),
     )
 
@@ -508,6 +512,8 @@ def main(argv: list[str]) -> int:
         "rewriter": args.rewriter,
         "router": settings.chat_router,
         "relevance_threshold": settings.chat_relevance_threshold,
+        "bm25_threshold": settings.chat_bm25_threshold,
+        "normalized_threshold": settings.chat_normalized_threshold,
         "history_turns": settings.chat_history_turns,
         "k": k,
         "min_chunk_chars": min_chunk_chars,

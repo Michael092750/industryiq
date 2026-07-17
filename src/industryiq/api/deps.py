@@ -302,7 +302,11 @@ def get_chat_service() -> ChatService:
         rewriter=LlmQueryRewriter(llm),
         llm=llm,
         store=_build_conversation_store(settings),
-        relevance_filter=ThresholdFilter(settings.chat_relevance_threshold),
+        relevance_filter=ThresholdFilter.from_settings(
+            settings.chat_relevance_threshold,
+            bm25=settings.chat_bm25_threshold,
+            normalized=settings.chat_normalized_threshold,
+        ),
         session_documents=get_session_documents(),
         policy=ChatPolicy(
             k=settings.chat_retrieval_k,

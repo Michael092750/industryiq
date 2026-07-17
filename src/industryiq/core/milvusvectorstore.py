@@ -50,7 +50,7 @@ from pymilvus import (
     WeightedRanker,
 )
 
-from industryiq.core.vectorstore import Hit, VectorStore, cosine_similarity
+from industryiq.core.vectorstore import Hit, ScoreKind, VectorStore, cosine_similarity
 
 # Milvus caps a single ``query`` at 16,384 rows; ``all_items`` pages with the
 # query iterator instead, in batches of this size.
@@ -436,6 +436,9 @@ class MilvusVectorStore(VectorStore):
                 id=hit["id"],
                 score=float(hit["distance"]),
                 metadata=self._merge_metadata(hit["entity"]),
+                # Query-relative min-max blend, not a cosine -- tag it so the
+                # relevance filter doesn't apply a cosine threshold to it.
+                score_kind=ScoreKind.NORMALIZED,
             )
             for hit in fused[0]
         ]
@@ -465,6 +468,9 @@ class MilvusVectorStore(VectorStore):
                 id=hit["id"],
                 score=float(hit["distance"]),
                 metadata=self._merge_metadata(hit["entity"]),
+                # Raw, unbounded BM25 weight -- not a cosine; tag it so the
+                # relevance filter doesn't threshold it on the cosine scale.
+                score_kind=ScoreKind.BM25,
             )
             for hit in results[0]
         ]
