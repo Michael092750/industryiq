@@ -1,16 +1,18 @@
 """Ephemeral per-conversation document index (the "chat on docs" side).
 
-Holds, per conversation id, an in-memory :class:`~industryiq.core.retrieval.Retriever`
-over the files dragged into that session. Nothing is persisted -- on restart the
-session docs are gone, which is exactly the "memory only, valid for the session"
-guarantee. The embedder is shared with the global store, so similarity scores are
-comparable when the two result sets are merged in :class:`ChatService`.
+Holds, per conversation id, an in-memory
+:class:`~industryiq.core.retrieval.retriever.Retriever` over the files dragged
+into that session. Nothing is persisted -- on restart the session docs are gone,
+which is exactly the "memory only, valid for the session" guarantee. The embedder
+is shared with the global store, so similarity scores are comparable when the two
+result sets are merged in
+:class:`~industryiq.core.retrieval.service.RetrievalService`.
 """
 
-from industryiq.core.chat.ports import SessionDocumentStore
 from industryiq.core.chunking import chunk_text
 from industryiq.core.embeddings import Embedder
-from industryiq.core.retrieval import Retriever
+from industryiq.core.retrieval.ports import SessionDocumentStore
+from industryiq.core.retrieval.retriever import Retriever
 from industryiq.core.vectorstore import Hit, InMemoryVectorStore
 
 

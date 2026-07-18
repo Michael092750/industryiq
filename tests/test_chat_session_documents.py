@@ -1,5 +1,5 @@
-from industryiq.core.chat.adapters.session_documents import SessionDocuments
 from industryiq.core.embeddings import FakeEmbedder
+from industryiq.core.retrieval.adapters.session_documents import SessionDocuments
 
 
 def _docs() -> SessionDocuments:

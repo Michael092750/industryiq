@@ -1,8 +1,10 @@
 """A tiny step timer for per-operation observability.
 
-Used by :class:`ChatService` to record how long each phase of a turn takes. The
-clock is injectable (defaulting to :func:`time.perf_counter`) so tests can feed a
-deterministic clock and assert exact durations.
+Used by :class:`~industryiq.core.chat.service.ChatService` and
+:class:`~industryiq.core.retrieval.service.RetrievalService` to record how long
+each phase of a turn takes. The clock is injectable (defaulting to
+:func:`time.perf_counter`) so tests can feed a deterministic clock and assert
+exact durations.
 """
 
 import time

@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TypeAlias
 
+from industryiq.core.conversation import Turn
 from industryiq.core.vectorstore import Hit
 
 
@@ -25,14 +26,6 @@ class Conversation:
     title: str
     created_at: datetime
     owner_id: str | None = None
-
-
-@dataclass(frozen=True)
-class Turn:
-    """One completed exchange in a conversation: a question and its answer."""
-
-    question: str
-    answer: str
 
 
 @dataclass(frozen=True)
@@ -110,3 +103,20 @@ class StreamEnd:
 
 # One conversational turn, streamed, is a sequence of these.
 StreamEvent: TypeAlias = StreamStatus | StreamStart | StreamToken | StreamEnd
+
+
+# ``Turn`` is re-exported (it now lives in :mod:`industryiq.core.conversation`, a
+# neutral module shared with the retrieval package) so existing
+# ``from industryiq.core.chat.models import Turn`` imports keep working.
+__all__ = [
+    "ChatPolicy",
+    "ChatResult",
+    "Conversation",
+    "RouteDecision",
+    "StreamEnd",
+    "StreamEvent",
+    "StreamStart",
+    "StreamStatus",
+    "StreamToken",
+    "Turn",
+]

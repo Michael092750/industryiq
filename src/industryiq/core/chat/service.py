@@ -1,14 +1,15 @@
 """ChatService: the orchestration policy for one conversational turn.
 
 High-level policy that depends only on ports (Dependency Inversion). It holds no
-SQL, no prompt strings, and makes no provider calls of its own -- it *coordinates*
-the router, rewriter, retriever, LLM, and store. That is the whole reason it can
-be unit tested end to end with in-memory fakes and zero network.
+SQL and makes no provider calls of its own -- it *coordinates* the router, the
+retrieval service, the LLM, and the store. That is the whole reason it can be
+unit tested end to end with in-memory fakes and zero network.
 
-Per turn it: routes (does this need the knowledge base?), optionally retrieves
-and applies a relevance backstop, then generates. :meth:`reply_stream` yields the
-answer token by token with status events for the UI; :meth:`reply` simply drains
-that stream into a :class:`ChatResult`, so the two can never diverge.
+Per turn it: routes (does this need the knowledge base?), and if so delegates the
+whole retrieve job to a :class:`~industryiq.core.retrieval.ports.ContextRetriever`
+(rewrite + fan-out + filter + merge), then generates. :meth:`reply_stream` yields
+the answer token by token with status events for the UI; :meth:`reply` simply
+drains that stream into a :class:`ChatResult`, so the two can never diverge.
 
 Each phase is timed (see :class:`StepTimer`).
 """
@@ -27,17 +28,11 @@ from industryiq.core.chat.models import (
     StreamToken,
     Turn,
 )
-from industryiq.core.chat.ports import (
-    ConversationStore,
-    QueryRewriter,
-    RelevanceFilter,
-    RetrievalPort,
-    RetrievalRouter,
-    SessionDocumentStore,
-)
+from industryiq.core.chat.ports import ConversationStore, RetrievalRouter
 from industryiq.core.chat.prompting import build_chat_prompt
-from industryiq.core.chat.timing import StepTimer
 from industryiq.core.generation import StreamingLLM
+from industryiq.core.retrieval.ports import ContextRetriever, SessionDocumentStore
+from industryiq.core.timing import StepTimer
 from industryiq.core.vectorstore import Hit
 
 
@@ -49,48 +44,32 @@ class ConversationNotFound(Exception):
 _DEFAULT_POLICY = ChatPolicy()
 
 
-def order_session_first(session: list[Hit], shared: list[Hit], k: int) -> list[Hit]:
-    """Order uploaded session documents ahead of the shared corpus, capped at ``k``.
-
-    Documents uploaded into a conversation are the user's chosen context, so they
-    lead: every session hit -- in descending score order -- comes before any
-    shared-corpus hit *regardless of score*. The shared knowledge base only
-    backfills the slots the uploads leave open. De-duped by id so a chunk somehow
-    present in both stores is never listed twice (the session copy wins).
-    """
-    ordered = sorted(session, key=lambda hit: hit.score, reverse=True)
-    seen = {hit.id for hit in ordered}
-    for hit in sorted(shared, key=lambda hit: hit.score, reverse=True):
-        if len(ordered) >= k:
-            break
-        if hit.id not in seen:
-            ordered.append(hit)
-            seen.add(hit.id)
-    return ordered[:k]
-
-
 class ChatService:
-    """Coordinate routing, rewriting, retrieval, generation, and persistence."""
+    """Coordinate routing, retrieval, generation, and persistence for a turn.
+
+    Pure conversation orchestration: it routes (does this turn need the knowledge
+    base?), delegates the whole retrieve job to a :class:`ContextRetriever`, then
+    generates and persists. It owns conversation *lifecycle* -- history, and the
+    session-document ``clear`` on delete -- but no retrieval policy of its own.
+    """
 
     def __init__(
         self,
-        retriever: RetrievalPort,
+        retrieval: ContextRetriever,
         router: RetrievalRouter,
-        rewriter: QueryRewriter,
         llm: StreamingLLM,
         store: ConversationStore,
-        relevance_filter: RelevanceFilter,
         *,
         session_documents: SessionDocumentStore | None = None,
         policy: ChatPolicy = _DEFAULT_POLICY,
         clock: Callable[[], float] = time.perf_counter,
     ) -> None:
-        self._retriever = retriever
+        self._retrieval = retrieval
         self._router = router
-        self._rewriter = rewriter
         self._llm = llm
         self._store = store
-        self._relevance_filter = relevance_filter
+        # Held only for lifecycle: clearing a conversation's uploads on delete.
+        # Retrieval *from* it is the retrieval service's job, not chat's.
         self._session_documents = session_documents
         self._policy = policy
         self._clock = clock
@@ -162,29 +141,12 @@ class ChatService:
             hits: list[Hit] = []
             if decision.should_retrieve:
                 yield StreamStatus(phase="retrieving")
-                with timer.measure("rewrite"):
-                    standalone = self._rewriter.condense(history, question)
-                with timer.measure("retrieve"):
-                    # Documents uploaded into this session are the primary context:
-                    # take (and relevance-filter) them first. Only when they don't
-                    # fill the whole k-budget do we consult the shared corpus for
-                    # additional grounding -- "retrieve from the knowledge base if
-                    # needed". Both go through the same coverage backstop.
-                    session = self._relevance_filter.keep(
-                        self._session_documents.retrieve(
-                            conversation_id, standalone, self._policy.k
-                        )
-                        if self._session_documents is not None
-                        else []
-                    )
-                    shared = (
-                        self._relevance_filter.keep(
-                            self._retriever.retrieve(standalone, k=self._policy.k)
-                        )
-                        if len(session) < self._policy.k
-                        else []
-                    )
-                    hits = order_session_first(session, shared, self._policy.k)
+                # Delegate the whole retrieve job -- rewrite, fan-out to session +
+                # shared sources, relevance filter, merge -- to the retrieval
+                # service, and fold its "rewrite"/"retrieve" timings into the turn.
+                result = self._retrieval.gather(conversation_id, question, history, self._policy.k)
+                timer.timings_ms.update(result.timings_ms)
+                standalone, hits = result.standalone_question, result.hits
 
             yield StreamStart(standalone_question=standalone, hits=hits)
             yield StreamStatus(phase="generating")

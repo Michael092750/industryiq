@@ -1,9 +1,6 @@
-from industryiq.core.chat.models import Turn
-from industryiq.core.chat.prompting import (
-    build_chat_prompt,
-    build_condense_prompt,
-    format_history,
-)
+from industryiq.core.chat.prompting import build_chat_prompt
+from industryiq.core.conversation import Turn, format_history
+from industryiq.core.retrieval.prompting import build_condense_prompt
 from industryiq.core.vectorstore import Hit
 
 

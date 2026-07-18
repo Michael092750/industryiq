@@ -1,11 +1,10 @@
 """Relevance-filtering adapters: implementations of the :class:`RelevanceFilter` port.
 
-The post-retrieval coverage gate as a swappable strategy, symmetric with the
-pre-retrieval :class:`RetrievalRouter`. Swap in a reranker or a quorum rule
-without touching :class:`ChatService`.
+The post-retrieval coverage gate as a swappable strategy. Swap in a reranker or a
+quorum rule without touching :class:`~industryiq.core.retrieval.service.RetrievalService`.
 """
 
-from industryiq.core.chat.ports import RelevanceFilter
+from industryiq.core.retrieval.ports import RelevanceFilter
 from industryiq.core.vectorstore import Hit, ScoreKind
 
 

@@ -20,12 +20,12 @@ from industryiq.core.chat import (
     ChatService,
     Conversation,
     ConversationNotFound,
-    SessionDocumentStore,
     StreamEnd,
     StreamStart,
     StreamStatus,
     StreamToken,
 )
+from industryiq.core.retrieval import SessionDocumentStore
 
 Service = Annotated[ChatService, Depends(get_chat_service)]
 SessionDocs = Annotated[SessionDocumentStore, Depends(get_session_documents)]

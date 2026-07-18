@@ -86,17 +86,20 @@ from industryiq.core.chat import (
     ChatPolicy,
     ChatService,
     InMemoryConversationStore,
-    LlmQueryRewriter,
     LlmRouter,
-    NoOpQueryRewriter,
-    QueryRewriter,
     RetrievalRouter,
-    ThresholdFilter,
 )
 from industryiq.core.embeddings import Embedder
 from industryiq.core.generation import GenerativeLLM
 from industryiq.core.pgvectorstore import PgVectorStore
-from industryiq.core.retrieval import Retriever
+from industryiq.core.retrieval import (
+    LlmQueryRewriter,
+    NoOpQueryRewriter,
+    QueryRewriter,
+    RetrievalService,
+    Retriever,
+    ThresholdFilter,
+)
 from industryiq.core.vectorstore import Hit, VectorStore
 
 HERE = Path(__file__).resolve().parent
@@ -205,19 +208,22 @@ def build_chat_service(
         if settings.chat_router == "llm"
         else AlwaysRetrieveRouter()
     )
-    return ChatService(
+    retrieval = RetrievalService(
         retriever=Retriever(
             embedder, build_store(settings, backend, embedder.dim), min_chunk_chars=min_chunk_chars
         ),
-        router=router,
         rewriter=rewriter,
-        llm=llm,
-        store=InMemoryConversationStore(),
         relevance_filter=ThresholdFilter.from_settings(
             settings.chat_relevance_threshold,
             bm25=settings.chat_bm25_threshold,
             normalized=settings.chat_normalized_threshold,
         ),
+    )
+    return ChatService(
+        retrieval=retrieval,
+        router=router,
+        llm=llm,
+        store=InMemoryConversationStore(),
         policy=ChatPolicy(k=k, history_limit=settings.chat_history_turns),
     )
 

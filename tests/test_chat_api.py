@@ -11,13 +11,16 @@ from industryiq.core.chat import (
     AlwaysRetrieveRouter,
     ChatService,
     InMemoryConversationStore,
-    NoOpQueryRewriter,
-    SessionDocuments,
-    ThresholdFilter,
 )
 from industryiq.core.embeddings import FakeEmbedder
 from industryiq.core.generation import FakeLLM
-from industryiq.core.retrieval import Retriever
+from industryiq.core.retrieval import (
+    NoOpQueryRewriter,
+    RetrievalService,
+    Retriever,
+    SessionDocuments,
+    ThresholdFilter,
+)
 from industryiq.core.vectorstore import InMemoryVectorStore
 
 # A stand-in authenticated user; tests that need a second user override the
@@ -33,13 +36,17 @@ def client() -> Iterator[TestClient]:
     retriever.index(["the sky is blue"], metadatas=[{"source": "facts.txt"}])
     # Shared between the chat service and the upload route -- same instance.
     session_documents = SessionDocuments(FakeEmbedder(dim=16))
-    service = ChatService(
+    retrieval = RetrievalService(
         retriever=retriever,
-        router=AlwaysRetrieveRouter(),
         rewriter=NoOpQueryRewriter(),
+        relevance_filter=ThresholdFilter(),
+        session_documents=session_documents,
+    )
+    service = ChatService(
+        retrieval=retrieval,
+        router=AlwaysRetrieveRouter(),
         llm=FakeLLM(response="Grounded answer [1]."),
         store=InMemoryConversationStore(),
-        relevance_filter=ThresholdFilter(),
         session_documents=session_documents,
     )
     app.dependency_overrides[get_chat_service] = lambda: service

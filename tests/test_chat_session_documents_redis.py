@@ -7,8 +7,8 @@ TTL, which are its reason for existing (shared, restart-surviving, self-evicting
 
 import fakeredis
 
-from industryiq.core.chat.adapters.session_documents_redis import RedisSessionDocumentStore
 from industryiq.core.embeddings import FakeEmbedder
+from industryiq.core.retrieval.adapters.session_documents_redis import RedisSessionDocumentStore
 
 
 def _docs(*, ttl_seconds: int | None = None) -> RedisSessionDocumentStore:

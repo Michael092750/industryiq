@@ -1,4 +1,4 @@
-from industryiq.core.chat.adapters.filtering import ThresholdFilter
+from industryiq.core.retrieval.adapters.filtering import ThresholdFilter
 from industryiq.core.vectorstore import Hit, ScoreKind
 
 

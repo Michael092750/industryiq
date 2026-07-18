@@ -10,9 +10,9 @@ from redis import Redis
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 from industryiq.api import deps
-from industryiq.core.chat.adapters.session_documents import SessionDocuments
-from industryiq.core.chat.adapters.session_documents_redis import RedisSessionDocumentStore
 from industryiq.core.redis_client import build_redis_client, ping
+from industryiq.core.retrieval.adapters.session_documents import SessionDocuments
+from industryiq.core.retrieval.adapters.session_documents_redis import RedisSessionDocumentStore
 
 
 def test_build_redis_client_is_lazy_and_decodes() -> None:

@@ -7,33 +7,18 @@ substitutable without touching the service.
 
 Adapters declare their port as an explicit base class (e.g.
 ``class LlmRouter(RetrievalRouter)``) so the abstraction-to-implementation link
-is visible at the class and mypy verifies it at the definition site. The ports
-stay ``Protocol`` s rather than ABCs, so explicit subclassing is opt-in:
-:class:`RetrievalPort` is the deliberate exception -- left purely structural so
-the pre-existing :class:`industryiq.core.retrieval.Retriever`, which lives in
-``core`` and must not import ``chat``, can satisfy it without inheritance.
+is visible at the class and mypy verifies it at the definition site.
 
-Generation reuses the existing :class:`industryiq.core.generation.LLM` port, so
-it is not redefined here.
+The *retrieval* seam ChatService depends on -- the coarse
+:class:`~industryiq.core.retrieval.ports.ContextRetriever` and the fine-grained
+retrieval ports -- lives in :mod:`industryiq.core.retrieval.ports`. Generation
+reuses the existing :class:`industryiq.core.generation.LLM` port, so it is not
+redefined here.
 """
 
 from typing import Protocol, runtime_checkable
 
 from industryiq.core.chat.models import Conversation, RouteDecision, Turn
-from industryiq.core.vectorstore import Hit
-
-
-@runtime_checkable
-class RetrievalPort(Protocol):
-    """Find the chunks most relevant to a query.
-
-    Deliberately narrower than :class:`industryiq.core.retrieval.Retriever`
-    (Interface Segregation): chat only ever *reads*, so it depends on
-    ``retrieve`` alone, not on indexing. The existing ``Retriever`` satisfies
-    this structurally.
-    """
-
-    def retrieve(self, query: str, k: int = 5) -> list[Hit]: ...
 
 
 @runtime_checkable
@@ -46,29 +31,6 @@ class RetrievalRouter(Protocol):
     """
 
     def route(self, history: list[Turn], question: str) -> RouteDecision: ...
-
-
-@runtime_checkable
-class RelevanceFilter(Protocol):
-    """Decide which retrieved hits are relevant enough to ground the answer.
-
-    The post-retrieval coverage gate ("did we actually find anything useful?"),
-    symmetric with the pre-retrieval :class:`RetrievalRouter`. Implementations
-    decide how -- a score threshold, a reranker, a quorum rule.
-    """
-
-    def keep(self, hits: list[Hit]) -> list[Hit]: ...
-
-
-@runtime_checkable
-class QueryRewriter(Protocol):
-    """Rewrite a follow-up question into a standalone one.
-
-    "What about its pricing?" only makes sense given prior turns, but retrieval
-    needs a self-contained query. Implementations decide how (LLM, no-op, ...).
-    """
-
-    def condense(self, history: list[Turn], question: str) -> str: ...
 
 
 @runtime_checkable
@@ -93,23 +55,3 @@ class ConversationStore(Protocol):
     def delete(self, conversation_id: str) -> None: ...
 
     def list_all(self, owner_id: str | None = None) -> list[Conversation]: ...
-
-
-@runtime_checkable
-class SessionDocumentStore(Protocol):
-    """Ephemeral per-conversation document index (in memory, lost on restart).
-
-    Lets a chat search the files uploaded into *that session* only, separate
-    from the persistent shared knowledge base. Uploaded documents are the
-    primary context: they lead the results, and the shared store only backfills
-    (see :func:`industryiq.core.chat.service.order_session_first`). Same embedder
-    as the shared store, so scores stay comparable within each backfilled slot.
-    """
-
-    def add(self, conversation_id: str, filename: str, text: str) -> list[str]: ...
-
-    def retrieve(self, conversation_id: str, query: str, k: int = 5) -> list[Hit]: ...
-
-    def documents(self, conversation_id: str) -> list[str]: ...
-
-    def clear(self, conversation_id: str) -> None: ...

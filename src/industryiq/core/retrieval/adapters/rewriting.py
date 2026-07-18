@@ -5,10 +5,10 @@
   Liskov-substitutable implementation, useful as a default and a test double.
 """
 
-from industryiq.core.chat.models import Turn
-from industryiq.core.chat.ports import QueryRewriter
-from industryiq.core.chat.prompting import build_condense_prompt
+from industryiq.core.conversation import Turn
 from industryiq.core.generation import LLM
+from industryiq.core.retrieval.ports import QueryRewriter
+from industryiq.core.retrieval.prompting import build_condense_prompt
 
 
 class LlmQueryRewriter(QueryRewriter):

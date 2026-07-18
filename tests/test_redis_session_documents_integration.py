@@ -14,9 +14,9 @@ import uuid
 import pytest
 
 from industryiq.config import get_settings
-from industryiq.core.chat.adapters.session_documents_redis import RedisSessionDocumentStore
 from industryiq.core.embeddings import FakeEmbedder
 from industryiq.core.redis_client import build_redis_client
+from industryiq.core.retrieval.adapters.session_documents_redis import RedisSessionDocumentStore
 
 pytestmark = pytest.mark.integration
 

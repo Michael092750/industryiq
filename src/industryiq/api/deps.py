@@ -32,13 +32,9 @@ from industryiq.core.chat import (
     ChatService,
     ConversationStore,
     InMemoryConversationStore,
-    LlmQueryRewriter,
     LlmRouter,
     RetrievalRouter,
-    SessionDocumentStore,
-    ThresholdFilter,
 )
-from industryiq.core.chat.adapters.session_documents import SessionDocuments
 from industryiq.core.chat.adapters.store_pg import PgConversationStore
 from industryiq.core.embeddings import Embedder, FakeEmbedder
 from industryiq.core.generation import FakeLLM, GenerativeLLM
@@ -47,7 +43,14 @@ from industryiq.core.ingestion.adapters.store_memory import InMemoryIngestStateS
 from industryiq.core.ingestion.adapters.store_pg import PgIngestStateStore
 from industryiq.core.pgvectorstore import PgVectorStore
 from industryiq.core.pipeline import RagPipeline
-from industryiq.core.retrieval import Retriever
+from industryiq.core.retrieval import (
+    LlmQueryRewriter,
+    RetrievalService,
+    Retriever,
+    SessionDocuments,
+    SessionDocumentStore,
+    ThresholdFilter,
+)
 from industryiq.core.vectorstore import InMemoryVectorStore, MultiVectorStore, VectorStore
 
 
@@ -273,7 +276,7 @@ def get_session_documents() -> SessionDocumentStore:
     embedder, _ = _build_ai_providers(settings)
     redis = get_redis()
     if redis is not None:
-        from industryiq.core.chat.adapters.session_documents_redis import (
+        from industryiq.core.retrieval.adapters.session_documents_redis import (
             RedisSessionDocumentStore,
         )
 
@@ -294,20 +297,27 @@ def get_chat_service() -> ChatService:
         if settings.chat_router == "llm"
         else AlwaysRetrieveRouter()
     )
-    return ChatService(
+    # Shared between the retrieval service (which reads it) and ChatService (which
+    # clears it on delete) -- one instance, disjoint methods.
+    session_documents = get_session_documents()
+    retrieval = RetrievalService(
         retriever=Retriever(
             embedder, vector_store, min_chunk_chars=settings.retrieval_min_chunk_chars
         ),
-        router=router,
         rewriter=LlmQueryRewriter(llm),
-        llm=llm,
-        store=_build_conversation_store(settings),
         relevance_filter=ThresholdFilter.from_settings(
             settings.chat_relevance_threshold,
             bm25=settings.chat_bm25_threshold,
             normalized=settings.chat_normalized_threshold,
         ),
-        session_documents=get_session_documents(),
+        session_documents=session_documents,
+    )
+    return ChatService(
+        retrieval=retrieval,
+        router=router,
+        llm=llm,
+        store=_build_conversation_store(settings),
+        session_documents=session_documents,
         policy=ChatPolicy(
             k=settings.chat_retrieval_k,
             history_limit=settings.chat_history_turns,

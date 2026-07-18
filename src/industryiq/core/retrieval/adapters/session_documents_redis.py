@@ -1,9 +1,10 @@
 """Redis-backed per-conversation document index (the shared "chat on docs" tier).
 
 The drop-in Redis counterpart to the in-memory
-:class:`~industryiq.core.chat.adapters.session_documents.SessionDocuments`. Same
-behavior, same :class:`~industryiq.core.chat.ports.SessionDocumentStore` port --
-it reuses the very same :class:`~industryiq.core.retrieval.Retriever` (chunking,
+:class:`~industryiq.core.retrieval.adapters.session_documents.SessionDocuments`.
+Same behavior, same
+:class:`~industryiq.core.retrieval.ports.SessionDocumentStore` port -- it reuses
+the very same :class:`~industryiq.core.retrieval.retriever.Retriever` (chunking,
 embedding, id generation, ranking), only swapping the per-conversation
 :class:`~industryiq.core.vectorstore.InMemoryVectorStore` for a
 :class:`~industryiq.core.redisvectorstore.RedisVectorStore` keyed by conversation.
@@ -21,11 +22,11 @@ to fall out of sync between processes.
 
 from typing import Any
 
-from industryiq.core.chat.ports import SessionDocumentStore
 from industryiq.core.chunking import chunk_text
 from industryiq.core.embeddings import Embedder
 from industryiq.core.redisvectorstore import RedisVectorStore
-from industryiq.core.retrieval import Retriever
+from industryiq.core.retrieval.ports import SessionDocumentStore
+from industryiq.core.retrieval.retriever import Retriever
 from industryiq.core.vectorstore import Hit
 
 # Redis key namespace for one conversation's uploaded documents.

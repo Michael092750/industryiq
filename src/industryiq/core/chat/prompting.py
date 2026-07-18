@@ -3,36 +3,15 @@
 Separated from :class:`ChatService` (Single Responsibility): the service decides
 *when* to build a prompt; these functions decide *what* it says. Mirrors the
 existing :func:`industryiq.core.generation.build_prompt`.
+
+Only the routing and answer prompts live here. The query-condense prompt is a
+retrieval concern and lives in :mod:`industryiq.core.retrieval.prompting`; the
+shared :func:`~industryiq.core.conversation.format_history` helper is imported
+from the neutral conversation module.
 """
 
-from industryiq.core.chat.models import Turn
+from industryiq.core.conversation import Turn, format_history
 from industryiq.core.vectorstore import Hit
-
-
-def format_history(history: list[Turn]) -> str:
-    """Render prior turns as alternating ``User:`` / ``Assistant:`` lines."""
-    lines: list[str] = []
-    for turn in history:
-        lines.append(f"User: {turn.question}")
-        lines.append(f"Assistant: {turn.answer}")
-    return "\n".join(lines)
-
-
-def build_condense_prompt(history: list[Turn], question: str) -> str:
-    """Prompt that rewrites a follow-up into a standalone question.
-
-    If the question already stands alone, the model is told to return it
-    unchanged.
-    """
-    return (
-        "Given the conversation so far and a follow-up question, rewrite the "
-        "follow-up as a standalone question that can be understood without the "
-        "conversation. If it already stands alone, return it unchanged. "
-        "Respond with only the rewritten question.\n\n"
-        f"Conversation:\n{format_history(history)}\n\n"
-        f"Follow-up: {question}\n\n"
-        "Standalone question:"
-    )
 
 
 def build_route_prompt(history: list[Turn], question: str, kb_description: str) -> str:
