@@ -50,7 +50,16 @@ from pymilvus import (
     WeightedRanker,
 )
 
-from industryiq.core.vectorstore import Hit, ScoreKind, VectorStore, cosine_similarity
+from industryiq.core.vectorstore import (
+    Hit,
+    MetadataFilter,
+    ScoreKind,
+    SearchPlan,
+    SearchStrategy,
+    StrategicSearch,
+    VectorStore,
+    cosine_similarity,
+)
 
 # Milvus caps a single ``query`` at 16,384 rows; ``all_items`` pages with the
 # query iterator instead, in batches of this size.
@@ -70,6 +79,9 @@ _SOURCE_TYPE_FIELD = "source_type"
 # ISO-8601 date string ("2024-03-15"); ISO sorts lexicographically = chronologically,
 # so ``published_date >= "2024"`` works as a range filter on the VARCHAR column.
 _PUBLISHED_DATE_FIELD = "published_date"
+# Chunk position within its source document (INT64), promoted out of the JSON blob so
+# neighbour/context expansion can filter it server-side (``source == X && chunk_index in [...]``).
+_CHUNK_INDEX_FIELD = "chunk_index"
 _METADATA_FIELD = "metadata"
 _SCALAR_STR_FIELDS = (
     _TEXT_FIELD,
@@ -90,8 +102,14 @@ _INDEXED_FIELDS = (
     _SOURCE_TYPE_FIELD,
     _PUBLISHED_DATE_FIELD,
 )
+# Every key promoted to its own column (str columns + the INT64 chunk_index); used to
+# decide what stays behind in the residual JSON blob on write.
+_PROMOTED_FIELDS = frozenset((*_SCALAR_STR_FIELDS, _CHUNK_INDEX_FIELD))
 # Fields read back to reconstruct a hit's metadata dict.
-_OUTPUT_FIELDS = (*_SCALAR_STR_FIELDS, _METADATA_FIELD)
+_OUTPUT_FIELDS = (*_SCALAR_STR_FIELDS, _CHUNK_INDEX_FIELD, _METADATA_FIELD)
+# Sentinel written when a chunk has no ``chunk_index`` (INT64 can't be absent); folded
+# back to "no index" on read, so a chunk that went in without one comes back without one.
+_NO_CHUNK_INDEX = -1
 
 # BM25 full-text: ``text`` is analyzed and projected into a sparse term-weight
 # vector by a Milvus Function; the sparse column is never set by callers.
@@ -153,7 +171,7 @@ _DEFAULT_DENSE_WEIGHT = 0.7
 _DEFAULT_SPARSE_WEIGHT = 0.3
 
 
-class MilvusVectorStore(VectorStore):
+class MilvusVectorStore(VectorStore, StrategicSearch):
     """Vector store backed by a Milvus collection (standalone server).
 
     ``index_type`` selects the vector index explicitly (default ``HNSW``); pass
@@ -201,6 +219,9 @@ class MilvusVectorStore(VectorStore):
                 else {}
             )
             schema.add_field(field, DataType.VARCHAR, max_length=_SCALAR_STR_MAX[field], **extra)
+        # Promoted INT column: chunk position within its source doc, for neighbour
+        # expansion. INT64 so it can be range/``in``-filtered server-side.
+        schema.add_field(_CHUNK_INDEX_FIELD, DataType.INT64)
         # Residual metadata: anything not promoted above.
         schema.add_field(_METADATA_FIELD, DataType.JSON)
         # BM25 sparse column: Milvus fills it from ``text`` via the function below
@@ -235,6 +256,8 @@ class MilvusVectorStore(VectorStore):
         # (``source``/``section``/``category`` equality).
         for field in _INDEXED_FIELDS:
             index_params.add_index(field_name=field, index_type="INVERTED")
+        # chunk_index is filtered on (source + index range) by fetch_neighbors.
+        index_params.add_index(field_name=_CHUNK_INDEX_FIELD, index_type="INVERTED")
         # Strong consistency so a write is immediately visible to the next search
         # (read-your-writes), matching the pgvector store's behavior.
         self._client.create_collection(
@@ -261,8 +284,11 @@ class MilvusVectorStore(VectorStore):
         everything else is kept verbatim in the ``metadata`` JSON field.
         """
         row: dict[str, Any] = {field: str(metadata.get(field, "")) for field in _SCALAR_STR_FIELDS}
+        # chunk_index is an INT64 column; missing -> sentinel (INT64 can't be absent).
+        raw_index = metadata.get(_CHUNK_INDEX_FIELD)
+        row[_CHUNK_INDEX_FIELD] = int(raw_index) if raw_index is not None else _NO_CHUNK_INDEX
         row[_METADATA_FIELD] = {
-            key: value for key, value in metadata.items() if key not in _SCALAR_STR_FIELDS
+            key: value for key, value in metadata.items() if key not in _PROMOTED_FIELDS
         }
         return row
 
@@ -279,6 +305,10 @@ class MilvusVectorStore(VectorStore):
             value = row.get(field)
             if value:
                 metadata[field] = value
+        # Fold chunk_index back only when it is a real position (not the sentinel).
+        index = row.get(_CHUNK_INDEX_FIELD)
+        if index is not None and index >= 0:
+            metadata[_CHUNK_INDEX_FIELD] = int(index)
         return metadata
 
     def upsert(
@@ -311,6 +341,63 @@ class MilvusVectorStore(VectorStore):
             return self._hybrid_search(query, query_text, k)
         return self._dense_search(query, k)
 
+    def search_plan(
+        self,
+        *,
+        query_vector: list[float],
+        query_text: str,
+        k: int,
+        plan: SearchPlan,
+    ) -> list[Hit]:
+        """Execute an explicit :class:`SearchPlan` -- the :class:`StrategicSearch` seam.
+
+        Dispatches to the mode's primitive and threads the plan's metadata filter
+        (compiled to a Milvus expression) into it. ``query_vector`` is embedded once
+        upstream and reused; ``LEXICAL`` ignores it. Each mode stamps its own
+        ``ScoreKind`` (via the underlying method), so the relevance filter downstream
+        reads the score on the right scale.
+        """
+        if k <= 0:
+            raise ValueError("k must be positive")
+        expr = self._compile_filter(plan.filter) if plan.filter is not None else ""
+        strategy = plan.strategy
+        if strategy is SearchStrategy.SEMANTIC:
+            return self._dense_search(query_vector, k, expr=expr)
+        if strategy is SearchStrategy.LEXICAL:
+            return self.lexical_search(query_text, k, expr=expr)
+        if strategy is SearchStrategy.HYBRID_WEIGHTED:
+            alpha, beta = plan.weights or (_DEFAULT_DENSE_WEIGHT, _DEFAULT_SPARSE_WEIGHT)
+            return self.weighted_search(
+                query_vector, query_text, k, alpha=alpha, beta=beta, expr=expr
+            )
+        # HYBRID_RRF: the default strategy, reachable here only when a filter is set.
+        return self._hybrid_search(query_vector, query_text, k, expr=expr)
+
+    @staticmethod
+    def _escape(value: str) -> str:
+        """Escape a string for safe interpolation into a Milvus filter literal."""
+        return value.replace("\\", "\\\\").replace('"', '\\"')
+
+    def _compile_filter(self, mf: MetadataFilter) -> str:
+        """Compile a :class:`MetadataFilter` into a Milvus boolean expression.
+
+        Each set field becomes an equality (or, for dates, a range) clause on its
+        promoted column, ANDed together. An empty filter compiles to ``""`` (no
+        constraint). Values are escaped so a stray quote/backslash can't break out.
+        """
+        clauses: list[str] = []
+        if mf.publisher:
+            clauses.append(f'{_PUBLISHER_FIELD} == "{self._escape(mf.publisher)}"')
+        if mf.source_type:
+            clauses.append(f'{_SOURCE_TYPE_FIELD} == "{self._escape(mf.source_type)}"')
+        if mf.category:
+            clauses.append(f'{_CATEGORY_FIELD} == "{self._escape(mf.category)}"')
+        if mf.published_from:
+            clauses.append(f'{_PUBLISHED_DATE_FIELD} >= "{self._escape(mf.published_from)}"')
+        if mf.published_to:
+            clauses.append(f'{_PUBLISHED_DATE_FIELD} <= "{self._escape(mf.published_to)}"')
+        return " && ".join(clauses)
+
     def semantic_search(self, query: list[float], k: int = 5) -> list[Hit]:
         """Pure dense (vector) search; ``Hit.score`` is the cosine similarity.
 
@@ -322,7 +409,7 @@ class MilvusVectorStore(VectorStore):
             raise ValueError("k must be positive")
         return self._dense_search(query, k)
 
-    def _dense_search(self, query: list[float], k: int) -> list[Hit]:
+    def _dense_search(self, query: list[float], k: int, *, expr: str = "") -> list[Hit]:
         results = self._client.search(
             collection_name=self._collection,
             data=[query],
@@ -330,6 +417,7 @@ class MilvusVectorStore(VectorStore):
             limit=k,
             output_fields=list(_OUTPUT_FIELDS),
             search_params=self._search_params(k),
+            filter=expr,
         )
         if not results:
             return []
@@ -342,19 +430,23 @@ class MilvusVectorStore(VectorStore):
             for hit in results[0]
         ]
 
-    def _hybrid_search(self, query: list[float], query_text: str, k: int) -> list[Hit]:
+    def _hybrid_search(
+        self, query: list[float], query_text: str, k: int, *, expr: str = ""
+    ) -> list[Hit]:
         pool = max(k, _HYBRID_CANDIDATES)
         dense = AnnSearchRequest(
             data=[query],
             anns_field="embedding",
             param=self._search_params(pool),
             limit=pool,
+            expr=expr,
         )
         sparse = AnnSearchRequest(
             data=[query_text],
             anns_field=_SPARSE_FIELD,
             param={"metric_type": "BM25"},
             limit=pool,
+            expr=expr,
         )
         fused = self._client.hybrid_search(
             collection_name=self._collection,
@@ -397,6 +489,7 @@ class MilvusVectorStore(VectorStore):
         *,
         alpha: float = _DEFAULT_DENSE_WEIGHT,
         beta: float = _DEFAULT_SPARSE_WEIGHT,
+        expr: str = "",
     ) -> list[Hit]:
         """Score-fusion hybrid: ``score = alpha*norm(dense) + beta*norm(bm25)``.
 
@@ -406,6 +499,8 @@ class MilvusVectorStore(VectorStore):
         ``WeightedRanker`` min-max normalizes each leg within the candidate set,
         so the score is query-relative and NOT a raw cosine: keep it out of
         cosine-calibrated paths (the session-doc merge / threshold filter).
+
+        ``expr`` is an optional server-side metadata pre-filter applied to both legs.
         """
         if k <= 0:
             raise ValueError("k must be positive")
@@ -415,12 +510,14 @@ class MilvusVectorStore(VectorStore):
             anns_field="embedding",
             param=self._search_params(pool),
             limit=pool,
+            expr=expr,
         )
         sparse = AnnSearchRequest(
             data=[query_text],
             anns_field=_SPARSE_FIELD,
             param={"metric_type": "BM25"},
             limit=pool,
+            expr=expr,
         )
         fused = self._client.hybrid_search(
             collection_name=self._collection,
@@ -443,13 +540,13 @@ class MilvusVectorStore(VectorStore):
             for hit in fused[0]
         ]
 
-    def lexical_search(self, query_text: str, k: int = 5) -> list[Hit]:
+    def lexical_search(self, query_text: str, k: int = 5, *, expr: str = "") -> list[Hit]:
         """Pure BM25 full-text search over ``text``; no embedding needed.
 
         The lexical-only tool: matches exact terms/acronyms/codes regardless of
         semantics. ``Hit.score`` is the raw BM25 score (unbounded, not a cosine),
         so keep it out of cosine-calibrated paths (the session-doc merge /
-        threshold filter).
+        threshold filter). ``expr`` is an optional server-side metadata pre-filter.
         """
         if k <= 0:
             raise ValueError("k must be positive")
@@ -460,6 +557,7 @@ class MilvusVectorStore(VectorStore):
             limit=k,
             output_fields=list(_OUTPUT_FIELDS),
             search_params={"metric_type": "BM25"},
+            filter=expr,
         )
         if not results:
             return []
@@ -482,15 +580,40 @@ class MilvusVectorStore(VectorStore):
         cheap server-side filtered delete. The value is escaped so a path
         containing a quote or backslash can't break out of the filter literal.
         """
-        escaped = source.replace("\\", "\\\\").replace('"', '\\"')
         result = self._client.delete(
             collection_name=self._collection,
-            filter=f'{_SOURCE_FIELD} == "{escaped}"',
+            filter=f'{_SOURCE_FIELD} == "{self._escape(source)}"',
         )
         # Milvus returns either a {"delete_count": N} mapping or a list of pks.
         if isinstance(result, dict):
             return int(result.get("delete_count", 0))
         return len(result)
+
+    def fetch_neighbors(self, source: str, indices: list[int]) -> dict[int, dict[str, Any]]:
+        """Return the metadata of the chunks at ``indices`` within one ``source``.
+
+        A server-side filtered ``query`` on the indexed ``source`` + ``chunk_index``
+        columns (no vector search), keyed by ``chunk_index`` for stitching. Missing
+        indices are simply absent from the result.
+        """
+        if not indices:
+            return {}
+        index_list = ", ".join(str(int(i)) for i in indices)
+        rows = self._client.query(
+            collection_name=self._collection,
+            filter=(
+                f'{_SOURCE_FIELD} == "{self._escape(source)}" '
+                f"&& {_CHUNK_INDEX_FIELD} in [{index_list}]"
+            ),
+            output_fields=list(_OUTPUT_FIELDS),
+        )
+        result: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            metadata = self._merge_metadata(row)
+            index = metadata.get(_CHUNK_INDEX_FIELD)
+            if index is not None:
+                result[int(index)] = metadata
+        return result
 
     def all_items(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
         items: list[tuple[str, dict[str, Any]]] = []

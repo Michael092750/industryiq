@@ -10,7 +10,13 @@ import uuid
 from typing import Any
 
 from industryiq.core.embeddings import Embedder
-from industryiq.core.vectorstore import Hit, VectorStore
+from industryiq.core.vectorstore import (
+    Hit,
+    SearchPlan,
+    StrategicSearch,
+    UnsupportedStrategyError,
+    VectorStore,
+)
 
 
 def _content_hash(text: str) -> str:
@@ -68,26 +74,54 @@ class Retriever:
         self._store.upsert(ids, vectors, metadatas)
         return ids
 
-    def retrieve(self, query: str, k: int = 5) -> list[Hit]:
+    def retrieve(self, query: str, k: int = 5, plan: SearchPlan | None = None) -> list[Hit]:
         """Return up to ``k`` chunks most relevant to ``query``.
 
         The raw ``query`` is passed through as ``query_text`` so stores that
         support it (Milvus) can run a hybrid dense + BM25 search; dense-only
         stores ignore it.
 
+        ``plan`` selects the search strategy + metadata filter. ``None`` (the
+        default) is hybrid-RRF with no filter -- the path every store can serve. A
+        non-default plan is dispatched to the store's :meth:`StrategicSearch.search_plan`
+        and raises :class:`UnsupportedStrategyError` if the store isn't strategy-capable.
+
         When ``min_chunk_chars`` is set, the search is widened by ``overfetch``,
         sub-threshold chunks (bare headings / fragments) are dropped, and the top
         ``k`` of the rest are returned -- falling back to the unfiltered hits if
         the filter would empty the result.
         """
+        plan = plan if plan is not None else SearchPlan()
         query_vector = self._embedder.embed([query])[0]
         if self._min_chunk_chars <= 0:
-            return self._store.search(query_vector, k=k, query_text=query)
-        raw = self._store.search(query_vector, k=k * self._overfetch, query_text=query)
+            return self._search(query_vector, query, k, plan)
+        raw = self._search(query_vector, query, k * self._overfetch, plan)
         substantive = [
             hit for hit in raw if len(hit.metadata.get("text", "")) >= self._min_chunk_chars
         ]
         return (substantive or raw)[:k]
+
+    def _search(
+        self, query_vector: list[float], query_text: str, k: int, plan: SearchPlan
+    ) -> list[Hit]:
+        """Route the search to the plain or the strategic path.
+
+        The default plan (hybrid-RRF, no filter) goes through
+        :meth:`VectorStore.search`, so any store serves it. Any other plan needs a
+        :class:`StrategicSearch` store; asking one that isn't raises rather than
+        silently degrading to dense.
+        """
+        if plan.is_default():
+            return self._store.search(query_vector, k=k, query_text=query_text)
+        if not isinstance(self._store, StrategicSearch):
+            raise UnsupportedStrategyError(
+                f"{type(self._store).__name__} cannot execute strategy "
+                f"{plan.strategy.value}; a StrategicSearch store (e.g. Milvus) is "
+                "required for non-default search plans"
+            )
+        return self._store.search_plan(
+            query_vector=query_vector, query_text=query_text, k=k, plan=plan
+        )
 
     def all_chunks(self, limit: int = 100) -> list[tuple[str, dict[str, Any]]]:
         """Return up to ``limit`` indexed ``(id, metadata)`` pairs, for inspection."""

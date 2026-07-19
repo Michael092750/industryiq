@@ -13,11 +13,11 @@ compose it without pulling in ``chat``.
   "gather the grounding context for this turn" in, a filtered/merged result out.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 from industryiq.core.conversation import Turn
-from industryiq.core.vectorstore import Hit
+from industryiq.core.vectorstore import Hit, SearchPlan
 
 
 @runtime_checkable
@@ -28,9 +28,14 @@ class RetrievalPort(Protocol):
     *reads*, so it depends on ``retrieve`` alone, not on indexing. The concrete
     :class:`~industryiq.core.retrieval.retriever.Retriever` satisfies this
     structurally.
+
+    ``plan`` selects the search strategy + metadata filter (a
+    :class:`~industryiq.core.vectorstore.SearchPlan`); ``None`` means the default
+    (hybrid-RRF, no filter), which every store can serve. A non-default plan
+    requires a strategy-capable store or the retriever raises.
     """
 
-    def retrieve(self, query: str, k: int = 5) -> list[Hit]: ...
+    def retrieve(self, query: str, k: int = 5, plan: SearchPlan | None = None) -> list[Hit]: ...
 
 
 @runtime_checkable
@@ -54,6 +59,36 @@ class QueryRewriter(Protocol):
     """
 
     def condense(self, history: list[Turn], question: str) -> str: ...
+
+
+@runtime_checkable
+class SearchStrategyRouter(Protocol):
+    """Choose *how* to search for a (standalone) question -- a :class:`SearchPlan`.
+
+    The pre-retrieval "retrieve how?" decision, downstream of the "retrieve at all?"
+    :class:`~industryiq.core.chat.ports.RetrievalRouter` and run on the already
+    condensed query. Implementations decide the strategy (dense / lexical / hybrid),
+    any metadata pre-filter, and fusion weights -- an LLM classifier, a heuristic, or
+    a fixed default. Returning ``SearchPlan()`` reproduces today's hybrid-RRF path.
+    """
+
+    def select(self, question: str) -> SearchPlan: ...
+
+
+@runtime_checkable
+class ContextExpander(Protocol):
+    """Widen retrieved hits with adjacent context before generation.
+
+    An answer often straddles a chunk boundary -- the matched chunk names the topic
+    but the figure/definition sits in the previous or next chunk. An expander stitches
+    each hit's neighbours (by ``source`` + ``chunk_index``) into its ``text`` so the
+    generator sees the whole passage, while the hit's id/score stay the matched chunk's
+    (retrieval precision is unchanged; only the text grows). Implementations decide the
+    window; :class:`~industryiq.core.retrieval.adapters.expansion.NoOpExpander` is the
+    identity default.
+    """
+
+    def expand(self, hits: list[Hit]) -> list[Hit]: ...
 
 
 @runtime_checkable
@@ -89,13 +124,16 @@ class RetrievalResult:
     * ``standalone_question`` -- the condensed, self-contained query actually used
       for retrieval (surfaced for debugging follow-ups).
     * ``hits`` -- the filtered, merged chunks to ground the answer on.
-    * ``timings_ms`` -- per-step durations (``"rewrite"``, ``"retrieve"``) so the
-      caller can fold them into its own turn timings.
+    * ``timings_ms`` -- per-step durations (``"rewrite"``, ``"route_strategy"``,
+      ``"retrieve"``) so the caller can fold them into its own turn timings.
+    * ``search_plan`` -- the strategy + metadata filter chosen for this turn
+      (surfaced for debugging which retrieval path ran); defaults to hybrid-RRF.
     """
 
     standalone_question: str
     hits: list[Hit]
     timings_ms: dict[str, float]
+    search_plan: SearchPlan = field(default_factory=SearchPlan)
 
 
 @runtime_checkable

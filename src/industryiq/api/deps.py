@@ -44,9 +44,15 @@ from industryiq.core.ingestion.adapters.store_pg import PgIngestStateStore
 from industryiq.core.pgvectorstore import PgVectorStore
 from industryiq.core.pipeline import RagPipeline
 from industryiq.core.retrieval import (
+    ContextExpander,
+    FixedStrategyRouter,
     LlmQueryRewriter,
+    LlmStrategyRouter,
+    NeighborExpander,
+    NoOpExpander,
     RetrievalService,
     Retriever,
+    SearchStrategyRouter,
     SessionDocuments,
     SessionDocumentStore,
     ThresholdFilter,
@@ -297,6 +303,25 @@ def get_chat_service() -> ChatService:
         if settings.chat_router == "llm"
         else AlwaysRetrieveRouter()
     )
+    # How to search, once we've decided to. "llm" classifies strategy + filter +
+    # weights per question (needs a Milvus-class store to exercise the non-default
+    # paths); "fixed" reproduces today's hybrid-RRF behaviour on any store.
+    strategy_router: SearchStrategyRouter = (
+        LlmStrategyRouter(llm, settings.chat_kb_description)
+        if settings.chat_strategy_router == "llm"
+        else FixedStrategyRouter()
+    )
+    # Neighbour/context expansion widens hits with their adjacent chunks (over the
+    # shared corpus store). Off by default -> identity NoOpExpander.
+    expander: ContextExpander = (
+        NeighborExpander(
+            vector_store,
+            radius=settings.chat_context_radius,
+            max_chunks=settings.chat_context_max_chunks,
+        )
+        if settings.chat_context_expansion
+        else NoOpExpander()
+    )
     # Shared between the retrieval service (which reads it) and ChatService (which
     # clears it on delete) -- one instance, disjoint methods.
     session_documents = get_session_documents()
@@ -310,6 +335,8 @@ def get_chat_service() -> ChatService:
             bm25=settings.chat_bm25_threshold,
             normalized=settings.chat_normalized_threshold,
         ),
+        strategy_router=strategy_router,
+        expander=expander,
         session_documents=session_documents,
     )
     return ChatService(

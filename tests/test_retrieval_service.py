@@ -10,7 +10,13 @@ from industryiq.core.embeddings import FakeEmbedder
 from industryiq.core.retrieval import Retriever
 from industryiq.core.retrieval.adapters.filtering import ThresholdFilter
 from industryiq.core.retrieval.service import RetrievalService, order_session_first
-from industryiq.core.vectorstore import Hit, InMemoryVectorStore
+from industryiq.core.vectorstore import (
+    Hit,
+    InMemoryVectorStore,
+    MetadataFilter,
+    SearchPlan,
+    SearchStrategy,
+)
 
 
 class RecordingRewriter:
@@ -26,15 +32,40 @@ class RecordingRewriter:
 
 
 class RecordingRetriever:
-    """A RetrievalPort double that records the queries it is asked to retrieve."""
+    """A RetrievalPort double that records the queries + plans it is asked to retrieve."""
 
     def __init__(self, hits: list[Hit] | None = None) -> None:
         self._hits = hits or []
         self.queries: list[str] = []
+        self.plans: list[SearchPlan] = []
 
-    def retrieve(self, query: str, k: int = 5) -> list[Hit]:
+    def retrieve(self, query: str, k: int = 5, plan: SearchPlan | None = None) -> list[Hit]:
         self.queries.append(query)
+        self.plans.append(plan if plan is not None else SearchPlan())
         return self._hits
+
+
+class RecordingStrategyRouter:
+    """A SearchStrategyRouter double: records questions, returns a canned plan."""
+
+    def __init__(self, plan: SearchPlan | None = None) -> None:
+        self._plan = plan if plan is not None else SearchPlan()
+        self.questions: list[str] = []
+
+    def select(self, question: str) -> SearchPlan:
+        self.questions.append(question)
+        return self._plan
+
+
+class RecordingExpander:
+    """A ContextExpander double: records the hits it is handed, returns them unchanged."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[Hit]] = []
+
+    def expand(self, hits: list[Hit]) -> list[Hit]:
+        self.calls.append(hits)
+        return hits
 
 
 class StubSessionDocuments:
@@ -61,6 +92,8 @@ def _service(
     rewriter: RecordingRewriter | None = None,
     relevance_filter: ThresholdFilter | None = None,
     session_documents: StubSessionDocuments | None = None,
+    strategy_router: RecordingStrategyRouter | None = None,
+    expander: RecordingExpander | None = None,
     clock=None,
 ) -> RetrievalService:
     kwargs = {} if clock is None else {"clock": clock}
@@ -68,6 +101,8 @@ def _service(
         retriever=retriever or RecordingRetriever(),
         rewriter=rewriter or RecordingRewriter(),
         relevance_filter=relevance_filter or ThresholdFilter(),
+        strategy_router=strategy_router,
+        expander=expander,
         session_documents=session_documents,
         **kwargs,
     )
@@ -140,10 +175,51 @@ def test_gather_without_session_documents_uses_shared_only() -> None:
     assert [hit.id for hit in result.hits] == ["g"]
 
 
-def test_gather_reports_rewrite_and_retrieve_timings(fake_clock) -> None:
+def test_gather_reports_rewrite_route_and_retrieve_timings(fake_clock) -> None:
     result = _service(clock=fake_clock(step=0.001)).gather("c", "q", [], k=5)
-    assert {"rewrite", "retrieve"} <= set(result.timings_ms)
+    assert {"rewrite", "route_strategy", "retrieve"} <= set(result.timings_ms)
     assert all(value >= 0 for value in result.timings_ms.values())
+
+
+def test_gather_without_router_retrieves_with_the_default_plan() -> None:
+    retriever = RecordingRetriever()
+    _service(retriever=retriever).gather("c", "q", [], k=5)
+    # No strategy router configured -> today's behaviour (hybrid-RRF, no filter).
+    assert retriever.plans[0].is_default()
+
+
+def test_gather_routes_strategy_on_the_standalone_query() -> None:
+    plan = SearchPlan(strategy=SearchStrategy.LEXICAL, filter=MetadataFilter(publisher="McKinsey"))
+    router = RecordingStrategyRouter(plan=plan)
+    retriever = RecordingRetriever()
+    result = _service(
+        retriever=retriever,
+        rewriter=RecordingRewriter(rewritten="standalone"),
+        strategy_router=router,
+    ).gather("c", "follow up?", [], k=5)
+    # The router classifies the *condensed* query, and its plan reaches the retriever.
+    assert router.questions == ["standalone"]
+    assert retriever.plans[0] is plan
+    # ...and is surfaced on the result for debugging which path ran.
+    assert result.search_plan is plan
+
+
+def test_gather_surfaces_default_plan_when_no_router() -> None:
+    result = _service().gather("c", "q", [], k=5)
+    assert result.search_plan.is_default()
+
+
+def test_gather_expands_context_when_an_expander_is_configured() -> None:
+    retriever = RecordingRetriever(hits=[Hit("g", 0.9, {"text": "global"})])
+    expander = RecordingExpander()
+    result = _service(retriever=retriever, expander=expander).gather("c", "q", [], k=5)
+    assert expander.calls == [result.hits]  # the merged hits were handed to the expander
+    assert "expand" in result.timings_ms
+
+
+def test_gather_skips_expansion_when_no_expander() -> None:
+    result = _service().gather("c", "q", [], k=5)
+    assert "expand" not in result.timings_ms
 
 
 def test_order_session_first_leads_with_uploads_over_higher_scoring_shared() -> None:

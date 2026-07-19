@@ -88,3 +88,16 @@ class RedisVectorStore(VectorStore):
         if ids:
             self._redis.hdel(self._key, *ids)
         return len(ids)
+
+    def fetch_neighbors(self, source: str, indices: list[int]) -> dict[int, dict[str, Any]]:
+        # Brute-force scan of the bounded namespace, keyed by chunk_index (mirrors
+        # InMemoryVectorStore). Cheap here since a session holds tens of chunks.
+        wanted = set(indices)
+        raw: dict[str, str] = self._redis.hgetall(self._key)
+        result: dict[int, dict[str, Any]] = {}
+        for blob in raw.values():
+            metadata = json.loads(blob)["metadata"]
+            index = metadata.get("chunk_index")
+            if metadata.get("source") == source and index in wanted:
+                result[int(index)] = metadata
+        return result

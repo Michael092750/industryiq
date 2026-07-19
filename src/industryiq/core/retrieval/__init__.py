@@ -17,23 +17,32 @@ the neutral ``conversation`` / ``timing`` helpers -- never on ``chat`` -- so the
 dependency runs one way (``chat -> retrieval``).
 """
 
+from industryiq.core.retrieval.adapters.expansion import NeighborExpander, NoOpExpander
 from industryiq.core.retrieval.adapters.filtering import ThresholdFilter
 from industryiq.core.retrieval.adapters.rewriting import LlmQueryRewriter, NoOpQueryRewriter
 from industryiq.core.retrieval.adapters.session_documents import SessionDocuments
+from industryiq.core.retrieval.adapters.strategy import FixedStrategyRouter, LlmStrategyRouter
 from industryiq.core.retrieval.ports import (
+    ContextExpander,
     ContextRetriever,
     QueryRewriter,
     RelevanceFilter,
     RetrievalPort,
     RetrievalResult,
+    SearchStrategyRouter,
     SessionDocumentStore,
 )
 from industryiq.core.retrieval.retriever import Retriever
 from industryiq.core.retrieval.service import RetrievalService, order_session_first
 
 __all__ = [
+    "ContextExpander",
     "ContextRetriever",
+    "FixedStrategyRouter",
     "LlmQueryRewriter",
+    "LlmStrategyRouter",
+    "NeighborExpander",
+    "NoOpExpander",
     "NoOpQueryRewriter",
     "QueryRewriter",
     "RelevanceFilter",
@@ -41,6 +50,7 @@ __all__ = [
     "RetrievalResult",
     "RetrievalService",
     "Retriever",
+    "SearchStrategyRouter",
     "SessionDocumentStore",
     "SessionDocuments",
     "ThresholdFilter",

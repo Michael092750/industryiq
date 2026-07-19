@@ -90,3 +90,22 @@ class PgVectorStore(VectorStore):
             )
             conn.commit()
             return cur.rowcount
+
+    def fetch_neighbors(self, source: str, indices: list[int]) -> dict[int, dict[str, Any]]:
+        # Filter on the JSONB ``source`` + ``chunk_index`` keys; keyed by chunk_index
+        # for stitching. chunk_index is stored as a JSON number, read back via ->> + cast.
+        if not indices:
+            return {}
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT metadata FROM {self._table} "
+                f"WHERE metadata->>'source' = %s "
+                f"AND (metadata->>'chunk_index')::int = ANY(%s)",
+                (source, list(indices)),
+            ).fetchall()
+        result: dict[int, dict[str, Any]] = {}
+        for (metadata,) in rows:
+            index = metadata.get("chunk_index")
+            if index is not None:
+                result[int(index)] = metadata
+        return result

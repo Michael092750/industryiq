@@ -16,7 +16,13 @@ from collections.abc import Iterator
 import pytest
 
 from industryiq.config import get_settings
-from industryiq.core.vectorstore import ScoreKind, VectorStore
+from industryiq.core.vectorstore import (
+    MetadataFilter,
+    ScoreKind,
+    SearchPlan,
+    SearchStrategy,
+    VectorStore,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -188,3 +194,128 @@ def test_delete_by_source_removes_only_matching_chunks(store: VectorStore) -> No
 def test_delete_by_source_unknown_source_is_noop(store: VectorStore) -> None:
     _seed(store)
     assert store.delete_by_source("missing.pdf") == 0
+
+
+# --- StrategicSearch: search_plan dispatch + metadata filter -------------------
+
+
+def _seed_fruit(store: VectorStore) -> None:
+    store.upsert(
+        ids=["a", "b", "c"],
+        vectors=[[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
+        metadatas=[{"text": "alpha apple"}, {"text": "beta banana"}, {"text": "gamma cherry"}],
+    )
+
+
+def test_search_plan_semantic_reports_cosine(store: VectorStore) -> None:
+    from industryiq.core.milvusvectorstore import MilvusVectorStore
+
+    assert isinstance(store, MilvusVectorStore)
+    _seed(store)
+    hits = store.search_plan(
+        query_vector=[0.0, 1.0],
+        query_text="",
+        k=3,
+        plan=SearchPlan(strategy=SearchStrategy.SEMANTIC),
+    )
+    assert [hit.id for hit in hits] == ["b", "c", "a"]
+    assert all(hit.score_kind is ScoreKind.COSINE for hit in hits)
+
+
+def test_search_plan_lexical_reports_bm25(store: VectorStore) -> None:
+    from industryiq.core.milvusvectorstore import MilvusVectorStore
+
+    assert isinstance(store, MilvusVectorStore)
+    _seed_fruit(store)
+    hits = store.search_plan(
+        query_vector=[0.0, 1.0],
+        query_text="banana",
+        k=3,
+        plan=SearchPlan(strategy=SearchStrategy.LEXICAL),
+    )
+    assert hits[0].id == "b"
+    assert all(hit.score_kind is ScoreKind.BM25 for hit in hits)
+
+
+def test_search_plan_weighted_reports_normalized(store: VectorStore) -> None:
+    from industryiq.core.milvusvectorstore import MilvusVectorStore
+
+    assert isinstance(store, MilvusVectorStore)
+    _seed_fruit(store)
+    hits = store.search_plan(
+        query_vector=[0.0, 1.0],
+        query_text="banana",
+        k=3,
+        plan=SearchPlan(strategy=SearchStrategy.HYBRID_WEIGHTED, weights=(0.5, 0.5)),
+    )
+    assert hits[0].id == "b"
+    assert all(hit.score_kind is ScoreKind.NORMALIZED for hit in hits)
+
+
+def test_search_plan_filters_by_publisher(store: VectorStore) -> None:
+    from industryiq.core.milvusvectorstore import MilvusVectorStore
+
+    assert isinstance(store, MilvusVectorStore)
+    store.upsert(
+        ids=["m", "b"],
+        vectors=[[1.0, 0.0], [0.9, 0.1]],
+        metadatas=[
+            {"text": "AI outlook", "publisher": "McKinsey"},
+            {"text": "AI outlook", "publisher": "BCG"},
+        ],
+    )
+    hits = store.search_plan(
+        query_vector=[1.0, 0.0],
+        query_text="AI outlook",
+        k=5,
+        plan=SearchPlan(filter=MetadataFilter(publisher="McKinsey")),
+    )
+    assert [hit.id for hit in hits] == ["m"]  # BCG chunk filtered out server-side
+
+
+def test_search_plan_filters_by_published_date_range(store: VectorStore) -> None:
+    from industryiq.core.milvusvectorstore import MilvusVectorStore
+
+    assert isinstance(store, MilvusVectorStore)
+    store.upsert(
+        ids=["old", "new"],
+        vectors=[[1.0, 0.0], [0.9, 0.1]],
+        metadatas=[
+            {"text": "trends", "published_date": "2021-01-01"},
+            {"text": "trends", "published_date": "2024-06-01"},
+        ],
+    )
+    hits = store.search_plan(
+        query_vector=[1.0, 0.0],
+        query_text="trends",
+        k=5,
+        plan=SearchPlan(filter=MetadataFilter(published_from="2024")),
+    )
+    assert [hit.id for hit in hits] == ["new"]
+
+
+# --- fetch_neighbors ----------------------------------------------------------
+
+
+def test_fetch_neighbors_returns_adjacent_chunks(store: VectorStore) -> None:
+    store.upsert(
+        ids=["a0", "a1", "a2", "b0"],
+        vectors=[[1.0, 0.0], [0.9, 0.1], [0.8, 0.2], [0.0, 1.0]],
+        metadatas=[
+            {"text": "A0", "source": "a.pdf", "chunk_index": 0},
+            {"text": "A1", "source": "a.pdf", "chunk_index": 1},
+            {"text": "A2", "source": "a.pdf", "chunk_index": 2},
+            {"text": "B0", "source": "b.pdf", "chunk_index": 0},
+        ],
+    )
+    got = store.fetch_neighbors("a.pdf", [0, 2])
+    assert set(got) == {0, 2}
+    assert got[0]["text"] == "A0"
+    assert got[2]["text"] == "A2"
+    # Same chunk_index in another source must not leak in.
+    assert all(meta["source"] == "a.pdf" for meta in got.values())
+
+
+def test_chunk_index_round_trips_through_promoted_column(store: VectorStore) -> None:
+    store.upsert(["x"], [[1.0, 0.0]], [{"text": "T", "source": "a.pdf", "chunk_index": 7}])
+    assert store.search([1.0, 0.0], k=1)[0].metadata["chunk_index"] == 7

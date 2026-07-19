@@ -1,6 +1,13 @@
+import pytest
+
 from industryiq.core.embeddings import FakeEmbedder
 from industryiq.core.retrieval import Retriever
-from industryiq.core.vectorstore import InMemoryVectorStore
+from industryiq.core.vectorstore import (
+    InMemoryVectorStore,
+    SearchPlan,
+    SearchStrategy,
+    UnsupportedStrategyError,
+)
 
 
 def _retriever() -> Retriever:
@@ -85,3 +92,20 @@ def test_retrieve_falls_back_when_all_chunks_short() -> None:
     retriever = Retriever(FakeEmbedder(dim=16), InMemoryVectorStore(), min_chunk_chars=200)
     retriever.index(["hi", "yo"])
     assert len(retriever.retrieve("hi", k=1)) == 1
+
+
+def test_retrieve_default_plan_uses_the_plain_search_path() -> None:
+    # An explicit default plan behaves exactly like passing none: any store serves it.
+    retriever = _retriever()
+    retriever.index(["the sky is blue"])
+    hits = retriever.retrieve("the sky is blue", k=1, plan=SearchPlan())
+    assert hits[0].metadata["text"] == "the sky is blue"
+
+
+def test_retrieve_non_default_plan_on_dense_store_raises() -> None:
+    # The hard-error seam: a dense-only store can't run a routed strategy, so asking
+    # it to raises instead of silently degrading to dense.
+    retriever = _retriever()
+    retriever.index(["anything"])
+    with pytest.raises(UnsupportedStrategyError):
+        retriever.retrieve("anything", k=1, plan=SearchPlan(strategy=SearchStrategy.LEXICAL))

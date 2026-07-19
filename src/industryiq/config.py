@@ -159,6 +159,11 @@ class Settings:
     chat_retrieval_k: int = 5
     # Retrieval routing: "always" (always search) or "llm" (let the model decide).
     chat_router: str = "always"
+    # Search-strategy routing (how to search, once we've decided to): "fixed" (always
+    # hybrid-RRF, today's behaviour) or "llm" (classify strategy + metadata filter +
+    # weights per question). Only "llm" against a Milvus-class store exercises the
+    # lexical/weighted/filtered paths; other stores raise on a non-default plan.
+    chat_strategy_router: str = "fixed"
     # What the knowledge base holds; injected into the LLM router prompt so it can
     # judge whether a question is in scope instead of guessing blind.
     chat_kb_description: str = "industry analysis reports"
@@ -174,6 +179,13 @@ class Settings:
     # score kinds.
     chat_bm25_threshold: float | None = None
     chat_normalized_threshold: float | None = None
+    # Context (neighbour) expansion: widen each retrieved hit with its adjacent chunks
+    # so a fact straddling a chunk boundary is still in the grounding context. Off by
+    # default (changes what the generator sees). ``radius`` = neighbours per side;
+    # ``max_chunks`` caps the odd window width per hit so k hits can't blow the context.
+    chat_context_expansion: bool = False
+    chat_context_radius: int = 1
+    chat_context_max_chunks: int = 5
     # Drop retrieved chunks shorter than this many characters: bare Markdown
     # headings, short one-line figure descriptions, and other fragments embed close
     # to topical queries but answer nothing, so left in they crowd real paragraphs
@@ -254,10 +266,14 @@ def get_settings() -> Settings:
         chat_history_turns=int(os.getenv("CHAT_HISTORY_TURNS", "6")),
         chat_retrieval_k=int(os.getenv("CHAT_RETRIEVAL_K", "5")),
         chat_router=os.getenv("CHAT_ROUTER", "always"),
+        chat_strategy_router=os.getenv("CHAT_STRATEGY_ROUTER", "fixed"),
         chat_kb_description=os.getenv("CHAT_KB_DESCRIPTION", "industry analysis reports"),
         chat_relevance_threshold=float(os.getenv("CHAT_RELEVANCE_THRESHOLD", "0.0")),
         chat_bm25_threshold=_env_float_opt("CHAT_BM25_THRESHOLD"),
         chat_normalized_threshold=_env_float_opt("CHAT_NORMALIZED_THRESHOLD"),
+        chat_context_expansion=_env_bool("CHAT_CONTEXT_EXPANSION", False),
+        chat_context_radius=int(os.getenv("CHAT_CONTEXT_RADIUS", "1")),
+        chat_context_max_chunks=int(os.getenv("CHAT_CONTEXT_MAX_CHUNKS", "5")),
         retrieval_min_chunk_chars=int(os.getenv("RETRIEVAL_MIN_CHUNK_CHARS", "400")),
         chunk_min_chars=int(os.getenv("CHUNK_MIN_CHARS", "400")),
         ingest_scheduler_enabled=_env_bool("INGEST_SCHEDULER_ENABLED", True),

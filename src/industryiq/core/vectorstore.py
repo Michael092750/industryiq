@@ -31,6 +31,97 @@ class ScoreKind(Enum):
     NORMALIZED = "normalized"  # min-max blend in [0, 1], query-relative -> ditto
 
 
+class SearchStrategy(Enum):
+    """Which retrieval mode a :class:`StrategicSearch` store should run for a query.
+
+    The vocabulary a strategy router picks from, matched one-to-one to a store's
+    search primitives. Each mode reports a different :class:`ScoreKind`, so the
+    downstream relevance filter reads it on the right scale.
+
+    * ``SEMANTIC`` -- dense/vector only (COSINE); conceptual, paraphrased queries.
+    * ``LEXICAL`` -- BM25 only (BM25); exact terms/acronyms/codes the embedder blurs.
+    * ``HYBRID_RRF`` -- dense + BM25, rank-fused (COSINE); the safe default for mixed
+      queries. Equivalent to today's :meth:`VectorStore.search` with a ``query_text``.
+    * ``HYBRID_WEIGHTED`` -- dense + BM25, score-fused with tunable weights (NORMALIZED);
+      when the dense/lexical balance should be dialled rather than rank-fused equally.
+    """
+
+    SEMANTIC = "semantic"
+    LEXICAL = "lexical"
+    HYBRID_RRF = "hybrid_rrf"
+    HYBRID_WEIGHTED = "hybrid_weighted"
+
+
+@dataclass(frozen=True)
+class MetadataFilter:
+    """A structured pre-filter over the promoted, server-searchable metadata columns.
+
+    Carries *what* to constrain, not *how* -- a store compiles it into its own filter
+    dialect (e.g. Milvus' boolean expression), so a strategy router can request
+    "publisher = McKinsey, since 2024" without knowing any store syntax. ``None``
+    fields are unconstrained. ``published_from``/``published_to`` are inclusive ISO
+    date bounds (``"2024"``, ``"2024-03-15"``); the ``published_date`` column sorts
+    lexicographically = chronologically, so string comparison is a real date range.
+    """
+
+    publisher: str | None = None
+    source_type: str | None = None
+    category: str | None = None
+    published_from: str | None = None
+    published_to: str | None = None
+
+    def is_empty(self) -> bool:
+        """True when no field constrains anything (nothing to filter on)."""
+        return all(
+            value is None
+            for value in (
+                self.publisher,
+                self.source_type,
+                self.category,
+                self.published_from,
+                self.published_to,
+            )
+        )
+
+
+@dataclass(frozen=True)
+class SearchPlan:
+    """A resolved retrieval plan: which strategy, which pre-filter, which weights.
+
+    The output of a strategy router and the input to :meth:`StrategicSearch.search_plan`.
+    Defaults reproduce today's behaviour exactly (hybrid-RRF, no filter, no weight
+    override), so :meth:`is_default` marks the plan that any store can serve through
+    the plain :meth:`VectorStore.search` path -- only a non-default plan needs a
+    :class:`StrategicSearch`-capable store.
+    """
+
+    strategy: SearchStrategy = SearchStrategy.HYBRID_RRF
+    filter: MetadataFilter | None = None
+    weights: tuple[float, float] | None = None  # (dense, sparse) for HYBRID_WEIGHTED
+
+    def is_default(self) -> bool:
+        """True when this plan is the polymorphic path every store can serve.
+
+        Hybrid-RRF, no metadata filter, no weight override -- i.e. exactly what
+        ``VectorStore.search(query, query_text=...)`` already does. A plan that fails
+        this needs a :class:`StrategicSearch` store; requesting it elsewhere raises.
+        """
+        has_filter = self.filter is not None and not self.filter.is_empty()
+        return (
+            self.strategy is SearchStrategy.HYBRID_RRF and not has_filter and self.weights is None
+        )
+
+
+class UnsupportedStrategyError(RuntimeError):
+    """Raised when a non-default :class:`SearchPlan` is asked of a store that can't run it.
+
+    Deliberately a hard failure rather than a silent degrade to dense: if the router
+    asked for lexical/weighted/filtered retrieval and the wired store can't do it, the
+    caller should know, not receive quietly-wrong results (which would also corrupt a
+    backend benchmark).
+    """
+
+
 @dataclass(frozen=True)
 class Hit:
     """A single search result.
@@ -79,6 +170,39 @@ class VectorStore(Protocol):
         set, then re-ingest). Returns the number of chunks removed.
         """
         ...
+
+    def fetch_neighbors(self, source: str, indices: list[int]) -> dict[int, dict[str, Any]]:
+        """Return the metadata of the chunks at ``indices`` within one ``source``.
+
+        Keyed by ``chunk_index`` so a caller can stitch a retrieved chunk together
+        with its neighbours (``chunk_index`` is contiguous per source, in reading
+        order -- see :meth:`industryiq.core.retrieval.retriever.Retriever.index`).
+        Indices with no chunk are simply absent from the result. Used by context
+        expansion to recover a fact that sits in the previous/next chunk.
+        """
+        ...
+
+
+@runtime_checkable
+class StrategicSearch(Protocol):
+    """A store that can execute an explicit :class:`SearchPlan` -- multiple retrieval
+    modes plus a metadata pre-filter.
+
+    A capability layered *above* :class:`VectorStore`: only stores that actually
+    implement lexical/weighted/filtered retrieval (Milvus) declare it. Dense-only
+    stores (pgvector, in-memory) deliberately do not, so a non-default plan asked of
+    them raises :class:`UnsupportedStrategyError` instead of degrading silently. The
+    default plan never needs this -- it goes through :meth:`VectorStore.search`.
+    """
+
+    def search_plan(
+        self,
+        *,
+        query_vector: list[float],
+        query_text: str,
+        k: int,
+        plan: SearchPlan,
+    ) -> list[Hit]: ...
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -131,6 +255,14 @@ class InMemoryVectorStore(VectorStore):
             del self._metadatas[id_]
         return len(ids)
 
+    def fetch_neighbors(self, source: str, indices: list[int]) -> dict[int, dict[str, Any]]:
+        wanted = set(indices)
+        return {
+            index: meta
+            for meta in self._metadatas.values()
+            if meta.get("source") == source and (index := meta.get("chunk_index")) in wanted
+        }
+
 
 class MultiVectorStore(VectorStore):
     """Fan-out vector store: writes to every backend, reads from the first.
@@ -181,3 +313,7 @@ class MultiVectorStore(VectorStore):
         # when the backends are in sync).
         counts = [store.delete_by_source(source) for store in self._stores]
         return counts[0]
+
+    def fetch_neighbors(self, source: str, indices: list[int]) -> dict[int, dict[str, Any]]:
+        # Read path: primary only, like search/all_items.
+        return self._primary.fetch_neighbors(source, indices)
