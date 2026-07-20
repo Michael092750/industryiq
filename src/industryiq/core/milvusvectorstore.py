@@ -38,6 +38,7 @@ Connections are managed by a single :class:`MilvusClient`; it is thread-safe for
 the per-request use the web server makes of it.
 """
 
+import re
 from typing import Any
 
 from pymilvus import (
@@ -169,6 +170,52 @@ _RRF_K = 60
 # Default weights for score-fusion (weighted) hybrid: dense (cosine) vs BM25.
 _DEFAULT_DENSE_WEIGHT = 0.7
 _DEFAULT_SPARSE_WEIGHT = 0.3
+
+
+def _escape_literal(value: str) -> str:
+    """Escape a string for safe interpolation into a Milvus filter string literal."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+# A publisher filter value is reduced to this safe charset before a ``like`` match, so
+# it can never carry a ``like`` wildcard (``%``/``_``) or a quote that breaks the literal.
+_PUBLISHER_UNSAFE = re.compile(r"[^a-z0-9.\-]")
+
+
+def _publisher_like_value(value: str) -> str:
+    """Normalise a publisher filter value to a safe substring for a ``like`` match.
+
+    The corpus tags ``publisher`` by lowercased domain, frequently with a subdomain
+    (``www2.deloitte.com``, ``mkto.deloitte.com``). A *contains* match on the registrable
+    domain (``deloitte.com``) therefore unifies all of a publisher's subdomain forms,
+    and a plain name ("Deloitte") still matches via its token -- both far better than the
+    exact ``==`` that missed every fragmented publisher. Lowercased, a leading ``www.``
+    dropped, and restricted to ``[a-z0-9.-]``.
+    """
+    return _PUBLISHER_UNSAFE.sub("", value.strip().lower()).removeprefix("www.")
+
+
+def _compile_filter_expr(mf: MetadataFilter) -> str:
+    """Compile a :class:`MetadataFilter` into a Milvus boolean expression (pure).
+
+    ``publisher`` is a case-insensitive substring (``like``) on the domain so subdomain
+    variants and name/domain inputs all hit; ``source_type``/``category`` are exact
+    equality on their controlled vocabularies; the dates are an inclusive range. Clauses
+    are ANDed; an empty (or fully-unmatchable) filter compiles to ``""`` (no constraint).
+    """
+    clauses: list[str] = []
+    publisher = _publisher_like_value(mf.publisher) if mf.publisher else ""
+    if publisher:
+        clauses.append(f'{_PUBLISHER_FIELD} like "%{publisher}%"')
+    if mf.source_type:
+        clauses.append(f'{_SOURCE_TYPE_FIELD} == "{_escape_literal(mf.source_type)}"')
+    if mf.category:
+        clauses.append(f'{_CATEGORY_FIELD} == "{_escape_literal(mf.category)}"')
+    if mf.published_from:
+        clauses.append(f'{_PUBLISHED_DATE_FIELD} >= "{_escape_literal(mf.published_from)}"')
+    if mf.published_to:
+        clauses.append(f'{_PUBLISHED_DATE_FIELD} <= "{_escape_literal(mf.published_to)}"')
+    return " && ".join(clauses)
 
 
 class MilvusVectorStore(VectorStore, StrategicSearch):
@@ -359,7 +406,7 @@ class MilvusVectorStore(VectorStore, StrategicSearch):
         """
         if k <= 0:
             raise ValueError("k must be positive")
-        expr = self._compile_filter(plan.filter) if plan.filter is not None else ""
+        expr = _compile_filter_expr(plan.filter) if plan.filter is not None else ""
         strategy = plan.strategy
         if strategy is SearchStrategy.SEMANTIC:
             return self._dense_search(query_vector, k, expr=expr)
@@ -372,31 +419,6 @@ class MilvusVectorStore(VectorStore, StrategicSearch):
             )
         # HYBRID_RRF: the default strategy, reachable here only when a filter is set.
         return self._hybrid_search(query_vector, query_text, k, expr=expr)
-
-    @staticmethod
-    def _escape(value: str) -> str:
-        """Escape a string for safe interpolation into a Milvus filter literal."""
-        return value.replace("\\", "\\\\").replace('"', '\\"')
-
-    def _compile_filter(self, mf: MetadataFilter) -> str:
-        """Compile a :class:`MetadataFilter` into a Milvus boolean expression.
-
-        Each set field becomes an equality (or, for dates, a range) clause on its
-        promoted column, ANDed together. An empty filter compiles to ``""`` (no
-        constraint). Values are escaped so a stray quote/backslash can't break out.
-        """
-        clauses: list[str] = []
-        if mf.publisher:
-            clauses.append(f'{_PUBLISHER_FIELD} == "{self._escape(mf.publisher)}"')
-        if mf.source_type:
-            clauses.append(f'{_SOURCE_TYPE_FIELD} == "{self._escape(mf.source_type)}"')
-        if mf.category:
-            clauses.append(f'{_CATEGORY_FIELD} == "{self._escape(mf.category)}"')
-        if mf.published_from:
-            clauses.append(f'{_PUBLISHED_DATE_FIELD} >= "{self._escape(mf.published_from)}"')
-        if mf.published_to:
-            clauses.append(f'{_PUBLISHED_DATE_FIELD} <= "{self._escape(mf.published_to)}"')
-        return " && ".join(clauses)
 
     def semantic_search(self, query: list[float], k: int = 5) -> list[Hit]:
         """Pure dense (vector) search; ``Hit.score`` is the cosine similarity.
@@ -582,7 +604,7 @@ class MilvusVectorStore(VectorStore, StrategicSearch):
         """
         result = self._client.delete(
             collection_name=self._collection,
-            filter=f'{_SOURCE_FIELD} == "{self._escape(source)}"',
+            filter=f'{_SOURCE_FIELD} == "{_escape_literal(source)}"',
         )
         # Milvus returns either a {"delete_count": N} mapping or a list of pks.
         if isinstance(result, dict):
@@ -602,7 +624,7 @@ class MilvusVectorStore(VectorStore, StrategicSearch):
         rows = self._client.query(
             collection_name=self._collection,
             filter=(
-                f'{_SOURCE_FIELD} == "{self._escape(source)}" '
+                f'{_SOURCE_FIELD} == "{_escape_literal(source)}" '
                 f"&& {_CHUNK_INDEX_FIELD} in [{index_list}]"
             ),
             output_fields=list(_OUTPUT_FIELDS),

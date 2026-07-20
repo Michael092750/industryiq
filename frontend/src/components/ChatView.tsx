@@ -34,6 +34,7 @@ interface Live {
 const PHASE_LABELS: Record<string, string> = {
   thinking: "Thinking",
   retrieving: "Searching knowledge base",
+  broadening: "No filter matches — broadening search",
   generating: "Generating answer",
 };
 

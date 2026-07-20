@@ -256,12 +256,14 @@ def test_search_plan_filters_by_publisher(store: VectorStore) -> None:
     from industryiq.core.milvusvectorstore import MilvusVectorStore
 
     assert isinstance(store, MilvusVectorStore)
+    # The corpus stores publisher as a lowercased domain (the manifest does .lower());
+    # a name-based filter matches it via a case-insensitive-by-convention contains.
     store.upsert(
         ids=["m", "b"],
         vectors=[[1.0, 0.0], [0.9, 0.1]],
         metadatas=[
-            {"text": "AI outlook", "publisher": "McKinsey"},
-            {"text": "AI outlook", "publisher": "BCG"},
+            {"text": "AI outlook", "publisher": "mckinsey.com"},
+            {"text": "AI outlook", "publisher": "bcg.com"},
         ],
     )
     hits = store.search_plan(
@@ -270,7 +272,31 @@ def test_search_plan_filters_by_publisher(store: VectorStore) -> None:
         k=5,
         plan=SearchPlan(filter=MetadataFilter(publisher="McKinsey")),
     )
-    assert [hit.id for hit in hits] == ["m"]  # BCG chunk filtered out server-side
+    assert [hit.id for hit in hits] == ["m"]  # bcg.com chunk filtered out server-side
+
+
+def test_search_plan_publisher_filter_matches_domain_subforms(store: VectorStore) -> None:
+    from industryiq.core.milvusvectorstore import MilvusVectorStore
+
+    assert isinstance(store, MilvusVectorStore)
+    # Publisher is tagged by domain, often with a subdomain; a name-based filter must
+    # match all of a publisher's forms (contains on the domain) and nothing else.
+    store.upsert(
+        ids=["d1", "d2", "o1"],
+        vectors=[[1.0, 0.0], [0.9, 0.1], [0.0, 1.0]],
+        metadatas=[
+            {"text": "AI outlook", "publisher": "www2.deloitte.com"},
+            {"text": "AI outlook", "publisher": "deloitte.com"},
+            {"text": "AI outlook", "publisher": "imf.org"},
+        ],
+    )
+    hits = store.search_plan(
+        query_vector=[1.0, 0.0],
+        query_text="AI outlook",
+        k=5,
+        plan=SearchPlan(filter=MetadataFilter(publisher="Deloitte")),
+    )
+    assert {hit.id for hit in hits} == {"d1", "d2"}  # both Deloitte subdomains, not imf
 
 
 def test_search_plan_filters_by_published_date_range(store: VectorStore) -> None:

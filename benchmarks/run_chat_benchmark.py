@@ -93,11 +93,17 @@ from industryiq.core.embeddings import Embedder
 from industryiq.core.generation import GenerativeLLM
 from industryiq.core.pgvectorstore import PgVectorStore
 from industryiq.core.retrieval import (
+    ContextExpander,
+    FixedStrategyRouter,
     LlmQueryRewriter,
+    LlmStrategyRouter,
+    NeighborExpander,
+    NoOpExpander,
     NoOpQueryRewriter,
     QueryRewriter,
     RetrievalService,
     Retriever,
+    SearchStrategyRouter,
     ThresholdFilter,
 )
 from industryiq.core.vectorstore import Hit, VectorStore
@@ -190,6 +196,8 @@ def build_chat_service(
     rewriter: QueryRewriter,
     backend: str,
     min_chunk_chars: int,
+    strategy_router_kind: str,
+    context_expansion: bool,
 ) -> ChatService:
     """The real ``ChatService`` the app serves (mirrors ``deps.get_chat_service``),
     against the live store selected by ``backend`` (pgvector or milvus) -- so
@@ -197,6 +205,12 @@ def build_chat_service(
     is the hot-swappable technique under test (see ``REWRITERS``); the only other swap
     is an in-memory conversation store, so benchmark turns are never written to your
     database.
+
+    ``strategy_router_kind`` is the search-strategy routing axis under test: ``"fixed"``
+    (today's single hybrid-RRF path, i.e. routing OFF) or ``"llm"`` (classify strategy +
+    metadata filter per question, i.e. routing ON). ``context_expansion`` toggles
+    neighbour stitching. Both need a strategy-capable store (Milvus) to do anything
+    beyond the default; against pgvector a routed non-default plan would raise.
 
     ``min_chunk_chars`` matches the app's query-time filter (``deps`` passes
     ``RETRIEVAL_MIN_CHUNK_CHARS``): sub-threshold chunks (bare headings / fragments)
@@ -208,16 +222,31 @@ def build_chat_service(
         if settings.chat_router == "llm"
         else AlwaysRetrieveRouter()
     )
+    store = build_store(settings, backend, embedder.dim)
+    strategy_router: SearchStrategyRouter = (
+        LlmStrategyRouter(llm, settings.chat_kb_description)
+        if strategy_router_kind == "llm"
+        else FixedStrategyRouter()
+    )
+    expander: ContextExpander = (
+        NeighborExpander(
+            store,
+            radius=settings.chat_context_radius,
+            max_chunks=settings.chat_context_max_chunks,
+        )
+        if context_expansion
+        else NoOpExpander()
+    )
     retrieval = RetrievalService(
-        retriever=Retriever(
-            embedder, build_store(settings, backend, embedder.dim), min_chunk_chars=min_chunk_chars
-        ),
+        retriever=Retriever(embedder, store, min_chunk_chars=min_chunk_chars),
         rewriter=rewriter,
         relevance_filter=ThresholdFilter.from_settings(
             settings.chat_relevance_threshold,
             bm25=settings.chat_bm25_threshold,
             normalized=settings.chat_normalized_threshold,
         ),
+        strategy_router=strategy_router,
+        expander=expander,
     )
     return ChatService(
         retrieval=retrieval,
@@ -426,6 +455,22 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="Which live vector store the chatbot retrieves from (default: pgvector).",
     )
     parser.add_argument(
+        "--strategy-router",
+        choices=["fixed", "llm"],
+        default=None,
+        help="Search-strategy routing (the axis under test): 'fixed' = today's single "
+        "hybrid-RRF path (routing OFF), 'llm' = classify strategy+filter per question "
+        "(routing ON). Needs --backend milvus to exercise non-default plans. "
+        "Default: CHAT_STRATEGY_ROUTER.",
+    )
+    parser.add_argument(
+        "--context-expansion",
+        choices=["on", "off"],
+        default=None,
+        help="Neighbour/context expansion on or off (default: CHAT_CONTEXT_EXPANSION). "
+        "Hold this constant across an on-vs-off routing comparison to isolate routing.",
+    )
+    parser.add_argument(
         "--provider",
         choices=["anthropic", "bedrock"],
         default=None,
@@ -494,10 +539,30 @@ def main(argv: list[str]) -> int:
     if args.limit is not None:
         queries = queries[: args.limit]
 
+    strategy_router_kind = args.strategy_router or settings.chat_strategy_router
+    context_expansion = (
+        settings.chat_context_expansion
+        if args.context_expansion is None
+        else args.context_expansion == "on"
+    )
+    if strategy_router_kind == "llm" and args.backend != "milvus":
+        raise SystemExit(
+            "--strategy-router llm needs --backend milvus (only a strategy-capable store "
+            "can run non-default plans; pgvector would raise)."
+        )
+
     embedder, llm = build_providers(settings)
     rewriter = REWRITERS[args.rewriter](llm)
     service = build_chat_service(
-        settings, embedder, llm, k, rewriter, args.backend, min_chunk_chars
+        settings,
+        embedder,
+        llm,
+        k,
+        rewriter,
+        args.backend,
+        min_chunk_chars,
+        strategy_router_kind,
+        context_expansion,
     )
     judge = judge_lib.JudgeLLM(model_id=args.judge_model, api_key=settings.anthropic_api_key)
 
@@ -517,6 +582,8 @@ def main(argv: list[str]) -> int:
         "embed_dim": embedder.dim,
         "rewriter": args.rewriter,
         "router": settings.chat_router,
+        "strategy_router": strategy_router_kind,
+        "context_expansion": context_expansion,
         "relevance_threshold": settings.chat_relevance_threshold,
         "bm25_threshold": settings.chat_bm25_threshold,
         "normalized_threshold": settings.chat_normalized_threshold,

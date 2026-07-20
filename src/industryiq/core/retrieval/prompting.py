@@ -62,7 +62,9 @@ def build_strategy_prompt(question: str, kb_description: str) -> str:
         "matter more).\n"
         '- "hybrid_rrf": the safe default for anything mixed or unclear.\n\n'
         "Optionally add a filter when the question explicitly scopes one:\n"
-        '- "publisher": a named source/organisation (e.g. "according to McKinsey").\n'
+        '- "publisher": the source\'s registrable web DOMAIN, not a display name -- the '
+        'corpus tags publisher by domain (e.g. "mckinsey.com", "deloitte.com", '
+        '"weforum.org", "imf.org"). Map the named organisation to its domain.\n'
         '- "published_from"/"published_to": ISO dates for recency (e.g. "since 2024").\n'
         '- "category"/"source_type": only when explicitly stated.\n\n'
         "Respond with ONLY a JSON object, no prose:\n"

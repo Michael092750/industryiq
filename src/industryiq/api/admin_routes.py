@@ -214,6 +214,12 @@ def ingest_file(
         per_file = [{**defaults, **row} for row in rows]
     else:
         per_file = [dict(defaults) for _ in files]
+    # Publisher is a case-insensitive domain; lowercase it (the manifest-based ingest
+    # already does) so the promoted publisher column stays canonical for the substring
+    # filter, whichever path supplied the value.
+    for meta in per_file:
+        if meta.get("publisher"):
+            meta["publisher"] = meta["publisher"].lower()
     ingested = [
         IngestedFile(
             filename=upload.filename or "",

@@ -209,6 +209,18 @@ def test_gather_surfaces_default_plan_when_no_router() -> None:
     assert result.search_plan.is_default()
 
 
+def test_gather_plan_override_bypasses_the_strategy_router() -> None:
+    router = RecordingStrategyRouter(plan=SearchPlan(strategy=SearchStrategy.LEXICAL))
+    retriever = RecordingRetriever()
+    override = SearchPlan(strategy=SearchStrategy.SEMANTIC)
+    result = _service(retriever=retriever, strategy_router=router).gather(
+        "c", "q", [], k=5, plan_override=override
+    )
+    assert router.questions == []  # router not consulted on an override
+    assert retriever.plans[0] is override  # the override drove retrieval verbatim
+    assert result.search_plan is override
+
+
 def test_gather_expands_context_when_an_expander_is_configured() -> None:
     retriever = RecordingRetriever(hits=[Hit("g", 0.9, {"text": "global"})])
     expander = RecordingExpander()

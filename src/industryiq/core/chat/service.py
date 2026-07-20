@@ -146,6 +146,20 @@ class ChatService:
                 # service, and fold its "rewrite"/"retrieve" timings into the turn.
                 result = self._retrieval.gather(conversation_id, question, history, self._policy.k)
                 timer.timings_ms.update(result.timings_ms)
+                # A metadata filter can over-constrain the search to zero hits (e.g. a
+                # publisher the corpus doesn't tag that way). Rather than answer with
+                # no grounding, tell the UI we're broadening and retry once without the
+                # filter (same strategy), then generate from those results.
+                if not result.hits and result.search_plan.has_active_filter():
+                    yield StreamStatus(phase="broadening")
+                    result = self._retrieval.gather(
+                        conversation_id,
+                        question,
+                        history,
+                        self._policy.k,
+                        plan_override=result.search_plan.without_filter(),
+                    )
+                    timer.timings_ms.update(result.timings_ms)
                 standalone, hits = result.standalone_question, result.hits
 
             yield StreamStart(standalone_question=standalone, hits=hits)

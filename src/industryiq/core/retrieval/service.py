@@ -76,24 +76,37 @@ class RetrievalService(ContextRetriever):
         self._clock = clock
 
     def gather(
-        self, conversation_id: str, question: str, history: list[Turn], k: int
+        self,
+        conversation_id: str,
+        question: str,
+        history: list[Turn],
+        k: int,
+        *,
+        plan_override: SearchPlan | None = None,
     ) -> RetrievalResult:
         """Rewrite, retrieve from both sources, filter, and merge into a result.
         Records ``"rewrite"`` and ``"retrieve"`` timings so the caller can fold
         them into its own per-turn timings.
+
+        ``plan_override`` forces the search plan and skips strategy routing -- used
+        to re-run the turn on a broadened plan (e.g. an over-constraining filter
+        dropped) without paying for a second router call.
         """
         timer = StepTimer(self._clock)
         with timer.measure("rewrite"):
             standalone = self._rewriter.condense(history, question)
-        with timer.measure("route_strategy"):
-            # Choose *how* to search for the (standalone) question. Session-doc
-            # retrieval always stays on the default path (its store isn't
-            # strategy-capable); the plan only steers the shared-corpus search.
-            plan = (
-                self._strategy_router.select(standalone)
-                if self._strategy_router is not None
-                else SearchPlan()
-            )
+        if plan_override is not None:
+            plan = plan_override
+        else:
+            with timer.measure("route_strategy"):
+                # Choose *how* to search for the (standalone) question. Session-doc
+                # retrieval always stays on the default path (its store isn't
+                # strategy-capable); the plan only steers the shared-corpus search.
+                plan = (
+                    self._strategy_router.select(standalone)
+                    if self._strategy_router is not None
+                    else SearchPlan()
+                )
         with timer.measure("retrieve"):
             # Documents uploaded into this session are the primary context: take
             # (and relevance-filter) them first. Only when they don't fill the

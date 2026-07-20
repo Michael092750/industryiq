@@ -144,8 +144,18 @@ class ContextRetriever(Protocol):
     history and gets back a :class:`RetrievalResult` (rewrite + all doc retrieval
     + relevance filtering + merge already applied). Implementations decide the
     strategy; :class:`RetrievalService` is the default.
+
+    ``plan_override`` forces a specific :class:`SearchPlan` instead of routing --
+    used to re-run a turn on a broadened plan (e.g. filter dropped) without paying
+    for strategy routing again.
     """
 
     def gather(
-        self, conversation_id: str, question: str, history: list[Turn], k: int
+        self,
+        conversation_id: str,
+        question: str,
+        history: list[Turn],
+        k: int,
+        *,
+        plan_override: SearchPlan | None = None,
     ) -> RetrievalResult: ...

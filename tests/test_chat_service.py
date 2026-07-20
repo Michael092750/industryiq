@@ -24,31 +24,56 @@ from industryiq.core.chat.ports import ConversationStore, RetrievalRouter
 from industryiq.core.chat.service import ChatService, ConversationNotFound
 from industryiq.core.generation import FakeLLM, StreamingLLM
 from industryiq.core.retrieval.ports import ContextRetriever, RetrievalResult, SessionDocumentStore
-from industryiq.core.vectorstore import Hit
+from industryiq.core.vectorstore import Hit, MetadataFilter, SearchPlan
 
 
 class StubRetrieval:
-    """A ContextRetriever double: returns canned hits and records gather calls."""
+    """A ContextRetriever double: returns canned hits and records gather calls.
+
+    Models the broadening path too: the first (routed) ``gather`` returns ``hits``
+    with ``search_plan``; a follow-up call with a ``plan_override`` returns
+    ``broadened_hits`` instead (and echoes the override as the result's plan).
+    """
 
     def __init__(
         self,
         hits: list[Hit] | None = None,
         standalone: str = "STANDALONE",
         timings: dict[str, float] | None = None,
+        search_plan: SearchPlan | None = None,
+        broadened_hits: list[Hit] | None = None,
     ) -> None:
         self._hits = hits or []
         self._standalone = standalone
         self._timings = timings if timings is not None else {"rewrite": 0.0, "retrieve": 0.0}
+        self._search_plan = search_plan if search_plan is not None else SearchPlan()
+        self._broadened_hits = broadened_hits or []
         self.calls: list[tuple[str, str, list[Turn], int]] = []
+        self.plan_overrides: list[SearchPlan | None] = []
 
     def gather(
-        self, conversation_id: str, question: str, history: list[Turn], k: int
+        self,
+        conversation_id: str,
+        question: str,
+        history: list[Turn],
+        k: int,
+        *,
+        plan_override: SearchPlan | None = None,
     ) -> RetrievalResult:
         self.calls.append((conversation_id, question, list(history), k))
+        self.plan_overrides.append(plan_override)
+        if plan_override is not None:
+            return RetrievalResult(
+                standalone_question=self._standalone,
+                hits=list(self._broadened_hits),
+                timings_ms=dict(self._timings),
+                search_plan=plan_override,
+            )
         return RetrievalResult(
             standalone_question=self._standalone,
             hits=list(self._hits),
             timings_ms=dict(self._timings),
+            search_plan=self._search_plan,
         )
 
 
@@ -183,6 +208,54 @@ def test_reply_stream_emits_status_phases() -> None:
     events = list(service.reply_stream(convo.id, "q"))
     phases = [event.phase for event in events if isinstance(event, StreamStatus)]
     assert phases == ["thinking", "retrieving", "generating"]
+
+
+def test_reply_stream_broadens_when_a_filter_yields_no_hits() -> None:
+    # A filtered plan returns nothing; ChatService should announce "broadening" and
+    # retry once without the filter, then generate from the recovered hits.
+    stub = StubRetrieval(
+        hits=[],
+        search_plan=SearchPlan(filter=MetadataFilter(publisher="McKinsey")),
+        broadened_hits=[Hit("c", 0.9, {"text": "grounding"})],
+    )
+    store = InMemoryConversationStore()
+    convo = store.create("c")
+    events = list(_service(retrieval=stub, store=store).reply_stream(convo.id, "q"))
+
+    phases = [event.phase for event in events if isinstance(event, StreamStatus)]
+    assert phases == ["thinking", "retrieving", "broadening", "generating"]
+    # Retried exactly once, the second time with the filter dropped.
+    assert len(stub.calls) == 2
+    assert stub.plan_overrides[0] is None
+    assert stub.plan_overrides[1] is not None and not stub.plan_overrides[1].has_active_filter()
+    # The broadened hits reach the answer (grounding recovered, not answered empty).
+    start = next(event for event in events if isinstance(event, StreamStart))
+    assert [hit.id for hit in start.hits] == ["c"]
+
+
+def test_reply_stream_does_not_broaden_when_filtered_search_has_hits() -> None:
+    # A filter that DOES match must not trigger a retry.
+    stub = StubRetrieval(
+        hits=[Hit("c", 0.9, {"text": "ctx"})],
+        search_plan=SearchPlan(filter=MetadataFilter(publisher="McKinsey")),
+    )
+    store = InMemoryConversationStore()
+    convo = store.create("c")
+    events = list(_service(retrieval=stub, store=store).reply_stream(convo.id, "q"))
+    phases = [event.phase for event in events if isinstance(event, StreamStatus)]
+    assert "broadening" not in phases
+    assert len(stub.calls) == 1
+
+
+def test_reply_stream_does_not_broaden_when_no_filter_was_applied() -> None:
+    # Empty hits but no filter (nothing to drop) -> answer empty, no retry.
+    stub = StubRetrieval(hits=[], search_plan=SearchPlan())
+    store = InMemoryConversationStore()
+    convo = store.create("c")
+    events = list(_service(retrieval=stub, store=store).reply_stream(convo.id, "q"))
+    phases = [event.phase for event in events if isinstance(event, StreamStatus)]
+    assert "broadening" not in phases
+    assert len(stub.calls) == 1
 
 
 def test_reply_stream_emits_start_then_tokens_then_end(fake_clock) -> None:

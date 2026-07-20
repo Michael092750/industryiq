@@ -106,10 +106,24 @@ class SearchPlan:
         ``VectorStore.search(query, query_text=...)`` already does. A plan that fails
         this needs a :class:`StrategicSearch` store; requesting it elsewhere raises.
         """
-        has_filter = self.filter is not None and not self.filter.is_empty()
         return (
-            self.strategy is SearchStrategy.HYBRID_RRF and not has_filter and self.weights is None
+            self.strategy is SearchStrategy.HYBRID_RRF
+            and not self.has_active_filter()
+            and self.weights is None
         )
+
+    def has_active_filter(self) -> bool:
+        """True when a metadata filter is set and actually constrains something."""
+        return self.filter is not None and not self.filter.is_empty()
+
+    def without_filter(self) -> "SearchPlan":
+        """This plan with the metadata filter dropped (same strategy + weights).
+
+        Used to *broaden* a search that a filter over-constrained to zero hits --
+        retry on the same strategy without the (possibly wrong/unmatched) filter,
+        rather than answer with no grounding.
+        """
+        return SearchPlan(strategy=self.strategy, filter=None, weights=self.weights)
 
 
 class UnsupportedStrategyError(RuntimeError):
