@@ -200,8 +200,15 @@ def _compile_filter_expr(mf: MetadataFilter) -> str:
 
     ``publisher`` is a case-insensitive substring (``like``) on the domain so subdomain
     variants and name/domain inputs all hit; ``source_type``/``category`` are exact
-    equality on their controlled vocabularies; the dates are an inclusive range. Clauses
-    are ANDed; an empty (or fully-unmatchable) filter compiles to ``""`` (no constraint).
+    equality on their controlled vocabularies; the dates are an inclusive range that
+    *also admits undated chunks* (``published_date == ""``). Clauses are ANDed; an empty
+    (or fully-unmatchable) filter compiles to ``""`` (no constraint).
+
+    Undated chunks passing the date bound is deliberate: ``published_date`` is the
+    *publication* year, ~37% of the corpus is undated, and a report about a year is
+    routinely published in another (a 2025 report can cover 2023). Hard-excluding
+    unknown/out-of-window publish dates silently drops docs that may hold the answer,
+    so a date bound narrows *dated* chunks without ever dropping *undated* ones.
     """
     clauses: list[str] = []
     publisher = _publisher_like_value(mf.publisher) if mf.publisher else ""
@@ -211,10 +218,13 @@ def _compile_filter_expr(mf: MetadataFilter) -> str:
         clauses.append(f'{_SOURCE_TYPE_FIELD} == "{_escape_literal(mf.source_type)}"')
     if mf.category:
         clauses.append(f'{_CATEGORY_FIELD} == "{_escape_literal(mf.category)}"')
+    date_bounds: list[str] = []
     if mf.published_from:
-        clauses.append(f'{_PUBLISHED_DATE_FIELD} >= "{_escape_literal(mf.published_from)}"')
+        date_bounds.append(f'{_PUBLISHED_DATE_FIELD} >= "{_escape_literal(mf.published_from)}"')
     if mf.published_to:
-        clauses.append(f'{_PUBLISHED_DATE_FIELD} <= "{_escape_literal(mf.published_to)}"')
+        date_bounds.append(f'{_PUBLISHED_DATE_FIELD} <= "{_escape_literal(mf.published_to)}"')
+    if date_bounds:
+        clauses.append(f'(({" && ".join(date_bounds)}) || {_PUBLISHED_DATE_FIELD} == "")')
     return " && ".join(clauses)
 
 

@@ -61,7 +61,8 @@ import textmatch
 from industryiq.config import Settings, get_settings
 from industryiq.core.embeddings import Embedder
 from industryiq.core.pgvectorstore import PgVectorStore
-from industryiq.core.vectorstore import VectorStore
+from industryiq.core.retrieval import SearchStrategyRouter
+from industryiq.core.vectorstore import Hit, SearchPlan, VectorStore
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_QUERIES = HERE / "queries.json"
@@ -90,6 +91,29 @@ def build_embedder(settings: Settings) -> Embedder:
         "live pgvector and needs query vectors that match the stored ones. "
         "Set RAG_PROVIDER=anthropic (or bedrock)."
     )
+
+
+def build_strategy_router(settings: Settings, kind: str) -> SearchStrategyRouter | None:
+    """The retrieval strategy router for ``--strategy-router``: ``None`` (off, single
+    hybrid-RRF path) or an ``LlmStrategyRouter`` that classifies a per-question plan.
+    Mirrors ``api/deps`` and the chat benchmark so the routed path here is the app's."""
+    if kind != "llm":
+        return None
+    from industryiq.core.retrieval import LlmStrategyRouter
+
+    if settings.provider == "anthropic":
+        from industryiq.core.anthropic_llm import AnthropicLLM
+
+        llm = AnthropicLLM(
+            model_id=settings.anthropic_llm_model_id, api_key=settings.anthropic_api_key
+        )
+    elif settings.provider == "bedrock":
+        from industryiq.core.bedrock import BedrockLLM
+
+        llm = BedrockLLM(model_id=settings.bedrock_llm_model_id, region=settings.aws_region)
+    else:
+        raise SystemExit(f"provider {settings.provider!r} has no chat LLM for the strategy router.")
+    return LlmStrategyRouter(llm, settings.chat_kb_description)
 
 
 # --------------------------------------------------------------------------- #
@@ -243,6 +267,17 @@ def cutoffs(k: int) -> list[int]:
     return sorted({1, 3, k})
 
 
+def _retrieve(
+    store: VectorStore, query_vector: list[float], query_text: str, k: int, plan: SearchPlan | None
+) -> list[Hit]:
+    """One retrieval call, routed or not. A ``None``/default plan takes the polymorphic
+    ``search`` path (any backend); a non-default plan is dispatched to the strategy-capable
+    store's ``search_plan`` (Milvus) -- exactly what ``Retriever.retrieve`` does in the app."""
+    if plan is None or plan.is_default():
+        return store.search(query_vector, k=k, query_text=query_text)
+    return store.search_plan(query_vector=query_vector, query_text=query_text, k=k, plan=plan)
+
+
 def evaluate_retriever(
     corpus: Corpus,
     queries: list[dict[str, Any]],
@@ -251,6 +286,7 @@ def evaluate_retriever(
     *,
     min_chunk_chars: int,
     overfetch: int = 6,
+    strategy_router: SearchStrategyRouter | None = None,
 ) -> EvalOutput:
     """Embed and search each query, scoring the ranked hits against its gold set.
 
@@ -271,12 +307,13 @@ def evaluate_retriever(
         #    RRF-fused) use it; dense-only stores (pgvector) accept it and ignore it;
         #  * when ``min_chunk_chars`` is set, overfetch then drop sub-threshold chunks
         #    (bare headings / fragments the app filters out), keeping the top ``k``.
+        plan = strategy_router.select(q["query"]) if strategy_router is not None else None
         if min_chunk_chars > 0:
-            raw = corpus.store.search(query_vector, k=k * overfetch, query_text=q["query"])
+            raw = _retrieve(corpus.store, query_vector, q["query"], k * overfetch, plan)
             substantive = [h for h in raw if len(h.metadata.get("text", "")) >= min_chunk_chars]
             hits = (substantive or raw)[:k]
         else:
-            hits = corpus.store.search(query_vector, k=k, query_text=q["query"])
+            hits = _retrieve(corpus.store, query_vector, q["query"], k, plan)
         search_ms = (time.perf_counter() - search_start) * 1000
         latency = embed_ms + search_ms
         hit_ids = [h.id for h in hits]
@@ -413,6 +450,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "app's query-time filter (default: RETRIEVAL_MIN_CHUNK_CHARS). Pass 0 to score raw "
         "store hits (bare headings included).",
     )
+    parser.add_argument(
+        "--strategy-router",
+        choices=["off", "llm"],
+        default="off",
+        help="Retrieval strategy routing: 'off' (single hybrid-RRF path, today's behaviour) or "
+        "'llm' (classify a per-question strategy + metadata filter). 'llm' needs --backend milvus "
+        "(only a strategy-capable store dispatches a non-default plan).",
+    )
     parser.add_argument("--limit", type=int, default=None, help="Only run the first N queries.")
     parser.add_argument(
         "--out", type=Path, default=None, help="Write full results as JSON to this path."
@@ -431,6 +476,12 @@ def main(argv: list[str]) -> int:
         if args.min_chunk_chars is not None
         else settings.retrieval_min_chunk_chars
     )
+    if args.strategy_router == "llm" and args.backend != "milvus":
+        raise SystemExit(
+            "--strategy-router llm needs --backend milvus (only a strategy-capable store "
+            "dispatches a non-default plan; pgvector would raise)."
+        )
+    strategy_router = build_strategy_router(settings, args.strategy_router)
 
     spec = json.loads(args.queries.read_text(encoding="utf-8"))
     queries = spec["queries"]
@@ -456,6 +507,7 @@ def main(argv: list[str]) -> int:
         "embed_dim": embedder.dim,
         "k": k,
         "min_chunk_chars": min_chunk_chars,
+        "strategy_router": args.strategy_router,
         "queries_file": args.queries.name,
         "n_queries": len(queries),
         "n_chunks": corpus.n_chunks,
@@ -515,7 +567,14 @@ def main(argv: list[str]) -> int:
     config["n_queries_scored"] = len(scored)
     config["n_expected_missing"] = len(known_gaps)
 
-    out = evaluate_retriever(corpus, scored, gold_by_id, k, min_chunk_chars=min_chunk_chars)
+    out = evaluate_retriever(
+        corpus,
+        scored,
+        gold_by_id,
+        k,
+        min_chunk_chars=min_chunk_chars,
+        strategy_router=strategy_router,
+    )
     summary = retriever_summary(out, k)
     if known_gaps:
         summary["expected_missing"] = known_gaps

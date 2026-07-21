@@ -14,6 +14,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+# What the knowledge base actually holds -- injected into the retrieval router and
+# strategy-router prompts so both judge scope and pick metadata filters on the real
+# corpus shape rather than a vague blurb. Names the five sector *categories*, the
+# publisher *types* (which map to the ``source_type`` facet), example *publishers*
+# (which map to the ``publisher`` domain facet), the rough *date* span (the
+# ``published_date`` year facet), and the fact-dense content (why exact-figure
+# lookups favour lexical search). Keep it aligned with the ingested corpus.
+_DEFAULT_KB_DESCRIPTION = (
+    "industry and market-research reports across five sectors -- artificial "
+    "intelligence, finance and banking, healthcare, agriculture, and semiconductors "
+    "-- published mainly 2019-2025 by management consultancies (e.g. McKinsey, BCG, "
+    "Bain, Deloitte, EY), industry associations, academic and think-tank groups "
+    "(e.g. Stanford HAI, WEF), and government and regulatory bodies (e.g. FDIC, the "
+    "Federal Reserve, IMF); the reports are dense with market sizes, forecasts, "
+    "investment and adoption figures, and financial statistics"
+)
+
+
 @dataclass(frozen=True)
 class Settings:
     """Runtime configuration."""
@@ -156,7 +174,10 @@ class Settings:
     # Multi-round chat: how many recent turns to feed into the prompt, and how
     # many chunks to retrieve per turn.
     chat_history_turns: int = 6
-    chat_retrieval_k: int = 5
+    # Chunks retrieved per turn. 8 (was 5): the bottleneck analysis found answer
+    # chunks landing at rank 6-7 for near-duplicate corpora (e.g. FDIC quarterly
+    # reports), just outside a top-5, so a slightly wider window recovers them.
+    chat_retrieval_k: int = 8
     # Retrieval routing: "always" (always search) or "llm" (let the model decide).
     chat_router: str = "always"
     # Search-strategy routing (how to search, once we've decided to): "fixed" (always
@@ -165,8 +186,9 @@ class Settings:
     # lexical/weighted/filtered paths; other stores raise on a non-default plan.
     chat_strategy_router: str = "fixed"
     # What the knowledge base holds; injected into the LLM router prompt so it can
-    # judge whether a question is in scope instead of guessing blind.
-    chat_kb_description: str = "industry analysis reports"
+    # judge whether a question is in scope instead of guessing blind. See
+    # _DEFAULT_KB_DESCRIPTION for the corpus-shaped default.
+    chat_kb_description: str = _DEFAULT_KB_DESCRIPTION
     # Drop retrieved context whose top score is below this (0.0 = keep all). This
     # is the *cosine* cutoff -- it only applies to cosine-scored hits (dense/hybrid).
     chat_relevance_threshold: float = 0.0
@@ -192,8 +214,10 @@ class Settings:
     # (and full figure tables) out of the top-k. The retriever over-fetches, then
     # trims to k. 0 disables the filter. This is the query-time *band-aid*; the real
     # fix is ``chunk_min_chars`` below, which merges short chunks at ingest so few
-    # remain to filter. Kept as a low safety net once the corpus is coalesce-chunked.
-    retrieval_min_chunk_chars: int = 400
+    # remain to filter. 200 (was 400): the bottleneck analysis found a 275-char chunk
+    # holding the answer (and short figure-VLM chunks) being trimmed away at 400 --
+    # kept low enough to pass terse exact-fact chunks, high enough to drop bare headings.
+    retrieval_min_chunk_chars: int = 200
     # Ingest-time chunk coalescing floor: merge adjacent chunks (a small figure table,
     # a one-line caption, a short trailing remainder) until each reaches this many
     # characters, so no orphan short chunk is produced in the first place -- the small
@@ -264,17 +288,17 @@ def get_settings() -> Settings:
         jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
         jwt_expiry_minutes=int(os.getenv("JWT_EXPIRY_MINUTES", str(60 * 24))),
         chat_history_turns=int(os.getenv("CHAT_HISTORY_TURNS", "6")),
-        chat_retrieval_k=int(os.getenv("CHAT_RETRIEVAL_K", "5")),
+        chat_retrieval_k=int(os.getenv("CHAT_RETRIEVAL_K", "8")),
         chat_router=os.getenv("CHAT_ROUTER", "always"),
         chat_strategy_router=os.getenv("CHAT_STRATEGY_ROUTER", "fixed"),
-        chat_kb_description=os.getenv("CHAT_KB_DESCRIPTION", "industry analysis reports"),
+        chat_kb_description=os.getenv("CHAT_KB_DESCRIPTION", _DEFAULT_KB_DESCRIPTION),
         chat_relevance_threshold=float(os.getenv("CHAT_RELEVANCE_THRESHOLD", "0.0")),
         chat_bm25_threshold=_env_float_opt("CHAT_BM25_THRESHOLD"),
         chat_normalized_threshold=_env_float_opt("CHAT_NORMALIZED_THRESHOLD"),
         chat_context_expansion=_env_bool("CHAT_CONTEXT_EXPANSION", False),
         chat_context_radius=int(os.getenv("CHAT_CONTEXT_RADIUS", "1")),
         chat_context_max_chunks=int(os.getenv("CHAT_CONTEXT_MAX_CHUNKS", "5")),
-        retrieval_min_chunk_chars=int(os.getenv("RETRIEVAL_MIN_CHUNK_CHARS", "400")),
+        retrieval_min_chunk_chars=int(os.getenv("RETRIEVAL_MIN_CHUNK_CHARS", "200")),
         chunk_min_chars=int(os.getenv("CHUNK_MIN_CHARS", "400")),
         ingest_scheduler_enabled=_env_bool("INGEST_SCHEDULER_ENABLED", True),
         ingest_scheduler_poll_seconds=int(os.getenv("INGEST_SCHEDULER_POLL_SECONDS", "60")),

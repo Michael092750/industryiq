@@ -133,31 +133,31 @@
     },
     {
       "id": "finance-qbp-yoy-increase",
-      "query": "By how much, in dollars and percent, did the reported metric increase from a year ago?",
+      "query": "By how much did community bank noninterest expense increase from a year ago, in dollars and percent?",
       "category": "Finance",
       "gold_needles": ["$1.2 billion (7.8 percent) higher than a year ago"]
     },
     {
       "id": "finance-community-bank-efficiency-ratio",
-      "query": "What did the community bank efficiency ratio rise to, and by how many basis points?",
+      "query": "What did the community bank efficiency ratio rise to in the second quarter of 2023, and by how many basis points?",
       "category": "Finance",
       "gold_needles": ["rose 95 basis points from one quarter ago to 63.8 percent"]
     },
     {
       "id": "finance-residential-re-loans",
-      "query": "How much did 1-4 family residential real estate loans increase from the prior quarter?",
+      "query": "How much did 1-4 family residential real estate loans at US banks increase from the prior quarter in the third quarter of 2023?",
       "category": "Finance",
       "gold_needles": ["family residential real estate loans ($11.1 billion, or 2.3 percent)"]
     },
     {
       "id": "finance-noninterest-expense",
-      "query": "How much did noninterest expense increase from the prior quarter?",
+      "query": "How much did community bank noninterest expense increase from the prior quarter in the fourth quarter of 2023?",
       "category": "Finance",
       "gold_needles": ["Noninterest expense increased $647.9 million (3.9 percent) from a quarter ago"]
     },
     {
       "id": "finance-unrealized-securities-losses",
-      "query": "What were total unrealized losses on securities?",
+      "query": "How much did total unrealized losses on securities at US banks reach in the first quarter of 2024?",
       "category": "Finance",
       "gold_needles": ["Unrealized losses on securities totaled $56.0 billion in first"]
     },
@@ -169,13 +169,13 @@
     },
     {
       "id": "finance-noninterest-income",
-      "query": "How much did noninterest income increase from the prior quarter?",
+      "query": "How much did community bank noninterest income increase from the prior quarter in the second quarter of 2023?",
       "category": "Finance",
       "gold_needles": ["Noninterest income increased $428.4 million"]
     },
     {
       "id": "finance-net-operating-revenue",
-      "query": "By how much did net operating revenue change quarter over quarter?",
+      "query": "By how much did the US banking industry's net operating revenue change quarter over quarter in the fourth quarter of 2022?",
       "category": "Finance",
       "gold_needles": ["decreased 1.0 percent quarter over quarter to $242.9 billion"]
     },
@@ -261,7 +261,7 @@
     },
     {
       "id": "agriculture-investment-return",
-      "query": "What return did the $1 million to $3 million investment generate for the program?",
+      "query": "What return did the $1 million to $3 million investment in the L3F farmer off-take model generate?",
       "category": "Agriculture",
       "gold_needles": ["investment returned between 20 and 33%"]
     },

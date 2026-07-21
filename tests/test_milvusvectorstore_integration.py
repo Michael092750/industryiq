@@ -320,6 +320,34 @@ def test_search_plan_filters_by_published_date_range(store: VectorStore) -> None
     assert [hit.id for hit in hits] == ["new"]
 
 
+def test_search_plan_date_filter_keeps_undated_chunks(store: VectorStore) -> None:
+    # A date bound narrows *dated* chunks but must not drop *undated* ones: the
+    # publish year is unknown for ~37% of the corpus and a report about a year is
+    # routinely published in another, so an undated chunk may hold the answer.
+    from industryiq.core.milvusvectorstore import MilvusVectorStore
+
+    assert isinstance(store, MilvusVectorStore)
+    store.upsert(
+        ids=["old", "new", "undated"],
+        vectors=[[1.0, 0.0], [0.9, 0.1], [0.85, 0.15]],
+        metadatas=[
+            {"text": "trends", "published_date": "2021-01-01"},
+            {"text": "trends", "published_date": "2024-06-01"},
+            {"text": "trends"},  # no published_date -> stored as "" -> undated
+        ],
+    )
+    hits = store.search_plan(
+        query_vector=[1.0, 0.0],
+        query_text="trends",
+        k=5,
+        plan=SearchPlan(filter=MetadataFilter(published_from="2024")),
+    )
+    ids = {hit.id for hit in hits}
+    assert "new" in ids  # dated, in range -> kept
+    assert "undated" in ids  # undated -> admitted, never dropped by a date bound
+    assert "old" not in ids  # dated, out of range -> excluded
+
+
 # --- fetch_neighbors ----------------------------------------------------------
 
 

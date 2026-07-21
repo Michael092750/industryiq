@@ -48,9 +48,24 @@ def test_source_type_and_category_stay_exact_equality() -> None:
     assert _compile_filter_expr(MetadataFilter(category="AI")) == 'category == "AI"'
 
 
-def test_dates_are_an_inclusive_range() -> None:
+def test_dates_are_an_inclusive_range_that_admits_undated() -> None:
+    # A date bound narrows dated chunks but never drops undated ones (published_date
+    # == ""): publication year != content year, and ~37% of the corpus is undated.
     got = _compile_filter_expr(MetadataFilter(published_from="2024", published_to="2025"))
-    assert got == 'published_date >= "2024" && published_date <= "2025"'
+    assert got == (
+        '((published_date >= "2024" && published_date <= "2025") || published_date == "")'
+    )
+
+
+def test_single_date_bound_also_admits_undated() -> None:
+    got = _compile_filter_expr(MetadataFilter(published_from="2024"))
+    assert got == '((published_date >= "2024") || published_date == "")'
+
+
+def test_date_bound_is_grouped_when_anded_with_other_clauses() -> None:
+    # The date OR must be parenthesised so it binds within the && chain, not across it.
+    got = _compile_filter_expr(MetadataFilter(category="AI", published_from="2024"))
+    assert got == ('category == "AI" && ((published_date >= "2024") || published_date == "")')
 
 
 def test_clauses_are_anded() -> None:
