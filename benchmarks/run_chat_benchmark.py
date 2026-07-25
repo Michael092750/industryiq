@@ -101,6 +101,7 @@ from industryiq.core.retrieval import (
     NoOpExpander,
     NoOpQueryRewriter,
     QueryRewriter,
+    Reranker,
     RetrievalService,
     Retriever,
     SearchStrategyRouter,
@@ -165,6 +166,20 @@ def build_providers(settings: Settings) -> tuple[Embedder, GenerativeLLM]:
     )
 
 
+def build_reranker(kind: str, model: str | None) -> Reranker | None:
+    """The Stage-2 reranker for ``--rerank``: ``None`` (off) or a local cross-encoder
+    that re-sorts the shared-corpus pool by *reading* each chunk's text.
+
+    The content-reading peer of the LLM strategy router (post-retrieval vs. the
+    router's pre-retrieval guess); CPU/local, 0 API calls. ``--rerank off`` returns
+    ``None`` so the chat pipeline is exactly the un-reranked path."""
+    if kind != "cross-encoder":
+        return None
+    from industryiq.core.retrieval import CrossEncoderReranker
+
+    return CrossEncoderReranker(model) if model else CrossEncoderReranker()
+
+
 def build_store(settings: Settings, backend: str, dim: int) -> VectorStore:
     """The live store the chatbot retrieves from, selected by ``backend``.
 
@@ -198,6 +213,8 @@ def build_chat_service(
     min_chunk_chars: int,
     strategy_router_kind: str,
     context_expansion: bool,
+    reranker: Reranker | None = None,
+    rerank_pool: int = 30,
 ) -> ChatService:
     """The real ``ChatService`` the app serves (mirrors ``deps.get_chat_service``),
     against the live store selected by ``backend`` (pgvector or milvus) -- so
@@ -246,6 +263,8 @@ def build_chat_service(
             normalized=settings.chat_normalized_threshold,
         ),
         strategy_router=strategy_router,
+        reranker=reranker,
+        rerank_pool=rerank_pool,
         expander=expander,
     )
     return ChatService(
@@ -323,38 +342,90 @@ def is_rag_hit(hits: list[Hit], needles: list[str]) -> bool:
     return any(textmatch.contains_any(hit.metadata.get("text", ""), needles) for hit in hits)
 
 
+def _record_from_row(row: dict[str, Any]) -> Record:
+    """Rebuild a :class:`Record` from a previously-persisted display row, so a
+    ``--resume`` run can fold prior queries back into the final summary without
+    re-answering (or re-paying for) them. The row carries every field a Record
+    needs -- including ``retrieve_ms`` -- and its verdict fields when it scored."""
+    verdict: judge_lib.JudgeVerdict | None = None
+    if row.get("error") is None and "correctness" in row:
+        verdict = judge_lib.JudgeVerdict(
+            context_sufficient=row["context_sufficient"],
+            correctness=row["correctness"],
+            groundedness=row["groundedness"],
+            citation=row["citation"],
+            rationale=row.get("rationale", ""),
+        )
+    return Record(
+        id=row["id"],
+        rag_hit=bool(row.get("rag_hit", False)),
+        verdict=verdict,
+        error=row.get("error"),
+        retrieve_ms=float(row.get("retrieve_ms", 0.0)),
+        generate_ms=float(row.get("generate_ms", 0.0)),
+        judge_ms=float(row.get("judge_ms", 0.0)),
+    )
+
+
 def evaluate(
     service: ChatService,
     judge: judge_lib.JudgeLLM,
     queries: list[dict[str, Any]],
+    *,
+    prior_rows: dict[str, dict[str, Any]] | None = None,
+    checkpoint: Callable[[list[Record], list[dict[str, Any]]], None] | None = None,
 ) -> tuple[list[Record], list[dict[str, Any]]]:
     """Answer and judge each query, returning raw records plus per-query display rows.
 
-    Each query is wrapped so one judge failure (refusal, transport error) records an
-    error and continues, rather than aborting a long, paid run.
+    Both the (paid) chat answer *and* the judge call are wrapped so any single-query
+    failure -- a refusal, a transport error, an out-of-credits 400 -- records an error
+    and continues, instead of aborting a long, expensive run on one bad query.
+
+    ``prior_rows`` (id -> row) are queries already completed by an earlier run: they
+    are skipped here and folded straight into the result, so ``--resume`` never
+    re-answers them. ``checkpoint`` is called after every query with the results so
+    far, so a hard crash still leaves the completed queries persisted on disk.
     """
-    records: list[Record] = []
-    rows: list[dict[str, Any]] = []
+    prior_rows = prior_rows or {}
+    # Seed with the carried-forward work so the summary covers all queries, not just
+    # the ones this run answered.
+    rows: list[dict[str, Any]] = list(prior_rows.values())
+    records: list[Record] = [_record_from_row(r) for r in rows]
     for q in queries:
-        hits, answer, retrieve_ms, generate_ms = answer_question(service, q["id"], q["query"])
+        if q["id"] in prior_rows:
+            continue
+        # Stage 1: the real chat pipeline (retrieve -> rerank -> generate). Guard it so
+        # a chat-side failure costs one query, not the whole run.
+        error: str | None = None
+        hits: list[Hit] = []
+        answer = ""
+        retrieve_ms = generate_ms = 0.0
+        try:
+            hits, answer, retrieve_ms, generate_ms = answer_question(service, q["id"], q["query"])
+        except Exception as exc:  # noqa: BLE001 -- record and keep the paid run going
+            error = f"chat: {type(exc).__name__}: {exc}"
         rag_hit = is_rag_hit(hits, q["gold_needles"])
         # The gold needles are the verbatim answer facts -- use them as the
         # reference the judge grades correctness against.
         reference = " / ".join(q["gold_needles"])
 
+        # Stage 2: the judge. Skipped when the chat step already failed (no answer to
+        # grade), otherwise guarded the same way.
         verdict: judge_lib.JudgeVerdict | None = None
-        error: str | None = None
-        judge_start = time.perf_counter()
-        try:
-            verdict = judge.score(q["query"], reference, hits, answer)
-        except Exception as exc:  # noqa: BLE001 -- record and keep the paid run going
-            error = f"{type(exc).__name__}: {exc}"
-        judge_ms = (time.perf_counter() - judge_start) * 1000
+        judge_ms = 0.0
+        if error is None:
+            judge_start = time.perf_counter()
+            try:
+                verdict = judge.score(q["query"], reference, hits, answer)
+            except Exception as exc:  # noqa: BLE001 -- record and keep the paid run going
+                error = f"judge: {type(exc).__name__}: {exc}"
+            judge_ms = (time.perf_counter() - judge_start) * 1000
 
         records.append(Record(q["id"], rag_hit, verdict, error, retrieve_ms, generate_ms, judge_ms))
         row: dict[str, Any] = {
             "id": q["id"],
             "rag_hit": rag_hit,
+            "retrieve_ms": round(retrieve_ms, 2),
             "generate_ms": round(generate_ms, 2),
             "judge_ms": round(judge_ms, 2),
         }
@@ -371,6 +442,8 @@ def evaluate(
         else:
             row["error"] = error
         rows.append(row)
+        if checkpoint is not None:
+            checkpoint(records, rows)
     return records, rows
 
 
@@ -471,6 +544,27 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "Hold this constant across an on-vs-off routing comparison to isolate routing.",
     )
     parser.add_argument(
+        "--rerank",
+        choices=["off", "cross-encoder"],
+        default="off",
+        help="Stage-2 reranking of the shared-corpus pool: 'off' or 'cross-encoder' (a local "
+        "cross-encoder reads each candidate's text and re-sorts to top-k). The content-reading "
+        "peer of --strategy-router llm; run with --strategy-router fixed to A/B them head-to-head. "
+        "Use --backend milvus for a hybrid Stage-1 pool.",
+    )
+    parser.add_argument(
+        "--rerank-pool",
+        type=int,
+        default=30,
+        help="Stage-1 shared-corpus pool size the reranker re-sorts to top-k (default: 30). "
+        "Only used with --rerank cross-encoder.",
+    )
+    parser.add_argument(
+        "--rerank-model",
+        default=None,
+        help="Cross-encoder model for --rerank cross-encoder (default: a small MS-MARCO MiniLM).",
+    )
+    parser.add_argument(
         "--provider",
         choices=["anthropic", "bedrock"],
         default=None,
@@ -499,6 +593,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=None, help="Only run the first N queries.")
     parser.add_argument(
         "--out", type=Path, default=None, help="Write full results as JSON to this path."
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Skip queries already present in --out (from an interrupted run) and continue with "
+        "the rest, folding the prior results into the final summary. Needs --out. Results are "
+        "checkpointed to --out after every query, so a crash never loses completed (paid) work.",
     )
     return parser.parse_args(argv)
 
@@ -553,6 +654,7 @@ def main(argv: list[str]) -> int:
 
     embedder, llm = build_providers(settings)
     rewriter = REWRITERS[args.rewriter](llm)
+    reranker = build_reranker(args.rerank, args.rerank_model)
     service = build_chat_service(
         settings,
         embedder,
@@ -563,6 +665,8 @@ def main(argv: list[str]) -> int:
         min_chunk_chars,
         strategy_router_kind,
         context_expansion,
+        reranker=reranker,
+        rerank_pool=args.rerank_pool,
     )
     judge = judge_lib.JudgeLLM(model_id=args.judge_model, api_key=settings.anthropic_api_key)
 
@@ -583,6 +687,9 @@ def main(argv: list[str]) -> int:
         "rewriter": args.rewriter,
         "router": settings.chat_router,
         "strategy_router": strategy_router_kind,
+        "rerank": args.rerank,
+        "rerank_pool": args.rerank_pool if args.rerank != "off" else None,
+        "rerank_model": (args.rerank_model or "default") if args.rerank != "off" else None,
         "context_expansion": context_expansion,
         "relevance_threshold": settings.chat_relevance_threshold,
         "bm25_threshold": settings.chat_bm25_threshold,
@@ -596,14 +703,40 @@ def main(argv: list[str]) -> int:
     }
     print("SETUP: " + json.dumps(config, ensure_ascii=False))
 
-    records, rows = evaluate(service, judge, queries)
+    def write_results(records: list[Record], rows: list[dict[str, Any]]) -> None:
+        """Persist the (paid) results to --out. Used both as the per-query checkpoint
+        and for the final write, so an interrupted run leaves completed work on disk."""
+        if not args.out:
+            return
+        results = {"config": config, "summary": chat_summary(records), "rows": rows}
+        args.out.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    # Resume: fold any queries already completed in --out back in and skip re-running
+    # (re-paying for) them. Requires --out to have somewhere to read from and write to.
+    prior_rows: dict[str, dict[str, Any]] = {}
+    if args.resume:
+        if not args.out:
+            raise SystemExit("--resume needs --out (the file to resume from and write to).")
+        if args.out.exists():
+            prior = json.loads(args.out.read_text(encoding="utf-8"))
+            prior_rows = {r["id"]: r for r in prior.get("rows", [])}
+            print(f"resume: {len(prior_rows)} queries already done, skipping them")
+
+    records, rows = evaluate(
+        service,
+        judge,
+        queries,
+        prior_rows=prior_rows,
+        # Checkpoint after every query so a crash (or an out-of-credits 400) never
+        # discards the queries that already completed -- rerun with --resume to finish.
+        checkpoint=write_results if args.out else None,
+    )
     summary = chat_summary(records)
 
-    # Persist the (paid) results BEFORE printing them, so a console-encoding hiccup
-    # on a judge rationale can never discard a completed run.
-    results: dict[str, Any] = {"config": config, "summary": summary, "rows": rows}
-    if args.out:
-        args.out.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
+    # Final persist BEFORE printing, so a console-encoding hiccup on a judge rationale
+    # can never discard a completed run (the checkpoint already wrote it, but this
+    # covers the no-op-checkpoint path and keeps the summary in sync).
+    write_results(records, rows)
 
     print_section("CHAT (LLM-as-judge)", summary, rows)
     if args.out:

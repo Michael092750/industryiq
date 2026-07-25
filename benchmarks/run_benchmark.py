@@ -39,6 +39,23 @@ the query vector:
   * ``bedrock``   -- Titan embeddings on AWS.
 Override per run with ``--provider``.
 
+Two-stage retrieve->rerank (head-to-head vs. the LLM strategy router)
+--------------------------------------------------------------------
+``--rerank cross-encoder`` adds a Stage-2 reranker: Stage 1 fetches a wide fused pool
+(``--rerank-pool``, default 30) for recall, then a *local* cross-encoder reads each
+candidate's text and re-sorts to the top-k for precision. It is the content-reading
+alternative to ``--strategy-router llm`` (which pays an LLM round-trip to *guess* which
+signal matters); run both against the same audited query set to compare them directly:
+
+    # baseline (plain hybrid-RRF)
+    python benchmarks/run_benchmark.py --backend milvus --label off        --out off.json
+    # intention detection (LLM strategy router)
+    python benchmarks/run_benchmark.py --backend milvus --strategy-router llm \
+        --label router --out router.json
+    # hybrid + cross-encoder reranker
+    python benchmarks/run_benchmark.py --backend milvus --rerank cross-encoder \
+        --label rerank --out rerank.json
+
 Usage
 -----
     python benchmarks/run_benchmark.py
@@ -61,7 +78,7 @@ import textmatch
 from industryiq.config import Settings, get_settings
 from industryiq.core.embeddings import Embedder
 from industryiq.core.pgvectorstore import PgVectorStore
-from industryiq.core.retrieval import SearchStrategyRouter
+from industryiq.core.retrieval import Reranker, SearchStrategyRouter
 from industryiq.core.vectorstore import Hit, SearchPlan, VectorStore
 
 HERE = Path(__file__).resolve().parent
@@ -114,6 +131,21 @@ def build_strategy_router(settings: Settings, kind: str) -> SearchStrategyRouter
     else:
         raise SystemExit(f"provider {settings.provider!r} has no chat LLM for the strategy router.")
     return LlmStrategyRouter(llm, settings.chat_kb_description)
+
+
+def build_reranker(kind: str, model: str | None) -> Reranker | None:
+    """The Stage-2 reranker for ``--rerank``: ``None`` (off) or a local cross-encoder
+    that re-sorts the fused Stage-1 candidate pool by *reading* each chunk's text.
+
+    The head-to-head foil to the LLM strategy router: where the router pays a ~1.4 s
+    API round-trip to *guess* which signal matters, the cross-encoder reads the content
+    directly on the CPU (fastembed, ~0 API calls). ``--rerank off`` returns ``None`` so
+    the pipeline is exactly the un-reranked path."""
+    if kind != "cross-encoder":
+        return None
+    from industryiq.core.retrieval import CrossEncoderReranker
+
+    return CrossEncoderReranker(model) if model else CrossEncoderReranker()
 
 
 # --------------------------------------------------------------------------- #
@@ -287,12 +319,17 @@ def evaluate_retriever(
     min_chunk_chars: int,
     overfetch: int = 6,
     strategy_router: SearchStrategyRouter | None = None,
+    reranker: Reranker | None = None,
+    rerank_pool: int = 30,
 ) -> EvalOutput:
     """Embed and search each query, scoring the ranked hits against its gold set.
 
     Times the embed and search steps separately (calling the embedder and store
     directly) so slow embedding can be told apart from slow search -- the two have
-    very different fixes (batch/cache the embedder vs. index the store).
+    very different fixes (batch/cache the embedder vs. index the store). The
+    ``strategy_router``'s LLM call and the ``reranker``'s scoring pass both land inside
+    the search window, so ``search_ms`` is the honest end-to-end retrieval cost for the
+    head-to-head (router API round-trip vs. local cross-encoder pass).
     """
     out = EvalOutput()
     for q in queries:
@@ -308,12 +345,19 @@ def evaluate_retriever(
         #  * when ``min_chunk_chars`` is set, overfetch then drop sub-threshold chunks
         #    (bare headings / fragments the app filters out), keeping the top ``k``.
         plan = strategy_router.select(q["query"]) if strategy_router is not None else None
+        # Stage 1 (recall): a reranker re-sorts a *wide* pool, so widen the fetch to
+        # ``rerank_pool`` when one is set (else just ``k``); ``overfetch`` widens further
+        # so the min-chunk filter still leaves a full pool after dropping fragments.
+        pool_k = max(rerank_pool, k) if reranker is not None else k
         if min_chunk_chars > 0:
-            raw = _retrieve(corpus.store, query_vector, q["query"], k * overfetch, plan)
+            raw = _retrieve(corpus.store, query_vector, q["query"], pool_k * overfetch, plan)
             substantive = [h for h in raw if len(h.metadata.get("text", "")) >= min_chunk_chars]
-            hits = (substantive or raw)[:k]
+            pool = (substantive or raw)[:pool_k]
         else:
-            hits = _retrieve(corpus.store, query_vector, q["query"], k, plan)
+            pool = _retrieve(corpus.store, query_vector, q["query"], pool_k, plan)
+        # Stage 2 (precision): the cross-encoder reads each candidate and re-sorts to
+        # top-k; without a reranker the Stage-1 order stands (identity truncation).
+        hits = reranker.rerank(q["query"], pool, k) if reranker is not None else pool[:k]
         search_ms = (time.perf_counter() - search_start) * 1000
         latency = embed_ms + search_ms
         hit_ids = [h.id for h in hits]
@@ -458,6 +502,27 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "'llm' (classify a per-question strategy + metadata filter). 'llm' needs --backend milvus "
         "(only a strategy-capable store dispatches a non-default plan).",
     )
+    parser.add_argument(
+        "--rerank",
+        choices=["off", "cross-encoder"],
+        default="off",
+        help="Stage-2 reranking of the fused candidate pool: 'off' or 'cross-encoder' (a local "
+        "cross-encoder reads each candidate's text and re-sorts to top-k). The head-to-head foil "
+        "to --strategy-router llm (reads content, 0 API calls, vs. the router's LLM guess); use "
+        "--backend milvus so Stage 1 is a real hybrid dense+BM25 pool.",
+    )
+    parser.add_argument(
+        "--rerank-pool",
+        type=int,
+        default=30,
+        help="Stage-1 candidate pool size the reranker re-sorts to top-k (default: 30). Only used "
+        "with --rerank cross-encoder.",
+    )
+    parser.add_argument(
+        "--rerank-model",
+        default=None,
+        help="Cross-encoder model for --rerank cross-encoder (default: a small MS-MARCO MiniLM).",
+    )
     parser.add_argument("--limit", type=int, default=None, help="Only run the first N queries.")
     parser.add_argument(
         "--out", type=Path, default=None, help="Write full results as JSON to this path."
@@ -482,6 +547,7 @@ def main(argv: list[str]) -> int:
             "dispatches a non-default plan; pgvector would raise)."
         )
     strategy_router = build_strategy_router(settings, args.strategy_router)
+    reranker = build_reranker(args.rerank, args.rerank_model)
 
     spec = json.loads(args.queries.read_text(encoding="utf-8"))
     queries = spec["queries"]
@@ -508,6 +574,9 @@ def main(argv: list[str]) -> int:
         "k": k,
         "min_chunk_chars": min_chunk_chars,
         "strategy_router": args.strategy_router,
+        "rerank": args.rerank,
+        "rerank_pool": args.rerank_pool if args.rerank != "off" else None,
+        "rerank_model": (args.rerank_model or "default") if args.rerank != "off" else None,
         "queries_file": args.queries.name,
         "n_queries": len(queries),
         "n_chunks": corpus.n_chunks,
@@ -574,6 +643,8 @@ def main(argv: list[str]) -> int:
         k,
         min_chunk_chars=min_chunk_chars,
         strategy_router=strategy_router,
+        reranker=reranker,
+        rerank_pool=args.rerank_pool,
     )
     summary = retriever_summary(out, k)
     if known_gaps:

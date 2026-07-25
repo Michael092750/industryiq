@@ -19,16 +19,18 @@ class ScoreKind(Enum):
     A bare float is meaningless without its scale. A cosine similarity is bounded
     ``[-1, 1]`` and calibrated *across* queries, so an absolute threshold transfers.
     A raw BM25 weight is unbounded and query-specific; a min-max--normalized blend
-    is query-*relative* in ``[0, 1]`` (the worst hit of every query floors near 0).
-    For those two an absolute cosine cutoff is nonsense -- it would pass every BM25
-    hit and chop a fixed slice off every normalized set. Carrying the kind on the
-    hit lets a :class:`~industryiq.core.chat.ports.RelevanceFilter` pick the right
-    policy per kind instead of assuming cosine.
+    is query-*relative* in ``[0, 1]`` (the worst hit of every query floors near 0);
+    a cross-encoder rerank score is an unbounded relevance logit, likewise
+    query-specific. For those an absolute cosine cutoff is nonsense -- it would pass
+    every BM25/rerank hit and chop a fixed slice off every normalized set. Carrying
+    the kind on the hit lets a :class:`~industryiq.core.chat.ports.RelevanceFilter`
+    pick the right policy per kind instead of assuming cosine.
     """
 
     COSINE = "cosine"  # bounded, cross-query comparable -> value thresholds work
     BM25 = "bm25"  # unbounded lexical weight, query-specific -> value thresholds don't transfer
     NORMALIZED = "normalized"  # min-max blend in [0, 1], query-relative -> ditto
+    RERANK = "rerank"  # cross-encoder relevance logit, unbounded & query-specific -> ditto
 
 
 class SearchStrategy(Enum):

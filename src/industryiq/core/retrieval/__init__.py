@@ -19,6 +19,7 @@ dependency runs one way (``chat -> retrieval``).
 
 from industryiq.core.retrieval.adapters.expansion import NeighborExpander, NoOpExpander
 from industryiq.core.retrieval.adapters.filtering import ThresholdFilter
+from industryiq.core.retrieval.adapters.reranking import CrossEncoderReranker, NoOpReranker
 from industryiq.core.retrieval.adapters.rewriting import LlmQueryRewriter, NoOpQueryRewriter
 from industryiq.core.retrieval.adapters.session_documents import SessionDocuments
 from industryiq.core.retrieval.adapters.strategy import FixedStrategyRouter, LlmStrategyRouter
@@ -27,6 +28,7 @@ from industryiq.core.retrieval.ports import (
     ContextRetriever,
     QueryRewriter,
     RelevanceFilter,
+    Reranker,
     RetrievalPort,
     RetrievalResult,
     SearchStrategyRouter,
@@ -38,14 +40,17 @@ from industryiq.core.retrieval.service import RetrievalService, order_session_fi
 __all__ = [
     "ContextExpander",
     "ContextRetriever",
+    "CrossEncoderReranker",
     "FixedStrategyRouter",
     "LlmQueryRewriter",
     "LlmStrategyRouter",
     "NeighborExpander",
     "NoOpExpander",
     "NoOpQueryRewriter",
+    "NoOpReranker",
     "QueryRewriter",
     "RelevanceFilter",
+    "Reranker",
     "RetrievalPort",
     "RetrievalResult",
     "RetrievalService",

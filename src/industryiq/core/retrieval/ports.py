@@ -76,6 +76,30 @@ class SearchStrategyRouter(Protocol):
 
 
 @runtime_checkable
+class Reranker(Protocol):
+    """Reorder a wide candidate pool by reading each ``(query, chunk_text)`` pair.
+
+    The Stage-2 *precision* step of a two-stage retrieve->rerank pipeline: Stage 1
+    (dense + BM25, RRF-fused) casts a wide, cheap net for *recall*; a reranker then
+    reads the *text* of each candidate and re-sorts by true relevance, returning the
+    top ``k``. Unlike a fusion ranker (``RRFRanker`` / ``WeightedRanker``), which only
+    combines the dense and BM25 *rank positions* and never sees the chunk text, a
+    cross-encoder scores the ``(query, chunk)`` pair *jointly* -- so it can rescue a
+    chunk that one leg ranked poorly (e.g. an exact-figure answer the 384-dim embedder
+    blurs and RRF then buries).
+
+    Composes with -- or *replaces* -- a :class:`SearchStrategyRouter`: reading the
+    content makes the router's "which signal matters?" guess moot, at ~0 API calls (a
+    local model, ~50-100 ms) instead of the router's ~1.4 s LLM round-trip.
+    Implementations decide the model;
+    :class:`~industryiq.core.retrieval.adapters.reranking.NoOpReranker` is the identity
+    default (the pipeline collapses back to plain Stage-1 retrieval).
+    """
+
+    def rerank(self, query: str, hits: list[Hit], k: int) -> list[Hit]: ...
+
+
+@runtime_checkable
 class ContextExpander(Protocol):
     """Widen retrieved hits with adjacent context before generation.
 

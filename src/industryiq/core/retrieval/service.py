@@ -21,6 +21,7 @@ from industryiq.core.retrieval.ports import (
     ContextRetriever,
     QueryRewriter,
     RelevanceFilter,
+    Reranker,
     RetrievalPort,
     RetrievalResult,
     SearchStrategyRouter,
@@ -60,6 +61,8 @@ class RetrievalService(ContextRetriever):
         relevance_filter: RelevanceFilter,
         *,
         strategy_router: SearchStrategyRouter | None = None,
+        reranker: Reranker | None = None,
+        rerank_pool: int = 30,
         expander: ContextExpander | None = None,
         session_documents: SessionDocumentStore | None = None,
         clock: Callable[[], float] = time.perf_counter,
@@ -70,6 +73,12 @@ class RetrievalService(ContextRetriever):
         # None => no strategy routing: retrieve with the default plan (hybrid-RRF),
         # i.e. today's behaviour, without coupling the service to an adapter.
         self._strategy_router = strategy_router
+        # None => no reranking: the Stage-1 order stands. When set, the shared-corpus
+        # search is widened to ``rerank_pool`` candidates and the reranker re-sorts
+        # them down to k -- the Stage-2 precision pass (a post-retrieval peer of the
+        # pre-retrieval strategy router).
+        self._reranker = reranker
+        self._rerank_pool = rerank_pool
         # None => no context expansion: hits are grounded on the matched chunks alone.
         self._expander = expander
         self._session_documents = session_documents
@@ -118,11 +127,23 @@ class RetrievalService(ContextRetriever):
                 if self._session_documents is not None
                 else []
             )
+            # Stage 1 (recall): widen the shared-corpus fetch to ``rerank_pool`` when a
+            # reranker is present, so Stage 2 has candidates beyond the final k to
+            # promote; otherwise fetch exactly k (today's behaviour).
+            pool_k = max(self._rerank_pool, k) if self._reranker is not None else k
             shared = (
-                self._relevance_filter.keep(self._retriever.retrieve(standalone, k=k, plan=plan))
+                self._relevance_filter.keep(
+                    self._retriever.retrieve(standalone, k=pool_k, plan=plan)
+                )
                 if len(session) < k
                 else []
             )
+            # Stage 2 (precision): a cross-encoder reads each shared candidate and
+            # re-sorts to the top k. Runs on the shared corpus only -- session uploads
+            # are the user's chosen context and still lead the merge below. Timed
+            # inside "retrieve", so its cost lands in the caller's retrieve budget.
+            if self._reranker is not None and shared:
+                shared = self._reranker.rerank(standalone, shared, k)
             hits = order_session_first(session, shared, k)
         if self._expander is not None:
             with timer.measure("expand"):
