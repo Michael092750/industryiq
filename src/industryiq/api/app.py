@@ -6,6 +6,7 @@ group of routes lives in its own router module:
 
 * :mod:`industryiq.api.auth_routes`  -- email register/login (issues tokens).
 * :mod:`industryiq.api.chat_routes`  -- multi-round chat (the user surface).
+* :mod:`industryiq.api.agent_routes` -- multi-agent orchestrator (Option B / C runs).
 * :mod:`industryiq.api.admin_routes` -- key-gated ingestion into the shared KB.
 * :mod:`industryiq.api.debug_routes` -- engineer-only inspection (hidden).
 """
@@ -17,6 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from industryiq.api.admin_routes import router as admin_router
+from industryiq.api.agent_routes import router as agent_router
 from industryiq.api.auth_routes import router as auth_router
 from industryiq.api.chat_routes import router as chat_router
 from industryiq.api.debug_routes import router as debug_router
@@ -70,4 +72,5 @@ def health() -> dict[str, str]:
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(chat_router)
+app.include_router(agent_router)
 app.include_router(debug_router)

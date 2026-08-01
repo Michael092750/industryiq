@@ -64,6 +64,21 @@ class Settings:
     # 1 day. Ignored by the in-memory blackboard.
     agent_blackboard_ttl_seconds: int = 60 * 60 * 24
 
+    # Multi-agent orchestrator (supervisor + workers over the task queue).
+    # How long a task may sit claimed-but-unacked before a live worker reclaims it
+    # (the crash-recovery window). ``max_attempts`` caps redeliveries before a task
+    # is dead-lettered. ``run_timeout_s`` bounds how long the supervisor waits for a
+    # run to finish. ``capability_k`` is the retrieval depth of each subtask's mini-RAG.
+    agent_reclaim_min_idle_ms: float = 5000.0
+    agent_max_attempts: int = 3
+    agent_run_timeout_s: float = 30.0
+    agent_worker_batch: int = 4
+    agent_capability_k: int = 6
+    # Demo failure injection (leave "off" in production). "crash_once" makes a worker
+    # (or the local executor) fail the first attempt of each node, to stage the
+    # kill-a-worker beat: Option C reclaims and resumes; Option B loses the run.
+    agent_failure_mode: str = "off"
+
     # Which vector store to use: "pgvector" (Postgres, the default) or "milvus".
     # pgvector is kept for benchmarking; "milvus" routes the live app to Milvus.
     vector_backend: str = "pgvector"
@@ -261,6 +276,12 @@ def get_settings() -> Settings:
         agent_blackboard_ttl_seconds=int(
             os.getenv("AGENT_BLACKBOARD_TTL_SECONDS", str(60 * 60 * 24))
         ),
+        agent_reclaim_min_idle_ms=float(os.getenv("AGENT_RECLAIM_MIN_IDLE_MS", "5000")),
+        agent_max_attempts=int(os.getenv("AGENT_MAX_ATTEMPTS", "3")),
+        agent_run_timeout_s=float(os.getenv("AGENT_RUN_TIMEOUT_S", "30")),
+        agent_worker_batch=int(os.getenv("AGENT_WORKER_BATCH", "4")),
+        agent_capability_k=int(os.getenv("AGENT_CAPABILITY_K", "6")),
+        agent_failure_mode=os.getenv("AGENT_FAILURE_MODE", "off"),
         vector_backend=os.getenv("VECTOR_BACKEND", "pgvector"),
         pdf_parser=os.getenv("PDF_PARSER", "docling"),
         pdf_hybrid_recovery=_env_bool("PDF_HYBRID_RECOVERY", True),

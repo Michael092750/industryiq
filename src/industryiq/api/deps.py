@@ -22,7 +22,17 @@ if TYPE_CHECKING:
     from redis import Redis
 
 from industryiq.config import Settings, get_settings
-from industryiq.core.agents import Blackboard, TaskQueue
+from industryiq.core.agents import Blackboard, Capability, Planner, RunLedger, TaskQueue
+from industryiq.core.agents.capabilities import (
+    CrashOnceHook,
+    IndustryAnalysisCapability,
+    no_failure,
+)
+from industryiq.core.agents.executor_local import LocalExecutor
+from industryiq.core.agents.planner import LlmPlanner
+from industryiq.core.agents.supervisor import Supervisor
+from industryiq.core.agents.synthesis import Synthesizer
+from industryiq.core.agents.worker import Worker
 from industryiq.core.auth import AuthService, User, UserStore
 from industryiq.core.auth.adapters.store_memory import InMemoryUserStore
 from industryiq.core.auth.adapters.store_pg import PgUserStore
@@ -213,6 +223,107 @@ def get_task_queue() -> TaskQueue:
     from industryiq.core.agents.adapters.queue_memory import InMemoryTaskQueue
 
     return InMemoryTaskQueue()
+
+
+@lru_cache(maxsize=1)
+def get_run_ledger() -> RunLedger:
+    """Return the process-wide agent run ledger (the per-run event timeline).
+
+    Redis Streams when REDIS_URL is set -- so a run's timeline is visible across the
+    supervisor + worker processes and survives a restart, with a per-run TTL --
+    otherwise the in-process :class:`InMemoryRunLedger`. Built once, then cached.
+    """
+    settings = get_settings()
+    redis = get_redis()
+    if redis is not None:
+        from industryiq.core.agents.adapters.ledger_redis import RedisRunLedger
+
+        return RedisRunLedger(redis, ttl_seconds=settings.agent_blackboard_ttl_seconds)
+    from industryiq.core.agents.adapters.ledger_memory import InMemoryRunLedger
+
+    return InMemoryRunLedger()
+
+
+@lru_cache(maxsize=1)
+def get_capability_registry() -> dict[str, Capability]:
+    """Return the process-wide capability registry (built once, then cached).
+
+    Today: one real capability -- industry analysis (a mini-RAG over the shared
+    corpus, reusing the same embedder + vector store the chat path queries). Web
+    search / database lookup slot in here later behind the same seam.
+    """
+    settings = get_settings()
+    embedder, llm = _build_ai_providers(settings)
+    store = _build_vector_store(settings, embedder.dim)
+    retriever = Retriever(embedder, store, min_chunk_chars=settings.retrieval_min_chunk_chars)
+    capability: Capability = IndustryAnalysisCapability(
+        retriever, llm, k=settings.agent_capability_k
+    )
+    return {capability.name: capability}
+
+
+@lru_cache(maxsize=1)
+def get_planner() -> Planner:
+    """Return the process-wide LLM planner (built once, then cached)."""
+    _embedder, llm = _build_ai_providers(get_settings())
+    return LlmPlanner(llm)
+
+
+@lru_cache(maxsize=1)
+def get_supervisor() -> Supervisor:
+    """Return the process-wide Option-C supervisor (built once, then cached).
+
+    Shares the cached task queue, blackboard, and run ledger with the workers, so a
+    distributed run coordinates through Redis when it is configured.
+    """
+    settings = get_settings()
+    _embedder, llm = _build_ai_providers(settings)
+    return Supervisor(
+        get_task_queue(),
+        get_blackboard(),
+        Synthesizer(llm),
+        ledger=get_run_ledger(),
+        run_timeout_s=settings.agent_run_timeout_s,
+    )
+
+
+def build_worker(consumer: str) -> Worker:
+    """Build one Option-C worker (NOT cached -- each process/consumer is distinct).
+
+    ``AGENT_FAILURE_MODE=crash_once`` gives this worker the demo failure hook, so a
+    "flaky worker" can be started next to healthy ones to stage a mid-run crash.
+    """
+    settings = get_settings()
+    failure_hook = CrashOnceHook() if settings.agent_failure_mode == "crash_once" else no_failure
+    return Worker(
+        get_task_queue(),
+        get_capability_registry(),
+        get_blackboard(),
+        consumer=consumer,
+        ledger=get_run_ledger(),
+        failure_hook=failure_hook,
+        max_attempts=settings.agent_max_attempts,
+        reclaim_min_idle_ms=settings.agent_reclaim_min_idle_ms,
+        batch=settings.agent_worker_batch,
+    )
+
+
+def build_local_executor(*, inject_failure: bool = False) -> LocalExecutor:
+    """Build an Option-B executor (NOT cached; the failure hook is per-request).
+
+    ``inject_failure`` stages the "B breaks" beat -- a node crashes and, with no
+    recovery, the whole run is lost.
+    """
+    settings = get_settings()
+    _embedder, llm = _build_ai_providers(settings)
+    failure_hook = CrashOnceHook() if inject_failure else no_failure
+    return LocalExecutor(
+        get_capability_registry(),
+        get_blackboard(),
+        Synthesizer(llm),
+        ledger=get_run_ledger(),
+        failure_hook=failure_hook,
+    )
 
 
 @lru_cache(maxsize=1)
