@@ -27,7 +27,7 @@ from industryiq.core.chat.models import (
     StreamToken,
     Turn,
 )
-from industryiq.core.chat.ports import ConversationStore, RetrievalRouter
+from industryiq.core.chat.ports import ConversationStore, TurnOrchestrator, TurnRouter
 from industryiq.core.chat.service import ChatService, ConversationNotFound
 
 __all__ = [
@@ -40,7 +40,6 @@ __all__ = [
     "ConversationStore",
     "InMemoryConversationStore",
     "LlmRouter",
-    "RetrievalRouter",
     "RouteDecision",
     "StreamEnd",
     "StreamEvent",
@@ -48,4 +47,6 @@ __all__ = [
     "StreamStatus",
     "StreamToken",
     "Turn",
+    "TurnOrchestrator",
+    "TurnRouter",
 ]

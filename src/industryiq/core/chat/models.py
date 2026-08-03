@@ -30,13 +30,20 @@ class Conversation:
 
 @dataclass(frozen=True)
 class RouteDecision:
-    """Whether a turn should consult the knowledge base.
+    """How to answer a turn -- the three tiers, as two flags.
 
-    A named type (rather than a bare ``bool``) so the router port can grow
-    richer verdicts later without changing its signature.
+    * ``should_retrieve`` -- consult the knowledge base at all (skip it for
+      greetings / small talk -> a plain LLM reply).
+    * ``needs_planning`` -- the question is complex enough to decompose into a
+      multi-tool plan (the agent orchestrator) rather than a single retrieve+answer.
+
+    So: neither = simple LLM reply; ``should_retrieve`` only = RAG; ``needs_planning``
+    = plan. A named type (not a bare ``bool``) is exactly what let this grow the
+    second flag without touching the router's signature.
     """
 
     should_retrieve: bool
+    needs_planning: bool = False
 
 
 @dataclass(frozen=True)

@@ -80,13 +80,13 @@ RetrievalResult`. Per turn, `ChatService` now routes and, if retrieval is needed
 makes one `gather` call (rewrite + fan-out to session + shared sources + relevance
 filter + merge all happen inside the service).
 
-- `ChatService` now depends on `ContextRetriever`, `RetrievalRouter`,
+- `ChatService` now depends on `ContextRetriever`, `TurnRouter`,
   `ConversationStore`, and `StreamingLLM` — plus `SessionDocumentStore` held **only**
   for session-doc *lifecycle* (`clear` on conversation delete), never for retrieval.
 - The fine-grained retrieval ports (`RetrievalPort`, `QueryRewriter`,
   `RelevanceFilter`, `SessionDocumentStore`) and their adapters moved into the new
   package; they are now `RetrievalService`'s concern. `core/chat/ports.py` keeps only
-  `RetrievalRouter` + `ConversationStore`.
+  `TurnRouter` + `ConversationStore`.
 - The package dependency runs strictly one way (`chat → retrieval`); the neutral
   `core.conversation` (`Turn`) and `core.timing` (`StepTimer`) modules exist to keep
   it acyclic. Wiring stays a single composition root (`api/deps.py`).

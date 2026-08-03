@@ -22,16 +22,16 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
-from industryiq.core.agents.models import Plan, PlanNode, RunResult
-from industryiq.core.agents.ports import Blackboard, RunLedger, TaskQueue
+from industryiq.core.agents.models import CapabilityResult, Plan, PlanNode, RunResult
+from industryiq.core.agents.ports import Blackboard, PlanExecutor, RunLedger, TaskQueue
 from industryiq.core.agents.synthesis import Synthesizer, collect_results
 from industryiq.core.agents.worker import DEFAULT_QUEUE
 
 
-class Supervisor:
+class Supervisor(PlanExecutor):
     """Drive one distributed run: plan in, enqueue + await + synthesize, result out."""
 
     def __init__(
@@ -57,7 +57,16 @@ class Supervisor:
         self._clock = clock
         self._sleep = sleep
 
-    def run(self, plan: Plan, *, on_poll: Callable[[], None] | None = None) -> RunResult:
+    def execute(
+        self, plan: Plan, *, on_poll: Callable[[], None] | None = None
+    ) -> Mapping[str, CapabilityResult]:
+        """Enqueue the plan wave by wave and await completion; return the results.
+
+        Workers (possibly other processes) claim/run/reclaim/ack; this loop just
+        enqueues newly-ready nodes and watches the blackboard fill up until every
+        node has a result or ``run_timeout_s`` trips. ``on_poll`` replaces the
+        inter-poll sleep (tests drive in-process workers through it).
+        """
         all_ids = plan.node_ids()
         enqueued: set[str] = set()
         # Record the whole plan in the ledger (not just a count) so the run inspector
@@ -82,7 +91,11 @@ class Supervisor:
                 on_poll()
             else:
                 self._sleep(self._poll_interval_s)
-        result = self._synthesizer.synthesize(plan, collect_results(plan, self._blackboard))
+        return collect_results(plan, self._blackboard)
+
+    def run(self, plan: Plan, *, on_poll: Callable[[], None] | None = None) -> RunResult:
+        """``execute`` then synthesize the full :class:`RunResult`."""
+        result = self._synthesizer.synthesize(plan, self.execute(plan, on_poll=on_poll))
         self._emit(
             plan.run_id,
             "run_completed",

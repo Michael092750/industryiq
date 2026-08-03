@@ -19,6 +19,7 @@ from industryiq.core.conversation import Turn
 from industryiq.core.retrieval.ports import (
     ContextExpander,
     ContextRetriever,
+    CorpusRetriever,
     QueryRewriter,
     RelevanceFilter,
     Reranker,
@@ -51,8 +52,13 @@ def order_session_first(session: list[Hit], shared: list[Hit], k: int) -> list[H
     return ordered[:k]
 
 
-class RetrievalService(ContextRetriever):
-    """Compose rewrite + fan-out + filter + merge into one ``gather`` call."""
+class RetrievalService(ContextRetriever, CorpusRetriever):
+    """Compose rewrite + fan-out + filter + merge into one ``gather`` call.
+
+    Also exposes its tuned shared-corpus core as :meth:`retrieve_corpus` (a
+    :class:`CorpusRetriever`) so a stateless caller -- an agent's retrieve tool --
+    reuses the same strategy-route + rerank the chat tier gets, with no drift.
+    """
 
     def __init__(
         self,
@@ -108,42 +114,19 @@ class RetrievalService(ContextRetriever):
             plan = plan_override
         else:
             with timer.measure("route_strategy"):
-                # Choose *how* to search for the (standalone) question. Session-doc
-                # retrieval always stays on the default path (its store isn't
-                # strategy-capable); the plan only steers the shared-corpus search.
-                plan = (
-                    self._strategy_router.select(standalone)
-                    if self._strategy_router is not None
-                    else SearchPlan()
-                )
+                plan = self._select_plan(standalone)
         with timer.measure("retrieve"):
             # Documents uploaded into this session are the primary context: take
-            # (and relevance-filter) them first. Only when they don't fill the
-            # whole k-budget do we consult the shared corpus for additional
-            # grounding -- "retrieve from the knowledge base if needed". Both go
-            # through the same coverage backstop.
+            # (and relevance-filter) them first. Only when they don't fill the whole
+            # k-budget do we consult the shared corpus -- through the same tuned core
+            # an agent's retrieve tool uses (:meth:`retrieve_corpus`) -- for
+            # additional grounding.
             session = self._relevance_filter.keep(
                 self._session_documents.retrieve(conversation_id, standalone, k)
                 if self._session_documents is not None
                 else []
             )
-            # Stage 1 (recall): widen the shared-corpus fetch to ``rerank_pool`` when a
-            # reranker is present, so Stage 2 has candidates beyond the final k to
-            # promote; otherwise fetch exactly k (today's behaviour).
-            pool_k = max(self._rerank_pool, k) if self._reranker is not None else k
-            shared = (
-                self._relevance_filter.keep(
-                    self._retriever.retrieve(standalone, k=pool_k, plan=plan)
-                )
-                if len(session) < k
-                else []
-            )
-            # Stage 2 (precision): a cross-encoder reads each shared candidate and
-            # re-sorts to the top k. Runs on the shared corpus only -- session uploads
-            # are the user's chosen context and still lead the merge below. Timed
-            # inside "retrieve", so its cost lands in the caller's retrieve budget.
-            if self._reranker is not None and shared:
-                shared = self._reranker.rerank(standalone, shared, k)
+            shared = self._retrieve_shared(standalone, k, plan) if len(session) < k else []
             hits = order_session_first(session, shared, k)
         if self._expander is not None:
             with timer.measure("expand"):
@@ -156,3 +139,38 @@ class RetrievalService(ContextRetriever):
             timings_ms=timer.timings_ms,
             search_plan=plan,
         )
+
+    def retrieve_corpus(self, question: str, k: int) -> list[Hit]:
+        """Tuned shared-corpus retrieval for a standalone ``question`` (the
+        :class:`CorpusRetriever` seam).
+
+        strategy-route -> retrieve -> relevance-filter -> rerank -> top ``k``, with
+        no follow-up rewrite and no session documents -- so an agent's retrieve tool
+        and :meth:`gather`'s shared leg share one implementation (and its tuning).
+        """
+        return self._retrieve_shared(question, k, self._select_plan(question))
+
+    def _select_plan(self, question: str) -> SearchPlan:
+        """Choose *how* to search: the strategy router's plan, or hybrid-RRF default.
+
+        Session-doc retrieval always stays on the default path (its store isn't
+        strategy-capable); the plan only steers the shared-corpus search.
+        """
+        return (
+            self._strategy_router.select(question)
+            if self._strategy_router is not None
+            else SearchPlan()
+        )
+
+    def _retrieve_shared(self, question: str, k: int, plan: SearchPlan) -> list[Hit]:
+        """Stage 1 (recall) + Stage 2 (rerank) over the shared corpus for ``plan``.
+
+        Widen the fetch to ``rerank_pool`` when a reranker is present, so Stage 2 has
+        candidates beyond the final k to promote; relevance-filter; then a
+        cross-encoder re-sorts to the top ``k`` (a no-op without a reranker).
+        """
+        pool_k = max(self._rerank_pool, k) if self._reranker is not None else k
+        hits = self._relevance_filter.keep(self._retriever.retrieve(question, k=pool_k, plan=plan))
+        if self._reranker is not None and hits:
+            hits = self._reranker.rerank(question, hits, k)
+        return hits

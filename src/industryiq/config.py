@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# What the knowledge base actually holds -- injected into the retrieval router and
+# What the knowledge base actually holds -- injected into the turn-router and
 # strategy-router prompts so both judge scope and pick metadata filters on the real
 # corpus shape rather than a vague blurb. Names the five sector *categories*, the
 # publisher *types* (which map to the ``source_type`` facet), example *publishers*
@@ -78,6 +78,10 @@ class Settings:
     # (or the local executor) fail the first attempt of each node, to stage the
     # kill-a-worker beat: Option C reclaims and resumes; Option B loses the run.
     agent_failure_mode: str = "off"
+    # Which executor answers a COMPLEX chat turn (one the router flags needs_planning):
+    # "local" (in-process LocalExecutor -- low latency, the default) or "distributed"
+    # (Supervisor + worker queue -- needs workers + Redis running).
+    chat_agent_executor: str = "local"
 
     # Which vector store to use: "pgvector" (Postgres, the default) or "milvus".
     # pgvector is kept for benchmarking; "milvus" routes the live app to Milvus.
@@ -282,6 +286,7 @@ def get_settings() -> Settings:
         agent_worker_batch=int(os.getenv("AGENT_WORKER_BATCH", "4")),
         agent_capability_k=int(os.getenv("AGENT_CAPABILITY_K", "6")),
         agent_failure_mode=os.getenv("AGENT_FAILURE_MODE", "off"),
+        chat_agent_executor=os.getenv("CHAT_AGENT_EXECUTOR", "local"),
         vector_backend=os.getenv("VECTOR_BACKEND", "pgvector"),
         pdf_parser=os.getenv("PDF_PARSER", "docling"),
         pdf_hybrid_recovery=_env_bool("PDF_HYBRID_RECOVERY", True),

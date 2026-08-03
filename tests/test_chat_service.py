@@ -20,7 +20,7 @@ from industryiq.core.chat.models import (
     StreamToken,
     Turn,
 )
-from industryiq.core.chat.ports import ConversationStore, RetrievalRouter
+from industryiq.core.chat.ports import ConversationStore, TurnRouter
 from industryiq.core.chat.service import ChatService, ConversationNotFound
 from industryiq.core.generation import FakeLLM, StreamingLLM
 from industryiq.core.retrieval.ports import ContextRetriever, RetrievalResult, SessionDocumentStore
@@ -78,15 +78,31 @@ class StubRetrieval:
 
 
 class StubRouter:
-    """A RetrievalRouter double with a fixed verdict that records its calls."""
+    """A TurnRouter double with a fixed verdict that records its calls."""
 
-    def __init__(self, should_retrieve: bool) -> None:
+    def __init__(self, should_retrieve: bool, needs_planning: bool = False) -> None:
         self._should = should_retrieve
+        self._plan = needs_planning
         self.calls: list[tuple[list[Turn], str]] = []
 
     def route(self, history: list[Turn], question: str) -> RouteDecision:
         self.calls.append((history, question))
-        return RouteDecision(should_retrieve=self._should)
+        return RouteDecision(should_retrieve=self._should, needs_planning=self._plan)
+
+
+class FakeOrchestrator:
+    """A TurnOrchestrator double: yields canned events (no StreamEnd), records calls."""
+
+    def __init__(self, tokens: tuple[str, ...] = ("plan", "ned")) -> None:
+        self._tokens = tokens
+        self.calls: list[tuple[list[Turn], str]] = []
+
+    def run_stream(self, history: list[Turn], question: str) -> object:
+        self.calls.append((list(history), question))
+        yield StreamStatus(phase="planning")
+        yield StreamStart(standalone_question="STANDALONE", hits=[])
+        for token in self._tokens:
+            yield StreamToken(text=token)
 
 
 class RecordingSessionDocuments:
@@ -110,17 +126,19 @@ class RecordingSessionDocuments:
 
 def _service(
     retrieval: ContextRetriever | None = None,
-    router: RetrievalRouter | None = None,
+    router: TurnRouter | None = None,
     llm: StreamingLLM | None = None,
     store: ConversationStore | None = None,
     session_documents: SessionDocumentStore | None = None,
     policy: ChatPolicy | None = None,
+    orchestrator: object | None = None,
 ) -> ChatService:
     return ChatService(
         retrieval=retrieval or StubRetrieval(),
         router=router or AlwaysRetrieveRouter(),
         llm=llm or FakeLLM(response="ANSWER"),
         store=store or InMemoryConversationStore(),
+        orchestrator=orchestrator,  # duck-typed TurnOrchestrator double
         session_documents=session_documents,
         policy=policy or ChatPolicy(),
     )
@@ -285,6 +303,46 @@ def test_reply_stream_persists_full_answer_after_streaming() -> None:
     convo = service.start("c")
     list(service.reply_stream(convo.id, "q"))  # drain the stream
     assert store.history(convo.id) == [Turn("q", "hello world")]
+
+
+# --- complex tier: delegation to the agent orchestrator ---------------------------
+
+
+def test_complex_turn_delegates_to_the_orchestrator_and_persists() -> None:
+    store = InMemoryConversationStore()
+    convo = store.create("c")
+    orchestrator = FakeOrchestrator(tokens=("plan", "ned"))
+    retrieval = StubRetrieval(hits=[Hit("c1", 0.9, {"text": "x"})])
+    service = _service(
+        retrieval=retrieval,
+        router=StubRouter(should_retrieve=True, needs_planning=True),
+        store=store,
+        orchestrator=orchestrator,
+    )
+    events = list(service.reply_stream(convo.id, "compare A and B"))
+
+    assert orchestrator.calls and orchestrator.calls[0][1] == "compare A and B"
+    assert retrieval.calls == []  # the simple retrieve path was NOT taken
+    # ChatService forwarded the orchestrator's events...
+    assert "planning" in [e.phase for e in events if isinstance(e, StreamStatus)]
+    # ...accumulated the tokens, owned the final StreamEnd, and persisted one turn.
+    assert isinstance(events[-1], StreamEnd)
+    assert events[-1].answer == "planned"
+    assert store.history(convo.id) == [Turn("compare A and B", "planned")]
+
+
+def test_complex_turn_falls_back_to_retrieve_when_no_orchestrator() -> None:
+    store = InMemoryConversationStore()
+    convo = store.create("c")
+    retrieval = StubRetrieval(hits=[Hit("c1", 0.9, {"text": "x"})])
+    service = _service(
+        retrieval=retrieval,
+        router=StubRouter(should_retrieve=True, needs_planning=True),
+        store=store,  # no orchestrator wired
+    )
+    events = list(service.reply_stream(convo.id, "compare A and B"))
+    assert retrieval.calls  # degraded safely to the retrieve/simple path
+    assert "planning" not in [e.phase for e in events if isinstance(e, StreamStatus)]
 
 
 def test_reply_stream_to_unknown_conversation_raises() -> None:

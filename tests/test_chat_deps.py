@@ -1,11 +1,25 @@
 import pytest
 
-from industryiq.api.deps import get_chat_service, get_session_documents
+from industryiq.api.deps import (
+    get_capability_registry,
+    get_chat_service,
+    get_planner,
+    get_retrieval_service,
+    get_session_documents,
+    get_turn_orchestrator,
+)
 from industryiq.core.chat import ChatService
 
 
 def _clear_caches() -> None:
+    # get_chat_service now builds the retrieval service AND the turn orchestrator
+    # (planner + capability registry); clear the whole chain so a monkeypatched
+    # store is picked up on rebuild.
     get_chat_service.cache_clear()
+    get_turn_orchestrator.cache_clear()
+    get_capability_registry.cache_clear()
+    get_planner.cache_clear()
+    get_retrieval_service.cache_clear()
     get_session_documents.cache_clear()
 
 

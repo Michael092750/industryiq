@@ -20,7 +20,7 @@ from typing import Any
 from industryiq.core.agents.models import CapabilityResult
 from industryiq.core.agents.ports import Capability
 from industryiq.core.generation import LLM, generate_answer
-from industryiq.core.retrieval.ports import RetrievalPort
+from industryiq.core.retrieval.ports import CorpusRetriever
 from industryiq.core.vectorstore import Hit
 
 
@@ -37,11 +37,13 @@ class IndustryAnalysisCapability(Capability):
     """Answer a focused question about ONE industry from the report corpus.
 
     A mini-RAG: retrieve the most relevant chunks for the (industry-scoped)
-    question, then ground an answer on them -- reusing the same retrieval + prompt
-    machinery (:func:`~industryiq.core.generation.generate_answer`) the chat path
-    uses, so a subtask answer is as grounded as a chat answer. Returns the answer
-    as ``summary`` and the retrieved chunks as ``sources`` (so the final synthesis
-    stays cited).
+    question, then ground an answer on them. Retrieval goes through the shared
+    :class:`~industryiq.core.retrieval.ports.CorpusRetriever` -- the *same* tuned
+    core (strategy router + reranker) the chat retrieve-tier uses -- so this tool
+    inherits that tuning rather than reimplementing it. Grounding reuses
+    :func:`~industryiq.core.generation.generate_answer`, so a subtask answer is as
+    grounded as a chat answer. Returns the answer as ``summary`` and the retrieved
+    chunks as ``sources`` (so the final synthesis stays cited).
     """
 
     name = "industry_analysis"
@@ -52,8 +54,8 @@ class IndustryAnalysisCapability(Capability):
         'inputs: {"industry": "<sector>", "question": "<focused question>"}.'
     )
 
-    def __init__(self, retriever: RetrievalPort, llm: LLM, *, k: int = 6) -> None:
-        self._retriever = retriever
+    def __init__(self, corpus: CorpusRetriever, llm: LLM, *, k: int = 6) -> None:
+        self._corpus = corpus
         self._llm = llm
         self._k = k
 
@@ -61,7 +63,7 @@ class IndustryAnalysisCapability(Capability):
         question = str(inputs.get("question") or inputs.get("query") or "").strip()
         industry = str(inputs.get("industry") or "").strip()
         query = f"{industry}: {question}" if industry else question
-        hits = self._retriever.retrieve(query, k=self._k)
+        hits = self._corpus.retrieve_corpus(query, k=self._k)
         answer = generate_answer(query, hits, self._llm)
         return CapabilityResult(
             summary=answer,

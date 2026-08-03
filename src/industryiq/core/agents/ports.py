@@ -36,7 +36,7 @@ are typed ``Any`` because that is the honest bound (any JSON value).
 from collections.abc import Mapping
 from typing import Any, Protocol, runtime_checkable
 
-from industryiq.core.agents.models import CapabilityResult, InFlight, Plan, Task
+from industryiq.core.agents.models import CapabilityResult, InFlight, Plan, RunResult, Task
 
 
 @runtime_checkable
@@ -177,4 +177,25 @@ class RunLedger(Protocol):
 
     def events(self, run_id: str) -> list[dict[str, Any]]:
         """Return ``run_id``'s events in append order (``[]`` if none)."""
+        ...
+
+
+@runtime_checkable
+class PlanExecutor(Protocol):
+    """Run a :class:`Plan`: fan the nodes out and/or synthesize the final result.
+
+    ``execute`` runs the fan-out and returns the per-node results (filling the
+    blackboard) -- the seam the chat turn uses so it can stream the synthesis
+    itself; ``run`` is ``execute`` + synthesize, the whole result in one call (used
+    by ``/agents/run``). :class:`~industryiq.core.agents.executor_local.LocalExecutor`
+    (in-process) and :class:`~industryiq.core.agents.supervisor.Supervisor`
+    (distributed) both satisfy it, so a caller picks the topology without changing.
+    """
+
+    def execute(self, plan: Plan) -> Mapping[str, CapabilityResult]:
+        """Run the fan-out; return the per-node results (blackboard filled)."""
+        ...
+
+    def run(self, plan: Plan) -> RunResult:
+        """``execute`` then synthesize -- the full result in one call."""
         ...

@@ -26,6 +26,7 @@ from industryiq.core.retrieval.adapters.strategy import FixedStrategyRouter, Llm
 from industryiq.core.retrieval.ports import (
     ContextExpander,
     ContextRetriever,
+    CorpusRetriever,
     QueryRewriter,
     RelevanceFilter,
     Reranker,
@@ -40,6 +41,7 @@ from industryiq.core.retrieval.service import RetrievalService, order_session_fi
 __all__ = [
     "ContextExpander",
     "ContextRetriever",
+    "CorpusRetriever",
     "CrossEncoderReranker",
     "FixedStrategyRouter",
     "LlmQueryRewriter",

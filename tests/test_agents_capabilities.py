@@ -12,15 +12,15 @@ from industryiq.core.generation import FakeLLM
 from industryiq.core.vectorstore import Hit
 
 
-class _FakeRetriever:
-    """Records the query it was asked, returns a fixed hit list (RetrievalPort shape)."""
+class _FakeCorpus:
+    """Records the query it was asked, returns a fixed hit list (CorpusRetriever shape)."""
 
     def __init__(self, hits: list[Hit]) -> None:
         self._hits = hits
         self.last_query: str | None = None
 
-    def retrieve(self, query: str, k: int = 5, plan: object | None = None) -> list[Hit]:
-        self.last_query = query
+    def retrieve_corpus(self, question: str, k: int = 6) -> list[Hit]:
+        self.last_query = question
         return self._hits
 
 
@@ -29,7 +29,7 @@ def test_capability_returns_grounded_cited_envelope() -> None:
         Hit(id="1", score=0.91, metadata={"text": "AI market is large", "source": "McKinsey"}),
         Hit(id="2", score=0.80, metadata={"text": "growth continues", "title": "BCG report"}),
     ]
-    cap = IndustryAnalysisCapability(_FakeRetriever(hits), FakeLLM("grounded answer"))
+    cap = IndustryAnalysisCapability(_FakeCorpus(hits), FakeLLM("grounded answer"))
     result = cap.run({"industry": "AI", "question": "how big is the market?"})
     assert result.summary == "grounded answer"
     assert result.data == {"industry": "AI", "chunks": 2}
@@ -37,14 +37,14 @@ def test_capability_returns_grounded_cited_envelope() -> None:
 
 
 def test_capability_scopes_query_by_industry() -> None:
-    retriever = _FakeRetriever([])
-    cap = IndustryAnalysisCapability(retriever, FakeLLM())
+    corpus = _FakeCorpus([])
+    cap = IndustryAnalysisCapability(corpus, FakeLLM())
     cap.run({"industry": "healthcare", "question": "adoption rate?"})
-    assert retriever.last_query == "healthcare: adoption rate?"
+    assert corpus.last_query == "healthcare: adoption rate?"
 
 
 def test_capability_satisfies_the_port() -> None:
-    assert isinstance(IndustryAnalysisCapability(_FakeRetriever([]), FakeLLM()), Capability)
+    assert isinstance(IndustryAnalysisCapability(_FakeCorpus([]), FakeLLM()), Capability)
 
 
 def test_crash_once_hook_fires_once_per_node() -> None:

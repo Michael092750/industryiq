@@ -68,6 +68,17 @@ class RecordingExpander:
         return hits
 
 
+class RecordingReranker:
+    """A Reranker double: records calls, reverses the hits (so a reorder is visible)."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, list[Hit], int]] = []
+
+    def rerank(self, query: str, hits: list[Hit], k: int) -> list[Hit]:
+        self.calls.append((query, hits, k))
+        return list(reversed(hits))[:k]
+
+
 class StubSessionDocuments:
     """A SessionDocumentStore double returning fixed per-session hits."""
 
@@ -94,6 +105,7 @@ def _service(
     session_documents: StubSessionDocuments | None = None,
     strategy_router: RecordingStrategyRouter | None = None,
     expander: RecordingExpander | None = None,
+    reranker: RecordingReranker | None = None,
     clock=None,
 ) -> RetrievalService:
     kwargs = {} if clock is None else {"clock": clock}
@@ -102,6 +114,7 @@ def _service(
         rewriter=rewriter or RecordingRewriter(),
         relevance_filter=relevance_filter or ThresholdFilter(),
         strategy_router=strategy_router,
+        reranker=reranker,
         expander=expander,
         session_documents=session_documents,
         **kwargs,
@@ -252,3 +265,47 @@ def test_order_session_first_dedups_by_id_keeping_the_session_copy() -> None:
     ordered = order_session_first([Hit("x", 0.4, {})], [Hit("x", 0.8, {})], k=5)
     assert [hit.id for hit in ordered] == ["x"]
     assert ordered[0].score == 0.4  # the session copy leads; the shared duplicate is dropped
+
+
+# --- retrieve_corpus: the shared tuned core the agent retrieve tool reuses --------
+
+
+def test_retrieve_corpus_uses_the_tuned_core_without_rewrite_or_session() -> None:
+    plan = SearchPlan(strategy=SearchStrategy.LEXICAL)
+    router = RecordingStrategyRouter(plan=plan)
+    retriever = RecordingRetriever(hits=[Hit("g", 0.9, {"text": "corpus"})])
+    rewriter = RecordingRewriter(rewritten="SHOULD_NOT_BE_USED")
+    session = StubSessionDocuments(hits=[Hit("s", 0.9, {"text": "upload"})])
+    service = _service(
+        retriever=retriever,
+        rewriter=rewriter,
+        strategy_router=router,
+        session_documents=session,
+    )
+    hits = service.retrieve_corpus("plain question", k=5)
+    assert [hit.id for hit in hits] == ["g"]  # shared corpus only -- no session upload
+    assert router.questions == ["plain question"]  # routed on the raw question
+    assert retriever.plans[0] is plan  # the tuned strategy plan reached the retriever
+    assert rewriter.calls == []  # no follow-up rewrite
+
+
+def test_retrieve_corpus_applies_the_reranker() -> None:
+    reranker = RecordingReranker()
+    retriever = RecordingRetriever(
+        hits=[Hit("a", 0.9, {"text": "a"}), Hit("b", 0.8, {"text": "b"})]
+    )
+    hits = _service(retriever=retriever, reranker=reranker).retrieve_corpus("q", k=2)
+    assert reranker.calls and reranker.calls[0][0] == "q"
+    assert [hit.id for hit in hits] == ["b", "a"]  # reranker reordered -> planner inherits it
+
+
+def test_gather_shared_leg_matches_retrieve_corpus() -> None:
+    # gather rewrites "follow up?" -> "standalone"; retrieve_corpus of that standalone
+    # returns the identical shared hits -- one shared implementation, no drift.
+    service = _service(
+        retriever=RecordingRetriever(hits=[Hit("g", 0.9, {"text": "x"})]),
+        rewriter=RecordingRewriter(rewritten="standalone"),
+    )
+    gathered = service.gather("c", "follow up?", [], k=5).hits
+    corpus = service.retrieve_corpus("standalone", k=5)
+    assert [hit.id for hit in gathered] == [hit.id for hit in corpus] == ["g"]

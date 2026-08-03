@@ -6,7 +6,7 @@ satisfies a port -- an in-memory fake in a test, Postgres in production -- is
 substitutable without touching the service.
 
 Adapters declare their port as an explicit base class (e.g.
-``class LlmRouter(RetrievalRouter)``) so the abstraction-to-implementation link
+``class LlmRouter(TurnRouter)``) so the abstraction-to-implementation link
 is visible at the class and mypy verifies it at the definition site.
 
 The *retrieval* seam ChatService depends on -- the coarse
@@ -16,21 +16,44 @@ reuses the existing :class:`industryiq.core.generation.LLM` port, so it is not
 redefined here.
 """
 
+from collections.abc import Iterator
 from typing import Protocol, runtime_checkable
 
-from industryiq.core.chat.models import Conversation, RouteDecision, Turn
+from industryiq.core.chat.models import Conversation, RouteDecision, StreamEvent, Turn
 
 
 @runtime_checkable
-class RetrievalRouter(Protocol):
-    """Decide whether answering a question needs a knowledge-base lookup.
+class TurnRouter(Protocol):
+    """Decide *which tier* answers a turn: plain reply / retrieve / plan.
 
-    The decision drives both behavior (skip retrieval for greetings/small talk)
-    and UX (whether to show a "checking knowledge base" status). Implementations
-    decide how -- always, an LLM intent classifier, a heuristic.
+    Not merely a retrieve-or-not gate: the returned
+    :class:`~industryiq.core.chat.models.RouteDecision` also escalates a complex
+    question to the :class:`TurnOrchestrator`, so the port is named for the turn it
+    routes rather than for one of the three destinations. The decision drives both
+    behavior (skip retrieval for greetings/small talk; plan for a multi-part question)
+    and UX (which status the UI shows). Implementations decide how -- always-retrieve,
+    an LLM tier classifier, a heuristic.
     """
 
     def route(self, history: list[Turn], question: str) -> RouteDecision: ...
+
+
+@runtime_checkable
+class TurnOrchestrator(Protocol):
+    """Answer a *complex* turn by planning + fanning out to tools, streamed.
+
+    The seam ``ChatService`` delegates to when a turn is
+    :attr:`~industryiq.core.chat.models.RouteDecision.needs_planning`. It yields the
+    same ``StreamStatus`` / ``StreamStart`` / ``StreamToken`` events the simple path
+    does -- but NOT ``StreamEnd``: ``ChatService`` stays the sole owner of the turn
+    lifecycle (accumulating the answer, persisting the ``Turn``, emitting the final
+    event), so both tiers persist and end a turn identically.
+
+    Implementations live in the ``chat`` package (they bridge to ``agents``); the
+    default is :class:`~industryiq.core.chat.adapters.orchestration.AgentTurnOrchestrator`.
+    """
+
+    def run_stream(self, history: list[Turn], question: str) -> Iterator[StreamEvent]: ...
 
 
 @runtime_checkable

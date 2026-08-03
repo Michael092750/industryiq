@@ -65,8 +65,8 @@ class QueryRewriter(Protocol):
 class SearchStrategyRouter(Protocol):
     """Choose *how* to search for a (standalone) question -- a :class:`SearchPlan`.
 
-    The pre-retrieval "retrieve how?" decision, downstream of the "retrieve at all?"
-    :class:`~industryiq.core.chat.ports.RetrievalRouter` and run on the already
+    The pre-retrieval "retrieve how?" decision, downstream of the "which tier?"
+    :class:`~industryiq.core.chat.ports.TurnRouter` and run on the already
     condensed query. Implementations decide the strategy (dense / lexical / hybrid),
     any metadata pre-filter, and fusion weights -- an LLM classifier, a heuristic, or
     a fixed default. Returning ``SearchPlan()`` reproduces today's hybrid-RRF path.
@@ -158,6 +158,20 @@ class RetrievalResult:
     hits: list[Hit]
     timings_ms: dict[str, float]
     search_plan: SearchPlan = field(default_factory=SearchPlan)
+
+
+@runtime_checkable
+class CorpusRetriever(Protocol):
+    """The tuned shared-corpus retrieval, minus conversation state.
+
+    ``retrieve_corpus`` runs strategy-route -> retrieve -> relevance-filter ->
+    rerank for a *standalone* question -- everything :meth:`ContextRetriever.gather`
+    does on the shared corpus, without the follow-up rewrite or the per-conversation
+    session documents. It is the reusable core shared by ``gather``'s shared leg and
+    a stateless caller (an agent's retrieve tool), so both inherit the same tuning.
+    """
+
+    def retrieve_corpus(self, question: str, k: int) -> list[Hit]: ...
 
 
 @runtime_checkable

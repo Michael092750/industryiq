@@ -87,7 +87,7 @@ from industryiq.core.chat import (
     ChatService,
     InMemoryConversationStore,
     LlmRouter,
-    RetrievalRouter,
+    TurnRouter,
 )
 from industryiq.core.embeddings import Embedder
 from industryiq.core.generation import GenerativeLLM
@@ -234,7 +234,7 @@ def build_chat_service(
     are dropped from the retrieved context, so the judged answer is grounded in what
     the app would actually serve.
     """
-    router: RetrievalRouter = (
+    router: TurnRouter = (
         LlmRouter(llm, settings.chat_kb_description)
         if settings.chat_router == "llm"
         else AlwaysRetrieveRouter()

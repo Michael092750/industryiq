@@ -15,20 +15,24 @@ from industryiq.core.vectorstore import Hit
 
 
 def build_route_prompt(history: list[Turn], question: str, kb_description: str) -> str:
-    """Prompt that asks whether a question needs a knowledge-base lookup.
+    """Prompt that classifies a question into the three answer tiers.
 
     ``kb_description`` tells the model what the knowledge base contains, so it can
-    judge whether the question is in scope instead of guessing blind.
+    judge scope instead of guessing blind. The reply is one word:
+    ``NONE`` / ``SIMPLE`` / ``COMPLEX``.
     """
     history_block = f"Conversation so far:\n{format_history(history)}\n\n" if history else ""
     return (
-        f"The knowledge base contains {kb_description}. Decide whether answering "
-        "the question needs information looked up from it. Questions about its "
-        "subject matter do; greetings, small talk, and questions about this "
-        "conversation itself do not. Answer with only 'yes' or 'no'.\n\n"
+        f"The knowledge base contains {kb_description}. Classify how to answer the "
+        "question, replying with ONE word:\n"
+        "- NONE: greetings, small talk, or questions about this conversation itself "
+        "-- no lookup needed.\n"
+        "- SIMPLE: one focused question answerable by a single knowledge-base lookup.\n"
+        "- COMPLEX: needs several lookups, a comparison across multiple industries or "
+        "entities, or multi-step reasoning.\n\n"
         f"{history_block}"
         f"Question: {question}\n\n"
-        "Needs knowledge base (yes/no):"
+        "Classification (NONE/SIMPLE/COMPLEX):"
     )
 
 

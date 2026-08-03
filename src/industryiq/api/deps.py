@@ -22,7 +22,14 @@ if TYPE_CHECKING:
     from redis import Redis
 
 from industryiq.config import Settings, get_settings
-from industryiq.core.agents import Blackboard, Capability, Planner, RunLedger, TaskQueue
+from industryiq.core.agents import (
+    Blackboard,
+    Capability,
+    PlanExecutor,
+    Planner,
+    RunLedger,
+    TaskQueue,
+)
 from industryiq.core.agents.capabilities import (
     CrashOnceHook,
     IndustryAnalysisCapability,
@@ -43,8 +50,9 @@ from industryiq.core.chat import (
     ConversationStore,
     InMemoryConversationStore,
     LlmRouter,
-    RetrievalRouter,
+    TurnRouter,
 )
+from industryiq.core.chat.adapters.orchestration import AgentTurnOrchestrator
 from industryiq.core.chat.adapters.store_pg import PgConversationStore
 from industryiq.core.embeddings import Embedder, FakeEmbedder
 from industryiq.core.generation import FakeLLM, GenerativeLLM
@@ -248,16 +256,15 @@ def get_run_ledger() -> RunLedger:
 def get_capability_registry() -> dict[str, Capability]:
     """Return the process-wide capability registry (built once, then cached).
 
-    Today: one real capability -- industry analysis (a mini-RAG over the shared
-    corpus, reusing the same embedder + vector store the chat path queries). Web
-    search / database lookup slot in here later behind the same seam.
+    Today: one real capability -- industry analysis (the corpus RAG tool). It
+    retrieves through the *same* tuned :func:`get_retrieval_service` the chat
+    retrieve-tier uses (as a ``CorpusRetriever``), so tier + planner share one
+    retrieval implementation. Web search / database lookup slot in here later.
     """
     settings = get_settings()
-    embedder, llm = _build_ai_providers(settings)
-    store = _build_vector_store(settings, embedder.dim)
-    retriever = Retriever(embedder, store, min_chunk_chars=settings.retrieval_min_chunk_chars)
+    _embedder, llm = _build_ai_providers(settings)
     capability: Capability = IndustryAnalysisCapability(
-        retriever, llm, k=settings.agent_capability_k
+        get_retrieval_service(), llm, k=settings.agent_capability_k
     )
     return {capability.name: capability}
 
@@ -323,6 +330,31 @@ def build_local_executor(*, inject_failure: bool = False) -> LocalExecutor:
         Synthesizer(llm),
         ledger=get_run_ledger(),
         failure_hook=failure_hook,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_turn_orchestrator() -> AgentTurnOrchestrator:
+    """Return the chat->agents orchestrator for complex turns (built once, cached).
+
+    Reuses the shared planner + capability registry (whose retrieve tool is the same
+    tuned :func:`get_retrieval_service` the chat tier uses) and a streaming
+    synthesizer. ``CHAT_AGENT_EXECUTOR=distributed`` routes complex chat turns
+    through the Supervisor + worker queue; the default runs them in-process.
+    """
+    settings = get_settings()
+    _embedder, llm = _build_ai_providers(settings)
+    executor: PlanExecutor = (
+        get_supervisor()
+        if settings.chat_agent_executor == "distributed"
+        else build_local_executor()
+    )
+    return AgentTurnOrchestrator(
+        rewriter=LlmQueryRewriter(llm),
+        planner=get_planner(),
+        registry=get_capability_registry(),
+        executor=executor,
+        synthesizer=Synthesizer(llm),
     )
 
 
@@ -404,16 +436,17 @@ def get_session_documents() -> SessionDocumentStore:
 
 
 @lru_cache(maxsize=1)
-def get_chat_service() -> ChatService:
-    """Return the process-wide chat service (built once, then cached)."""
+def get_retrieval_service() -> RetrievalService:
+    """Return the process-wide retrieval service (built once, then cached).
+
+    The one tuned retrieval pipeline shared by the chat retrieve-tier (as a
+    ``ContextRetriever``) and the agents' retrieve capability (as a
+    ``CorpusRetriever``, via :meth:`RetrievalService.retrieve_corpus`), so the two
+    never drift.
+    """
     settings = get_settings()
     embedder, llm = _build_ai_providers(settings)
     vector_store = _build_vector_store(settings, embedder.dim)
-    router: RetrievalRouter = (
-        LlmRouter(llm, settings.chat_kb_description)
-        if settings.chat_router == "llm"
-        else AlwaysRetrieveRouter()
-    )
     # How to search, once we've decided to. "llm" classifies strategy + filter +
     # weights per question (needs a Milvus-class store to exercise the non-default
     # paths); "fixed" reproduces today's hybrid-RRF behaviour on any store.
@@ -433,10 +466,7 @@ def get_chat_service() -> ChatService:
         if settings.chat_context_expansion
         else NoOpExpander()
     )
-    # Shared between the retrieval service (which reads it) and ChatService (which
-    # clears it on delete) -- one instance, disjoint methods.
-    session_documents = get_session_documents()
-    retrieval = RetrievalService(
+    return RetrievalService(
         retriever=Retriever(
             embedder, vector_store, min_chunk_chars=settings.retrieval_min_chunk_chars
         ),
@@ -448,14 +478,27 @@ def get_chat_service() -> ChatService:
         ),
         strategy_router=strategy_router,
         expander=expander,
-        session_documents=session_documents,
+        session_documents=get_session_documents(),
+    )
+
+
+@lru_cache(maxsize=1)
+def get_chat_service() -> ChatService:
+    """Return the process-wide chat service (built once, then cached)."""
+    settings = get_settings()
+    _embedder, llm = _build_ai_providers(settings)
+    router: TurnRouter = (
+        LlmRouter(llm, settings.chat_kb_description)
+        if settings.chat_router == "llm"
+        else AlwaysRetrieveRouter()
     )
     return ChatService(
-        retrieval=retrieval,
+        retrieval=get_retrieval_service(),
         router=router,
         llm=llm,
         store=_build_conversation_store(settings),
-        session_documents=session_documents,
+        orchestrator=get_turn_orchestrator(),
+        session_documents=get_session_documents(),
         policy=ChatPolicy(
             k=settings.chat_retrieval_k,
             history_limit=settings.chat_history_turns,

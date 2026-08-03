@@ -15,9 +15,12 @@ def _clear_caches() -> None:
         deps.get_blackboard,
         deps.get_task_queue,
         deps.get_run_ledger,
+        deps.get_retrieval_service,
+        deps.get_session_documents,
         deps.get_capability_registry,
         deps.get_planner,
         deps.get_supervisor,
+        deps.get_turn_orchestrator,
     ):
         factory.cache_clear()
 

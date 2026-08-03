@@ -18,12 +18,12 @@ from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 
 from industryiq.core.agents.capabilities import FailureHook, no_failure
-from industryiq.core.agents.models import Plan, PlanNode, RunResult
-from industryiq.core.agents.ports import Blackboard, Capability, RunLedger
+from industryiq.core.agents.models import CapabilityResult, Plan, PlanNode, RunResult
+from industryiq.core.agents.ports import Blackboard, Capability, PlanExecutor, RunLedger
 from industryiq.core.agents.synthesis import Synthesizer, collect_results
 
 
-class LocalExecutor:
+class LocalExecutor(PlanExecutor):
     """Run a :class:`Plan` in one process, one dependency wave at a time."""
 
     def __init__(
@@ -43,7 +43,12 @@ class LocalExecutor:
         self._failure_hook = failure_hook
         self._max_workers = max_workers
 
-    def run(self, plan: Plan) -> RunResult:
+    def execute(self, plan: Plan) -> Mapping[str, CapabilityResult]:
+        """Run the plan's waves in-process; return the per-node results.
+
+        A node crash propagates out (via ``future.result()``) -- Option B has no
+        recovery, so the whole run is lost. That is the "B breaks" beat.
+        """
         done: set[str] = set()
         while True:
             wave = plan.ready(done)
@@ -52,9 +57,13 @@ class LocalExecutor:
             with ThreadPoolExecutor(max_workers=min(self._max_workers, len(wave))) as pool:
                 futures = {pool.submit(self._run_node, plan, node): node for node in wave}
                 for future in futures:
-                    future.result()  # re-raises a node crash: B has no recovery
+                    future.result()  # re-raises a node crash
                     done.add(futures[future].node_id)
-        return self._synthesizer.synthesize(plan, collect_results(plan, self._blackboard))
+        return collect_results(plan, self._blackboard)
+
+    def run(self, plan: Plan) -> RunResult:
+        """``execute`` then synthesize the full :class:`RunResult`."""
+        return self._synthesizer.synthesize(plan, self.execute(plan))
 
     def _run_node(self, plan: Plan, node: PlanNode) -> None:
         self._failure_hook(node.node_id)  # demo crash -> propagates -> run aborts

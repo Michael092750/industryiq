@@ -26,6 +26,7 @@ from industryiq.core.agents.models import (
 from industryiq.core.agents.ports import (
     Blackboard,
     Capability,
+    PlanExecutor,
     Planner,
     RunLedger,
     TaskQueue,
@@ -40,6 +41,7 @@ __all__ = [
     "InMemoryRunLedger",
     "InMemoryTaskQueue",
     "Plan",
+    "PlanExecutor",
     "PlanNode",
     "Planner",
     "RunLedger",

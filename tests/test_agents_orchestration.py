@@ -16,6 +16,7 @@ from industryiq.core.agents.models import CapabilityResult, Plan, PlanNode
 from industryiq.core.agents.supervisor import Supervisor
 from industryiq.core.agents.synthesis import Synthesizer
 from industryiq.core.agents.worker import DEFAULT_QUEUE, Worker
+from industryiq.core.generation import FakeLLM
 
 
 class _StubCapability:
@@ -97,6 +98,28 @@ def test_local_executor_loses_the_whole_run_on_a_crash() -> None:
     with pytest.raises(WorkerCrash):
         LocalExecutor(registry, blackboard, Synthesizer(), failure_hook=CrashOnceHook()).run(plan)
     assert blackboard.read("r", "n1") is None  # nothing persisted -> run lost, no recovery
+
+
+def test_local_executor_execute_fills_blackboard_without_synthesizing() -> None:
+    blackboard = InMemoryBlackboard()
+    registry = {"industry_analysis": _StubCapability()}
+    results = LocalExecutor(registry, blackboard, Synthesizer()).execute(_fanout_plan())
+    assert set(results) == {"n1", "n2"}  # per-node results returned
+    assert blackboard.read("run1", "n1") is not None  # and persisted, but not synthesized
+
+
+# --- streaming synthesis ----------------------------------------------------------
+
+
+def test_synthesizer_stream_concatenates_to_the_synthesized_answer() -> None:
+    plan = _fanout_plan()
+    results = {
+        "n1": CapabilityResult(summary="A"),
+        "n2": CapabilityResult(summary="B"),
+    }
+    synth = Synthesizer(FakeLLM("combined answer"))
+    streamed = "".join(synth.stream(plan, results))
+    assert streamed == synth.synthesize(plan, results).answer == "combined answer"
 
 
 # --- Option C: Supervisor + Worker ------------------------------------------------
