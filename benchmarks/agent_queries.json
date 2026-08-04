@@ -1,0 +1,108 @@
+{
+  "description": "Tier-routing benchmark for the multi-agent chat service. Each query carries an `expected_tier` -- one of `simple` (no lookup; a plain LLM reply), `retrieve` (a single knowledge-base lookup), or `complex` (decompose into a multi-tool plan). run_agent_benchmark.py runs the real 3-way LlmRouter and scores whether it routed to the expected tier; for complex queries it also reports the planner's fan-out width (node count) and, for every tier, per-tier latency. Where `gold_needles` are present (verified corpus facts) it also grades answer correctness with the LLM judge. 20 queries: 3 simple, 7 retrieve, 10 complex. Complex queries are multi-industry comparisons or multi-part asks that also reach current info; because the router only knows the corpus, the two web-flavoured complex queries are anchored to the reports so they still read as substantive/complex (the planner then dispatches the current part to the web_search tool).",
+  "queries": [
+    {
+      "id": "simple-greeting",
+      "query": "Hi! What kinds of questions can you help me with?",
+      "expected_tier": "simple"
+    },
+    {
+      "id": "simple-thanks",
+      "query": "Thanks, that's exactly what I needed.",
+      "expected_tier": "simple"
+    },
+    {
+      "id": "simple-meta",
+      "query": "Can you briefly remind me what we've talked about so far?",
+      "expected_tier": "simple"
+    },
+    {
+      "id": "retrieve-ai-private-investment",
+      "query": "How much did U.S. private AI investment reach in 2025?",
+      "expected_tier": "retrieve",
+      "gold_needles": ["$285.9 billion"]
+    },
+    {
+      "id": "retrieve-ai-compute-capacity",
+      "query": "What was global AI compute capacity in H100-equivalents?",
+      "expected_tier": "retrieve",
+      "gold_needles": ["17.1 million H100-equivalents"]
+    },
+    {
+      "id": "retrieve-ai-incidents",
+      "query": "How many documented AI incidents were there in 2024?",
+      "expected_tier": "retrieve",
+      "gold_needles": ["233"]
+    },
+    {
+      "id": "retrieve-finance-outlook",
+      "query": "What does the report say about the outlook for U.S. banking in 2025?",
+      "expected_tier": "retrieve"
+    },
+    {
+      "id": "retrieve-healthcare-adoption",
+      "query": "What is the reported rate of AI adoption in healthcare?",
+      "expected_tier": "retrieve"
+    },
+    {
+      "id": "retrieve-agriculture-market",
+      "query": "What is the projected market size for precision agriculture?",
+      "expected_tier": "retrieve"
+    },
+    {
+      "id": "retrieve-semiconductor-forecast",
+      "query": "What is the forecast for the global semiconductor market?",
+      "expected_tier": "retrieve"
+    },
+    {
+      "id": "complex-ai-vs-semiconductor",
+      "query": "Compare the market size and growth outlook of the AI and semiconductor industries.",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-three-sector-investment",
+      "query": "Compare AI, finance, and healthcare on their main investment trends, and say which is growing fastest.",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-adoption-across-sectors",
+      "query": "Across AI, agriculture, and semiconductors, which sector shows the strongest adoption growth, and why?",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-regulatory-pressure",
+      "query": "Summarize the competitive dynamics in finance and in healthcare, then say which faces more regulatory pressure.",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-ai-finance-rank",
+      "query": "Compare the AI and finance sectors' outlooks and rank them by expected growth.",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-healthcare-agri-driver",
+      "query": "Compare the healthcare and agriculture market forecasts and identify a growth driver they share.",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-overview-three",
+      "query": "Give an overview of the AI, semiconductor, and finance sectors: market size, key players, and one risk each.",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-largest-investment",
+      "query": "Of AI, healthcare, and semiconductors, which had the largest reported investment figure, and by how much does it lead the next?",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-semis-plus-current-controls",
+      "query": "Using the reports for the semiconductor market size and the latest 2026 news on chip export controls, explain how recent policy could affect that market.",
+      "expected_tier": "complex"
+    },
+    {
+      "id": "complex-ai-market-plus-current-regulation",
+      "query": "Combine the AI market figures from the reports with the most recent 2026 developments in AI regulation, and assess the near-term outlook.",
+      "expected_tier": "complex"
+    }
+  ]
+}

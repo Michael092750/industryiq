@@ -74,6 +74,9 @@ class Settings:
     agent_run_timeout_s: float = 30.0
     agent_worker_batch: int = 4
     agent_capability_k: int = 6
+    # Max Anthropic server-side web searches per web_search capability call. The
+    # web_search tool is registered only when an ANTHROPIC_API_KEY is available.
+    agent_web_search_max_uses: int = 5
     # Demo failure injection (leave "off" in production). "crash_once" makes a worker
     # (or the local executor) fail the first attempt of each node, to stage the
     # kill-a-worker beat: Option C reclaims and resumes; Option B loses the run.
@@ -285,6 +288,7 @@ def get_settings() -> Settings:
         agent_run_timeout_s=float(os.getenv("AGENT_RUN_TIMEOUT_S", "30")),
         agent_worker_batch=int(os.getenv("AGENT_WORKER_BATCH", "4")),
         agent_capability_k=int(os.getenv("AGENT_CAPABILITY_K", "6")),
+        agent_web_search_max_uses=int(os.getenv("AGENT_WEB_SEARCH_MAX_USES", "5")),
         agent_failure_mode=os.getenv("AGENT_FAILURE_MODE", "off"),
         chat_agent_executor=os.getenv("CHAT_AGENT_EXECUTOR", "local"),
         vector_backend=os.getenv("VECTOR_BACKEND", "pgvector"),

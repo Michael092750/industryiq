@@ -1,10 +1,13 @@
-"""Tests for the industry-analysis capability and the demo failure hook."""
+"""Tests for the capabilities (industry-analysis, web-search) and the failure hook."""
+
+from types import SimpleNamespace
 
 import pytest
 
 from industryiq.core.agents.capabilities import (
     CrashOnceHook,
     IndustryAnalysisCapability,
+    WebSearchCapability,
     WorkerCrash,
 )
 from industryiq.core.agents.ports import Capability
@@ -45,6 +48,66 @@ def test_capability_scopes_query_by_industry() -> None:
 
 def test_capability_satisfies_the_port() -> None:
     assert isinstance(IndustryAnalysisCapability(_FakeCorpus([]), FakeLLM()), Capability)
+
+
+class _FakeMessages:
+    """Records create() calls, returns a canned message (Anthropic client shape)."""
+
+    def __init__(self, message: object) -> None:
+        self._message = message
+        self.calls: list[dict[str, object]] = []
+
+    def create(self, **kwargs: object) -> object:
+        self.calls.append(kwargs)
+        return self._message
+
+
+class _FakeAnthropic:
+    def __init__(self, message: object) -> None:
+        self.messages = _FakeMessages(message)
+
+
+def _web_message(content: list[object], stop_reason: str = "end_turn") -> SimpleNamespace:
+    return SimpleNamespace(content=content, stop_reason=stop_reason)
+
+
+def test_web_search_capability_extracts_answer_and_deduped_sources() -> None:
+    search_result = SimpleNamespace(
+        type="web_search_tool_result",
+        content=[
+            SimpleNamespace(type="web_search_result", url="https://a.com", title="A"),
+            SimpleNamespace(type="web_search_result", url="https://b.com", title="B"),
+        ],
+    )
+    answer = SimpleNamespace(
+        type="text",
+        text="the web answer",
+        citations=[SimpleNamespace(url="https://a.com", title="A")],  # dup of a result
+    )
+    client = _FakeAnthropic(_web_message([search_result, answer]))
+    result = WebSearchCapability(model_id="claude-sonnet-4-6", client=client).run(
+        {"question": "latest AI chip news?"}
+    )
+    assert result.summary == "the web answer"
+    assert [s["source"] for s in result.sources] == ["https://a.com", "https://b.com"]  # deduped
+
+
+def test_web_search_capability_declares_the_server_tool() -> None:
+    client = _FakeAnthropic(_web_message([]))
+    WebSearchCapability(model_id="claude-sonnet-4-6", client=client, max_searches=3).run(
+        {"question": "q"}
+    )
+    call = client.messages.calls[0]
+    tool = call["tools"][0]  # type: ignore[index]
+    assert tool["type"] == "web_search_20260209"
+    assert tool["name"] == "web_search"
+    assert tool["max_uses"] == 3
+    assert call["messages"][0]["content"] == "q"  # type: ignore[index]
+
+
+def test_web_search_capability_satisfies_the_port() -> None:
+    capability = WebSearchCapability(model_id="m", client=_FakeAnthropic(_web_message([])))
+    assert isinstance(capability, Capability)
 
 
 def test_crash_once_hook_fires_once_per_node() -> None:

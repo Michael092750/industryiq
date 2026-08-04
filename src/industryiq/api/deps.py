@@ -33,6 +33,7 @@ from industryiq.core.agents import (
 from industryiq.core.agents.capabilities import (
     CrashOnceHook,
     IndustryAnalysisCapability,
+    WebSearchCapability,
     no_failure,
 )
 from industryiq.core.agents.executor_local import LocalExecutor
@@ -256,17 +257,30 @@ def get_run_ledger() -> RunLedger:
 def get_capability_registry() -> dict[str, Capability]:
     """Return the process-wide capability registry (built once, then cached).
 
-    Today: one real capability -- industry analysis (the corpus RAG tool). It
-    retrieves through the *same* tuned :func:`get_retrieval_service` the chat
-    retrieve-tier uses (as a ``CorpusRetriever``), so tier + planner share one
-    retrieval implementation. Web search / database lookup slot in here later.
+    Two capabilities when an Anthropic key is present:
+
+    * ``industry_analysis`` -- the corpus RAG tool. It retrieves through the *same*
+      tuned :func:`get_retrieval_service` the chat retrieve-tier uses (as a
+      ``CorpusRetriever``), so tier + planner share one retrieval implementation.
+    * ``web_search`` -- Anthropic's server-side web search, for current/external
+      facts the reports don't cover. Registered only when ``ANTHROPIC_API_KEY`` is
+      set (it calls the Anthropic API directly), so offline/fake runs stay
+      single-capability. Database lookup slots in here later.
     """
     settings = get_settings()
     _embedder, llm = _build_ai_providers(settings)
-    capability: Capability = IndustryAnalysisCapability(
-        get_retrieval_service(), llm, k=settings.agent_capability_k
-    )
-    return {capability.name: capability}
+    capabilities: list[Capability] = [
+        IndustryAnalysisCapability(get_retrieval_service(), llm, k=settings.agent_capability_k)
+    ]
+    if settings.anthropic_api_key:
+        capabilities.append(
+            WebSearchCapability(
+                model_id=settings.anthropic_llm_model_id,
+                api_key=settings.anthropic_api_key,
+                max_searches=settings.agent_web_search_max_uses,
+            )
+        )
+    return {capability.name: capability for capability in capabilities}
 
 
 @lru_cache(maxsize=1)

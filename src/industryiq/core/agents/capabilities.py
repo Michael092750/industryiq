@@ -3,9 +3,11 @@
 Each capability satisfies the :class:`~industryiq.core.agents.ports.Capability`
 port -- a ``name``, a *prescriptive* ``description`` the planner routes on, and a
 ``run`` that turns an opaque ``inputs`` dict into a uniform
-:class:`~industryiq.core.agents.models.CapabilityResult`. Today there is one real
-capability (industry analysis = a mini-RAG over the report corpus); web search /
-database lookup slot in later behind the same seam.
+:class:`~industryiq.core.agents.models.CapabilityResult`. Two real capabilities
+today: :class:`IndustryAnalysisCapability` (a mini-RAG over the report corpus) and
+:class:`WebSearchCapability` (Anthropic's server-side web search, for current /
+external facts the reports don't cover); a database lookup slots in later behind
+the same seam.
 
 Also here: the demo ``FailureHook`` -- a tiny injectable seam a worker/executor
 calls before running a node, so the "kill a worker mid-run" beat is reproducible
@@ -69,6 +71,117 @@ class IndustryAnalysisCapability(Capability):
             summary=answer,
             data={"industry": industry, "chunks": len(hits)},
             sources=[_source_of(hit) for hit in hits],
+        )
+
+
+# --- web search (Anthropic server-side tool) --------------------------------------
+
+# Server-tool type with dynamic filtering (Opus 4.6+/Sonnet 4.6+). Older models
+# would need the basic "web_search_20250305"; the app pins a current model.
+WEB_SEARCH_TOOL = "web_search_20260209"
+
+
+def _web_text(content: list[Any]) -> str:
+    """Concatenate the answer text blocks of a web-search response."""
+    return "".join(
+        getattr(block, "text", "") for block in content if getattr(block, "type", None) == "text"
+    )
+
+
+def _web_sources(content: list[Any]) -> list[dict[str, Any]]:
+    """Collect cited URLs from a web-search response, de-duped, order preserved.
+
+    Sources come from two places: the ``web_search_tool_result`` blocks (the raw
+    results Claude searched) and the ``citations`` Claude attached to its answer
+    text. Both are folded into the same ``{source, title}`` envelope other tools use.
+    """
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+
+    def _add(url: str | None, title: str | None) -> None:
+        if url and url not in seen:
+            seen.add(url)
+            out.append({"source": url, "title": title})
+
+    for block in content:
+        btype = getattr(block, "type", None)
+        if btype == "web_search_tool_result":
+            results = getattr(block, "content", None)
+            if isinstance(results, list):  # a list of results (an error is a single object)
+                for result in results:
+                    _add(getattr(result, "url", None), getattr(result, "title", None))
+        elif btype == "text":
+            for citation in getattr(block, "citations", None) or []:
+                _add(getattr(citation, "url", None), getattr(citation, "title", None))
+    return out
+
+
+class WebSearchCapability(Capability):
+    """Answer a question with Anthropic's *server-side* web search.
+
+    Declares the ``web_search`` server tool on a single ``messages.create`` call;
+    Anthropic runs the searches and returns the grounded answer with citations --
+    no client-side tool loop. A long search turn can stop with
+    ``stop_reason == "pause_turn"``; we resume by re-sending with the paused
+    assistant turn appended. Returns the answer as ``summary`` and the cited URLs
+    as ``sources``, so a planned web subtask is as citable as a retrieval subtask.
+
+    The Anthropic client is imported lazily (only when no ``client`` is injected),
+    so this module stays import-light and unit-testable with a fake client.
+    """
+
+    name = "web_search"
+    description = (
+        "Search the public web for CURRENT or external information the internal report "
+        "library does not cover -- recent news, latest or post-cutoff figures, or facts "
+        "about companies and markets outside the ingested reports. Use it for anything "
+        "time-sensitive or clearly not in a market-research report. "
+        'inputs: {"question": "<what to look up on the web>"}.'
+    )
+
+    def __init__(
+        self,
+        *,
+        model_id: str,
+        api_key: str | None = None,
+        max_tokens: int = 2048,
+        max_searches: int = 5,
+        tool_type: str = WEB_SEARCH_TOOL,
+        client: Any | None = None,
+    ) -> None:
+        self._model_id = model_id
+        self._max_tokens = max_tokens
+        self._max_searches = max_searches
+        self._tool_type = tool_type
+        if client is not None:
+            self._client: Any = client
+        else:
+            # Lazy: only importing the capability with a real client pulls in anthropic.
+            from anthropic import Anthropic
+
+            self._client = Anthropic(api_key=api_key)
+
+    def run(self, inputs: dict[str, Any]) -> CapabilityResult:
+        question = str(inputs.get("question") or inputs.get("query") or "").strip()
+        messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
+        tools = [{"type": self._tool_type, "name": "web_search", "max_uses": self._max_searches}]
+        message: Any = None
+        # Server-tool loop: resume a paused search turn (bounded so a stuck loop ends).
+        for _ in range(self._max_searches + 2):
+            message = self._client.messages.create(
+                model=self._model_id,
+                max_tokens=self._max_tokens,
+                messages=messages,
+                tools=tools,
+            )
+            if getattr(message, "stop_reason", None) != "pause_turn":
+                break
+            messages.append({"role": "assistant", "content": message.content})
+        content = list(getattr(message, "content", None) or [])
+        return CapabilityResult(
+            summary=_web_text(content),
+            data={"tool": self._tool_type},
+            sources=_web_sources(content),
         )
 
 
