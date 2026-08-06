@@ -23,6 +23,7 @@ from industryiq.core.chat.models import (
 from industryiq.core.chat.ports import ConversationStore, TurnRouter
 from industryiq.core.chat.service import ChatService, ConversationNotFound
 from industryiq.core.generation import FakeLLM, StreamingLLM
+from industryiq.core.grounding import DEFAULT_ABSTENTION, DeterministicGroundingGate
 from industryiq.core.retrieval.ports import ContextRetriever, RetrievalResult, SessionDocumentStore
 from industryiq.core.vectorstore import Hit, MetadataFilter, SearchPlan
 
@@ -132,6 +133,7 @@ def _service(
     session_documents: SessionDocumentStore | None = None,
     policy: ChatPolicy | None = None,
     orchestrator: object | None = None,
+    grounding: object | None = None,
 ) -> ChatService:
     return ChatService(
         retrieval=retrieval or StubRetrieval(),
@@ -139,6 +141,7 @@ def _service(
         llm=llm or FakeLLM(response="ANSWER"),
         store=store or InMemoryConversationStore(),
         orchestrator=orchestrator,  # duck-typed TurnOrchestrator double
+        grounding=grounding,  # duck-typed GroundingGate double (None => gate off)
         session_documents=session_documents,
         policy=policy or ChatPolicy(),
     )
@@ -343,6 +346,67 @@ def test_complex_turn_falls_back_to_retrieve_when_no_orchestrator() -> None:
     events = list(service.reply_stream(convo.id, "compare A and B"))
     assert retrieval.calls  # degraded safely to the retrieve/simple path
     assert "planning" not in [e.phase for e in events if isinstance(e, StreamStatus)]
+
+
+# --- grounding gate (retrieve tier) -----------------------------------------------
+
+
+def test_grounding_gate_abstains_when_retrieval_finds_nothing() -> None:
+    # No grounded context -> abstain deterministically instead of letting the model
+    # answer (and possibly hallucinate); the generator is never even called.
+    llm = FakeLLM(response="hallucinated answer")
+    store = InMemoryConversationStore()
+    convo = store.create("c")
+    service = _service(
+        retrieval=StubRetrieval(hits=[]),
+        llm=llm,
+        store=store,
+        grounding=DeterministicGroundingGate(),
+    )
+    events = list(service.reply_stream(convo.id, "q"))
+    assert isinstance(events[-1], StreamEnd)
+    assert events[-1].answer == DEFAULT_ABSTENTION
+    assert llm.last_prompt is None  # never generated
+    assert store.history(convo.id) == [Turn("q", DEFAULT_ABSTENTION)]
+
+
+def test_grounding_gate_caveats_a_fabricated_citation() -> None:
+    # One hit is numbered [1]; the model cites [2], which matches no source -> caveat.
+    store = InMemoryConversationStore()
+    convo = store.create("c")
+    service = _service(
+        retrieval=StubRetrieval(hits=[Hit("c1", 0.9, {"text": "ctx"})]),
+        llm=FakeLLM(response="the answer [2]"),
+        store=store,
+        grounding=DeterministicGroundingGate(),
+    )
+    events = list(service.reply_stream(convo.id, "q"))
+    answer = events[-1].answer
+    assert answer.startswith("the answer [2]")
+    assert "could not be matched" in answer  # the caveat was appended
+    assert store.history(convo.id)[0].answer == answer  # persisted with the caveat
+
+
+def test_grounding_gate_leaves_a_clean_grounded_answer_untouched() -> None:
+    service = _service(
+        retrieval=StubRetrieval(hits=[Hit("c1", 0.9, {"text": "ctx"})]),
+        llm=FakeLLM(response="grounded [1]"),
+        grounding=DeterministicGroundingGate(),
+    )
+    convo = service.start("c")
+    assert service.reply(convo.id, "q").answer == "grounded [1]"
+
+
+def test_grounding_gate_does_not_abstain_on_a_greeting() -> None:
+    # should_retrieve=False (small talk) has no context by design -> must NOT abstain.
+    service = _service(
+        retrieval=StubRetrieval(hits=[]),
+        router=StubRouter(should_retrieve=False),
+        llm=FakeLLM(response="hello!"),
+        grounding=DeterministicGroundingGate(),
+    )
+    convo = service.start("c")
+    assert service.reply(convo.id, "hi").answer == "hello!"
 
 
 def test_reply_stream_to_unknown_conversation_raises() -> None:

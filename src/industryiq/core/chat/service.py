@@ -34,6 +34,12 @@ from industryiq.core.chat.models import (
 from industryiq.core.chat.ports import ConversationStore, TurnOrchestrator, TurnRouter
 from industryiq.core.chat.prompting import build_chat_prompt
 from industryiq.core.generation import StreamingLLM
+from industryiq.core.grounding import (
+    DEFAULT_ABSTENTION,
+    GroundingGate,
+    citation_caveat,
+    verify_citations,
+)
 from industryiq.core.retrieval.ports import ContextRetriever, SessionDocumentStore
 from industryiq.core.timing import StepTimer
 from industryiq.core.vectorstore import Hit
@@ -65,6 +71,7 @@ class ChatService:
         store: ConversationStore,
         *,
         orchestrator: TurnOrchestrator | None = None,
+        grounding: GroundingGate | None = None,
         session_documents: SessionDocumentStore | None = None,
         policy: ChatPolicy = _DEFAULT_POLICY,
         clock: Callable[[], float] = time.perf_counter,
@@ -78,6 +85,10 @@ class ChatService:
         # -> streamed synthesis). ``None`` => complex turns fall back to the simple
         # retrieve path, so behaviour degrades safely (e.g. offline).
         self._orchestrator = orchestrator
+        # Post-generation faithfulness check for the retrieve tier: abstain when there
+        # is no grounded context, and caveat fabricated citations. ``None`` => the gate
+        # is off (today's behaviour), so existing/offline callers are unaffected.
+        self._grounding = grounding
         # Held only for lifecycle: clearing a conversation's uploads on delete.
         # Retrieval *from* it is the retrieval service's job, not chat's.
         self._session_documents = session_documents
@@ -201,6 +212,13 @@ class ChatService:
         yield StreamStart(standalone_question=standalone, hits=hits)
         yield StreamStatus(phase="generating")
 
+        # Grounding gate, pre-generation: with no grounded context, abstain rather than
+        # let the model answer from parametric memory (or hallucinate). Retrieve tier
+        # only -- greetings (should_retrieve=False) legitimately have no context.
+        if self._grounding is not None and decision.should_retrieve and not hits:
+            verdict = self._grounding.check(question, "", hits)
+            return (yield from self._stream_text(verdict.abstention or DEFAULT_ABSTENTION, timer))
+
         prompt = build_chat_prompt(history, question, hits)
         parts: list[str] = []
         generate_start = self._clock()
@@ -210,7 +228,29 @@ class ChatService:
             parts.append(chunk)
             yield StreamToken(text=chunk)
         timer.timings_ms["generate"] = round((self._clock() - generate_start) * 1000, 3)
-        return "".join(parts)
+        answer = "".join(parts)
+
+        # Grounding gate, post-generation: keep the streamed answer but append a caveat
+        # for any fabricated [n] citation (the tokens are already out, so we suffix
+        # rather than replace). Citation validity is a pure fact, so it is checked
+        # directly -- no model call on the hot streaming path. A gate verdict that
+        # *replaces* the answer needs a surface that can withhold it until the verdict
+        # is in, i.e. the non-streamed Synthesizer.synthesize behind /agents/run.
+        if self._grounding is not None and hits:
+            invalid = verify_citations(answer, hits)
+            if invalid:
+                caveat = citation_caveat(invalid)
+                yield StreamToken(text=caveat)
+                answer += caveat
+        return answer
+
+    def _stream_text(self, text: str, timer: StepTimer) -> Generator[StreamEvent, None, str]:
+        """Stream a fixed answer (e.g. an abstention) as one token, recording timings."""
+        start = self._clock()
+        timer.timings_ms["first_token"] = round((self._clock() - start) * 1000, 3)
+        yield StreamToken(text=text)
+        timer.timings_ms["generate"] = round((self._clock() - start) * 1000, 3)
+        return text
 
     def _answer_by_planning(
         self, history: list[Turn], question: str, timer: StepTimer

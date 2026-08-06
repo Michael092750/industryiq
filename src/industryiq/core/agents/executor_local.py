@@ -18,9 +18,11 @@ from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 
 from industryiq.core.agents.capabilities import FailureHook, no_failure
+from industryiq.core.agents.grounding import check_node_result, node_question
 from industryiq.core.agents.models import CapabilityResult, Plan, PlanNode, RunResult
 from industryiq.core.agents.ports import Blackboard, Capability, PlanExecutor, RunLedger
 from industryiq.core.agents.synthesis import Synthesizer, collect_results
+from industryiq.core.grounding import GroundingGate
 
 
 class LocalExecutor(PlanExecutor):
@@ -33,6 +35,7 @@ class LocalExecutor(PlanExecutor):
         synthesizer: Synthesizer,
         *,
         ledger: RunLedger | None = None,
+        grounding: GroundingGate | None = None,
         failure_hook: FailureHook = no_failure,
         max_workers: int = 8,
     ) -> None:
@@ -40,6 +43,9 @@ class LocalExecutor(PlanExecutor):
         self._blackboard = blackboard
         self._synthesizer = synthesizer
         self._ledger = ledger
+        # Checked between running a node and posting it, so an ungrounded subtask
+        # never becomes synthesis input. ``None`` => no gate (previous behaviour).
+        self._grounding = grounding
         self._failure_hook = failure_hook
         self._max_workers = max_workers
 
@@ -68,6 +74,8 @@ class LocalExecutor(PlanExecutor):
     def _run_node(self, plan: Plan, node: PlanNode) -> None:
         self._failure_hook(node.node_id)  # demo crash -> propagates -> run aborts
         result = self._registry[node.capability].run(node.inputs)
+        question = node_question(node.inputs, plan.question)
+        result = check_node_result(self._grounding, question, result)
         self._blackboard.write(plan.run_id, node.node_id, result.as_dict())
         if self._ledger is not None:
             self._ledger.append(

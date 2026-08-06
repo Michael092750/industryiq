@@ -24,8 +24,10 @@ from collections.abc import Mapping
 from typing import Any
 
 from industryiq.core.agents.capabilities import FailureHook, no_failure
+from industryiq.core.agents.grounding import check_node_result, node_question
 from industryiq.core.agents.models import Task
 from industryiq.core.agents.ports import Blackboard, Capability, RunLedger, TaskQueue
+from industryiq.core.grounding import GroundingGate
 
 DEFAULT_QUEUE = "agents"
 
@@ -41,6 +43,7 @@ class Worker:
         *,
         consumer: str,
         ledger: RunLedger | None = None,
+        grounding: GroundingGate | None = None,
         failure_hook: FailureHook = no_failure,
         queue_name: str = DEFAULT_QUEUE,
         max_attempts: int = 3,
@@ -52,6 +55,9 @@ class Worker:
         self._blackboard = blackboard
         self._consumer = consumer
         self._ledger = ledger
+        # Same seam as LocalExecutor's: gate the node result before it is posted, so
+        # both topologies enforce grounding identically. ``None`` => no gate.
+        self._grounding = grounding
         self._failure_hook = failure_hook
         self._queue_name = queue_name
         self._max_attempts = max_attempts
@@ -91,9 +97,14 @@ class Worker:
             self._queue.ack(self._queue_name, task)  # memoized: already done, don't re-run
             self._emit(run_id, "task_skipped", node_id=node_id)
             return
+        inputs = task.payload["inputs"]
         try:
             self._failure_hook(node_id)
-            result = self._registry[str(task.payload["capability"])].run(task.payload["inputs"])
+            result = self._registry[str(task.payload["capability"])].run(inputs)
+            # Inside the try: a gate that raises must leave the task unacked and
+            # reclaimable like any other node failure, not kill the worker loop.
+            question = node_question(inputs, str(task.payload.get("question") or ""))
+            result = check_node_result(self._grounding, question, result)
         except Exception as exc:
             # A failed attempt must NOT ack -- the task stays outstanding and another
             # worker will reclaim it. That is the crash-recovery path.

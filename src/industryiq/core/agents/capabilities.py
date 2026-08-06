@@ -27,11 +27,19 @@ from industryiq.core.vectorstore import Hit
 
 
 def _source_of(hit: Hit) -> dict[str, Any]:
-    """Distil a hit into a citation dict (best-effort over varied metadata keys)."""
+    """Distil a hit into a citation dict (best-effort over varied metadata keys).
+
+    ``text`` is the chunk the answer was grounded on. It is carried (not just the
+    label) so a node's answer stays *verifiable* after the result leaves this process
+    for the blackboard -- without it there is nothing downstream to check a citation
+    against. It is the largest field on the envelope; if run payloads ever get heavy,
+    this is what P2-23's blob offload moves out.
+    """
     md = hit.metadata
     return {
         "source": md.get("source") or md.get("doc") or md.get("title") or md.get("filename"),
         "score": round(float(hit.score), 4),
+        "text": str(md.get("text") or ""),
     }
 
 

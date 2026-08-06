@@ -115,6 +115,10 @@ class Supervisor(PlanExecutor):
                     "node_id": node.node_id,
                     "capability": node.capability,
                     "inputs": node.inputs,
+                    # The run's question, so a worker gating a node whose inputs use
+                    # an unconventional key still has something to judge against. Not
+                    # part of the idempotency key: it is context, not work.
+                    "question": plan.question,
                     "idempotency_key": _idempotency_key(plan.run_id, node),
                 },
             )

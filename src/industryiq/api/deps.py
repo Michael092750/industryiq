@@ -57,6 +57,11 @@ from industryiq.core.chat.adapters.orchestration import AgentTurnOrchestrator
 from industryiq.core.chat.adapters.store_pg import PgConversationStore
 from industryiq.core.embeddings import Embedder, FakeEmbedder
 from industryiq.core.generation import FakeLLM, GenerativeLLM
+from industryiq.core.grounding import (
+    DeterministicGroundingGate,
+    GroundingGate,
+    LlmGroundingGate,
+)
 from industryiq.core.ingestion import IngestionService, IngestStateStore
 from industryiq.core.ingestion.adapters.store_memory import InMemoryIngestStateStore
 from industryiq.core.ingestion.adapters.store_pg import PgIngestStateStore
@@ -291,6 +296,28 @@ def get_planner() -> Planner:
 
 
 @lru_cache(maxsize=1)
+def get_grounding_gate() -> GroundingGate | None:
+    """Return the process-wide grounding gate, from ``CHAT_GROUNDING_GATE``.
+
+    "deterministic" (default) is network-free; "llm" adds a model faithfulness check;
+    "off" disables the gate (``None`` -> pre-gate behaviour). One instance is shared by
+    every answer path -- the chat retrieve tier, each agent node at the executor seam,
+    and synthesis -- so a single setting governs how strict the whole system is.
+
+    Note what "llm" costs on a planned run: the node-level check fires once per node,
+    so an N-node fan-out spends N+1 extra calls. Until P1-5/P1-6 put a ceiling under
+    that, "deterministic" is the honest default.
+    """
+    settings = get_settings()
+    if settings.chat_grounding_gate == "off":
+        return None
+    if settings.chat_grounding_gate == "llm":
+        _embedder, llm = _build_ai_providers(settings)
+        return LlmGroundingGate(llm)
+    return DeterministicGroundingGate()
+
+
+@lru_cache(maxsize=1)
 def get_supervisor() -> Supervisor:
     """Return the process-wide Option-C supervisor (built once, then cached).
 
@@ -302,7 +329,7 @@ def get_supervisor() -> Supervisor:
     return Supervisor(
         get_task_queue(),
         get_blackboard(),
-        Synthesizer(llm),
+        Synthesizer(llm, grounding=get_grounding_gate()),
         ledger=get_run_ledger(),
         run_timeout_s=settings.agent_run_timeout_s,
     )
@@ -322,6 +349,7 @@ def build_worker(consumer: str) -> Worker:
         get_blackboard(),
         consumer=consumer,
         ledger=get_run_ledger(),
+        grounding=get_grounding_gate(),
         failure_hook=failure_hook,
         max_attempts=settings.agent_max_attempts,
         reclaim_min_idle_ms=settings.agent_reclaim_min_idle_ms,
@@ -341,8 +369,9 @@ def build_local_executor(*, inject_failure: bool = False) -> LocalExecutor:
     return LocalExecutor(
         get_capability_registry(),
         get_blackboard(),
-        Synthesizer(llm),
+        Synthesizer(llm, grounding=get_grounding_gate()),
         ledger=get_run_ledger(),
+        grounding=get_grounding_gate(),
         failure_hook=failure_hook,
     )
 
@@ -368,7 +397,7 @@ def get_turn_orchestrator() -> AgentTurnOrchestrator:
         planner=get_planner(),
         registry=get_capability_registry(),
         executor=executor,
-        synthesizer=Synthesizer(llm),
+        synthesizer=Synthesizer(llm, grounding=get_grounding_gate()),
     )
 
 
@@ -496,6 +525,19 @@ def get_retrieval_service() -> RetrievalService:
     )
 
 
+def _build_grounding_gate(settings: Settings, llm: GenerativeLLM) -> GroundingGate | None:
+    """Choose the retrieve-tier grounding gate from ``CHAT_GROUNDING_GATE``.
+
+    "deterministic" (default) is network-free; "llm" adds a model faithfulness check
+    (one extra call per turn); "off" disables the gate (``None`` -> today's behaviour).
+    """
+    if settings.chat_grounding_gate == "off":
+        return None
+    if settings.chat_grounding_gate == "llm":
+        return LlmGroundingGate(llm)
+    return DeterministicGroundingGate()
+
+
 @lru_cache(maxsize=1)
 def get_chat_service() -> ChatService:
     """Return the process-wide chat service (built once, then cached)."""
@@ -512,6 +554,7 @@ def get_chat_service() -> ChatService:
         llm=llm,
         store=_build_conversation_store(settings),
         orchestrator=get_turn_orchestrator(),
+        grounding=get_grounding_gate(),
         session_documents=get_session_documents(),
         policy=ChatPolicy(
             k=settings.chat_retrieval_k,

@@ -223,6 +223,11 @@ class Settings:
     # score kinds.
     chat_bm25_threshold: float | None = None
     chat_normalized_threshold: float | None = None
+    # Post-generation grounding gate for the retrieve tier: "deterministic" (default --
+    # network-free: abstain when retrieval found no context, caveat fabricated [n]
+    # citations), "llm" (also run a model faithfulness check -- one extra call per turn),
+    # or "off" (today's behaviour, no gate). See industryiq.core.grounding.
+    chat_grounding_gate: str = "deterministic"
     # Context (neighbour) expansion: widen each retrieved hit with its adjacent chunks
     # so a fact straddling a chunk boundary is still in the grounding context. Off by
     # default (changes what the generator sees). ``radius`` = neighbours per side;
@@ -325,6 +330,7 @@ def get_settings() -> Settings:
         chat_relevance_threshold=float(os.getenv("CHAT_RELEVANCE_THRESHOLD", "0.0")),
         chat_bm25_threshold=_env_float_opt("CHAT_BM25_THRESHOLD"),
         chat_normalized_threshold=_env_float_opt("CHAT_NORMALIZED_THRESHOLD"),
+        chat_grounding_gate=os.getenv("CHAT_GROUNDING_GATE", "deterministic"),
         chat_context_expansion=_env_bool("CHAT_CONTEXT_EXPANSION", False),
         chat_context_radius=int(os.getenv("CHAT_CONTEXT_RADIUS", "1")),
         chat_context_max_chunks=int(os.getenv("CHAT_CONTEXT_MAX_CHUNKS", "5")),

@@ -12,15 +12,14 @@ stays the sole owner of persistence + the final ``StreamEnd``.
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
-from typing import Any
 from uuid import uuid4
 
+from industryiq.core.agents.grounding import hits_from_sources
 from industryiq.core.agents.ports import Capability, PlanExecutor, Planner
 from industryiq.core.agents.synthesis import Synthesizer, merge_sources
 from industryiq.core.chat.models import StreamEvent, StreamStart, StreamStatus, StreamToken, Turn
 from industryiq.core.chat.ports import TurnOrchestrator
 from industryiq.core.retrieval.ports import QueryRewriter
-from industryiq.core.vectorstore import Hit
 
 
 class AgentTurnOrchestrator(TurnOrchestrator):
@@ -51,22 +50,11 @@ class AgentTurnOrchestrator(TurnOrchestrator):
         yield StreamStatus(phase="retrieving")
         results = self._executor.execute(plan)  # fan-out fills the blackboard
         sources = merge_sources(results.values())
-        yield StreamStart(standalone_question=standalone, hits=_hits_from_sources(sources))
+        # The merged citations become the same Hit shape a simple turn streams, so the
+        # chat route serializes a complex turn's sources identically -- and, now that
+        # nodes retain their chunk text, with the same grounding text in them.
+        yield StreamStart(standalone_question=standalone, hits=hits_from_sources(sources))
 
         yield StreamStatus(phase="generating")
         for token in self._synthesizer.stream(plan, results):
             yield StreamToken(text=token)
-
-
-def _hits_from_sources(sources: list[dict[str, Any]]) -> list[Hit]:
-    """Map merged citation dicts to lightweight ``Hit`` stand-ins for ``StreamStart``,
-    so the chat route serializes a complex turn's sources exactly like a simple turn's.
-    """
-    return [
-        Hit(
-            id=str(src.get("source") or ""),
-            score=float(src.get("score") or 0.0),
-            metadata={"source": src.get("source"), "text": ""},
-        )
-        for src in sources
-    ]
